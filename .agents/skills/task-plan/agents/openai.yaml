@@ -1,0 +1,4 @@
+interface:
+  display_name: "Task Plan"
+  short_description: "Plan tasks with review before implementation"
+  default_prompt: "Use $task-plan to define the feature, owners, scope, validation, and plan review before implementation."

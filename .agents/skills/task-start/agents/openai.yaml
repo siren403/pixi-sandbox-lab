@@ -1,0 +1,4 @@
+interface:
+  display_name: "Task Start"
+  short_description: "Start tasks with baseline and scope"
+  default_prompt: "Use $task-start to record the task goal, git baseline, dirty state, and intended scope before editing."

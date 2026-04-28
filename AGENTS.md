@@ -74,6 +74,7 @@ Good future documents might include:
 
 ## Implementation Principles
 
+- For non-trivial work, use the task boundary flow: `task-plan` before implementation, `task-start` before editing, and `task-end` before final closeout.
 - Start with the smallest runnable vertical slice before expanding architecture.
 - Prefer clear, inspectable code over engine-like generality.
 - Preserve the distinction between sandbox infrastructure and the demo application, but let discoveries in one inform the other.

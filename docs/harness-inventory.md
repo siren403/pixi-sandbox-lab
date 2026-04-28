@@ -64,6 +64,24 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 - `.agents/skills/task-end/agents/openai.yaml`  
   UI metadata for the `task-end` skill.
 
+- `.agents/skills/task-plan/SKILL.md`  
+  Provides the pre-implementation planning procedure with feature summary, concrete assigned agents, scope, validation, closeout, and plan review.
+  Discovery route: `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`.
+  Expected user/agent: parent Codex and harness agents planning non-trivial work.
+  Validation: `mise run validate-skills`.
+
+- `.agents/skills/task-plan/agents/openai.yaml`  
+  UI metadata for the `task-plan` skill.
+
+- `.agents/skills/task-start/SKILL.md`  
+  Provides the task start baseline procedure for branch, HEAD, existing dirty state, intended file scope, validation plan, and blockers before editing.
+  Discovery route: `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`.
+  Expected user/agent: parent Codex and harness agents starting approved work.
+  Validation: `mise run validate-skills`.
+
+- `.agents/skills/task-start/agents/openai.yaml`  
+  UI metadata for the `task-start` skill.
+
 ### Codex Custom Agents
 
 - `.codex/agents/harness-architect.toml`  
