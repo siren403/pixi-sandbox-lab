@@ -87,6 +87,7 @@ Use this format:
    - Completion signal.
 
 2. **Ownership**
+   - Assigned agent names or concrete executor for each role, such as parent Codex, `harness_architect`, a named custom agent, or a spawned worker/explorer.
    - PM/parent agent: decision owner, sequencing, final integration, commit/closeout.
    - `harness_architect`: architecture, protocol compliance, inventory/discovery updates.
    - Creator skill or specialist agent: exact generation/research responsibility.

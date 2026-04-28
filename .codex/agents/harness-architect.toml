@@ -78,6 +78,7 @@ When asked for an implementation plan, use this format:
    - User-visible outcome.
    - Completion signal.
 2. Ownership:
+   - Assigned agent names or concrete executor for each role.
    - PM/parent agent responsibilities.
    - harness_architect responsibilities.
    - worker/explorer/custom agent responsibilities, if any.
