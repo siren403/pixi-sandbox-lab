@@ -55,6 +55,15 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 - `.agents/skills/hook-creator/agents/openai.yaml`  
   UI metadata for the `hook-creator` skill.
 
+- `.agents/skills/task-closeout/SKILL.md`  
+  Provides the generic task closeout procedure for dirty-state hook follow-up, dirty file classification, safe temporary artifact cleanup, validation, optional commit, and final clean-state reporting.
+  Discovery route: `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`.
+  Expected user/agent: parent Codex and harness agents closing out work items.
+  Validation: `mise run validate-skills`.
+
+- `.agents/skills/task-closeout/agents/openai.yaml`  
+  UI metadata for the `task-closeout` skill.
+
 ### Codex Custom Agents
 
 - `.codex/agents/harness-architect.toml`  
