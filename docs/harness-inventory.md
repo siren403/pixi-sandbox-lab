@@ -65,7 +65,15 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 
 ### Codex Hooks
 
-- None yet.
+- `.codex/config.toml`  
+  Project-scoped Codex config. Enables `codex_hooks` and registers the `Stop` dirty-state warning hook.
+  Discovery route: `harness_architect` boot discovery reads `.codex/config.toml`.
+
+- `.codex/hooks/dirty-state-stop.ts`  
+  Bun/TypeScript command hook for the Codex `Stop` event. Runs `git status --short` in the hook `cwd`, emits a non-blocking `systemMessage` when the working tree is dirty, and exits cleanly on git inspection errors with a warning.
+  Event: `Stop`. Matcher: none. Behavior: warn-only, non-blocking.
+  Expected user/agent: all Codex sessions in this project once project hooks are active.
+  Validation: smoke-tested with clean and dirty temporary git repositories; dirty state emitted `systemMessage`.
 
 When hooks are added, register:
 

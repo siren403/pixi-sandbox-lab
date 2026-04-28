@@ -5,6 +5,9 @@
 !.codex/
 !.codex/agents/
 !.codex/agents/*.toml
+!.codex/config.toml
+!.codex/hooks/
+!.codex/hooks/*.ts
 .gemini/
 .copilot/
 .mise.local.toml

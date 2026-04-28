@@ -1,0 +1,10 @@
+[features]
+codex_hooks = true
+
+[[hooks.Stop]]
+
+[[hooks.Stop.hooks]]
+type = "command"
+command = "mise exec bun -- bun .codex/hooks/dirty-state-stop.ts"
+timeout = 10
+statusMessage = "Checking git dirty state"
