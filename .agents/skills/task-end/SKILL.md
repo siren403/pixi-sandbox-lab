@@ -1,9 +1,9 @@
 ---
-name: task-closeout
-description: Close a work item safely after edits or a dirty-state hook warning. Use when asked to finish, wrap up, clean up, commit, close out a task, respond to a Codex Stop hook dirty-state warning, classify dirty files, remove obvious temporary artifacts, run final validation, or confirm the working tree is clean.
+name: task-end
+description: End a work item safely after edits or a dirty-state hook warning. Use when asked to finish, wrap up, clean up, commit, close out, end a task, respond to a Codex Stop hook dirty-state warning, classify dirty files, remove obvious temporary artifacts, run final validation, or confirm the working tree is clean.
 ---
 
-# Task Closeout
+# Task End
 
 ## Quick Start
 

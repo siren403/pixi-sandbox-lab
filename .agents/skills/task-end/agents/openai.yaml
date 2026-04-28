@@ -1,0 +1,4 @@
+interface:
+  display_name: "Task End"
+  short_description: "Close tasks with clean git state"
+  default_prompt: "Use $task-end to classify dirty files, clean temporary artifacts, validate, and close the task."

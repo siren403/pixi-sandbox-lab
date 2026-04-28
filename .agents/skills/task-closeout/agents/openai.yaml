@@ -1,4 +1,0 @@
-interface:
-  display_name: "Task Closeout"
-  short_description: "Close tasks with clean git state"
-  default_prompt: "Use $task-closeout to classify dirty files, clean temporary artifacts, validate, and close the task."
