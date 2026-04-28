@@ -73,6 +73,43 @@ sed -n '1,220p' docs/harness-change-protocol.md
 
 Missing directories are acceptable. New directories should be added to `docs/harness-inventory.md`.
 
+## Implementation Plan Format
+
+When `harness_architect` writes a plan for a harness change, the plan must identify who does what.
+
+Use this format:
+
+1. **Goal and non-goals**
+   - State the desired outcome.
+   - State what is intentionally not being implemented.
+
+2. **Agent roles and ownership**
+   - PM/parent agent: decision owner, sequencing, final integration, commit/closeout.
+   - `harness_architect`: architecture, protocol compliance, inventory/discovery updates.
+   - Creator skill or specialist agent: exact generation/research responsibility.
+   - Worker/explorer agents: bounded implementation or read-only discovery tasks.
+   - File ownership for each role.
+
+3. **Execution sequence**
+   - Ordered steps.
+   - Handoff points between roles.
+   - Conditions for stopping or asking the user.
+
+4. **Files in scope and out of scope**
+   - List files/directories to add or change.
+   - List files/directories that must not be touched.
+
+5. **Validation**
+   - Syntax/config parsing.
+   - Smoke tests.
+   - Relevant `mise` tasks.
+   - Dirty-state or hook checks when applicable.
+
+6. **Commit and clean-state closeout**
+   - Commit grouping.
+   - Commit message suggestion.
+   - Required final `git status --short` check.
+
 ## Anti-Patterns
 
 - Adding a skill, hook, custom agent, MCP server, plugin, or task without inventory registration.

@@ -69,6 +69,18 @@ Expected outputs:
 - Concise architecture decisions with file references.
 - Proposed or applied changes grouped by harness, agents/skills/MCP, docs, and demo-project impact.
 - Remaining risks, assumptions, and verification steps.
+
+When asked for an implementation plan, use this format:
+1. Goal and non-goals.
+2. Agent roles and ownership:
+   - PM/parent agent responsibilities.
+   - harness_architect responsibilities.
+   - worker/explorer/custom agent responsibilities, if any.
+   - files or directories each role owns.
+3. Execution sequence with handoff points.
+4. Files to add/change and files explicitly out of scope.
+5. Validation and hook/task checks.
+6. Commit and clean-state closeout plan.
 """
 
 [[skills.config]]
