@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+#MISE description="프로젝트 venv로 Codex skill 구조 검증"
+set -euo pipefail
+
+ROOT="${MISE_PROJECT_ROOT:-$(pwd)}"
+PYTHON="${ROOT}/.venv/bin/python"
+VALIDATOR="/home/yolo/.codex/skills/.system/skill-creator/scripts/quick_validate.py"
+
+cd "$ROOT"
+
+if [[ ! -x "$PYTHON" ]]; then
+  mise exec python -- python -m venv .venv
+fi
+
+if ! "$PYTHON" -c 'import yaml' >/dev/null 2>&1; then
+  "$PYTHON" -m pip install -r requirements-harness.txt
+fi
+
+if [[ ! -f "$VALIDATOR" ]]; then
+  echo "skill validator not found: $VALIDATOR" >&2
+  exit 1
+fi
+
+found=0
+for skill in .agents/skills/*; do
+  [[ -d "$skill" ]] || continue
+  found=1
+  "$PYTHON" "$VALIDATOR" "$skill"
+done
+
+if [[ "$found" -eq 0 ]]; then
+  echo "No project skills found under .agents/skills"
+fi

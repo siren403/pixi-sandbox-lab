@@ -104,6 +104,9 @@ When MCP config is added, register:
 - `.mise/tasks/doctor`  
   Run environment checks.
 
+- `.mise/tasks/validate-skills`  
+  Use the project-scoped mise Python runtime and `.venv` to run Codex skill validation.
+
 - `.mise/tasks/lib/shared.ts`  
   Shared launcher utilities.
 
@@ -113,7 +116,10 @@ When MCP config is added, register:
 ### Sandbox Config
 
 - `.mise.toml`  
-  Project tool declarations. Currently declares Bun.
+  Project tool declarations. Currently declares Bun and Python.
+
+- `requirements-harness.txt`  
+  Python dependencies for harness validation tasks.
 
 ### Harness Documentation
 

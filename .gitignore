@@ -10,3 +10,4 @@
 .mise.local.toml
 .mise/bootstrap.log
 .mise/.bootstrap-tmp.sh
+.venv/

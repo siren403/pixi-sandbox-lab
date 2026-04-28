@@ -12,7 +12,7 @@
   - 진입점: `mise` + `tmux`
   - 격리: `yolobox` (프로젝트 폴더를 호스트 경로 그대로 마운트)
   - 에이전트: yolobox 이미지 내장, 자동 승인 플래그 포함 (yolo 모드)
-  - 샌드박스 런타임 매니저: `mise` (`.mise.toml` 자동 인식)
+  - 샌드박스 런타임 매니저: `mise` (`.mise.toml` 자동 인식, Bun/Python 관리)
 
 ## 2. 태스크 목록
 
@@ -25,6 +25,7 @@
 | `mise run copilot` | `mise p` | GitHub Copilot yolo 모드 |
 | `mise run bash` | — | 초기 설정·수동 조정용 인터랙티브 bash |
 | `mise run doctor` | — | 환경 검증만 단독 실행 |
+| `mise run validate-skills` | — | 프로젝트 venv로 Codex skill 구조 검증 |
 
 ## 3. 책임 분담
 

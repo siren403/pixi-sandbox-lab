@@ -49,6 +49,7 @@ The architect may use creator skills:
    - Skills: check `SKILL.md` frontmatter has `name` and `description`; run `quick_validate.py` when PyYAML is available.
    - Hooks: run the script with representative JSON stdin and validate config syntax.
    - Tasks: run or dry-run the task where safe.
+   - Skill validation: prefer `mise run validate-skills` so PyYAML and Python execution come from the project-scoped runtime.
    - Docs: search for stale paths or renamed files.
 
 6. **Report closeout**
