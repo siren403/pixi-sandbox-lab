@@ -79,25 +79,30 @@ When `harness_architect` writes a plan for a harness change, the plan must ident
 
 Use this format:
 
-1. **Goal and non-goals**
-   - State the desired outcome.
-   - State what is intentionally not being implemented.
+1. **Feature Summary**
+   - Feature name.
+   - Problem being solved.
+   - Proposed change.
+   - User-visible outcome.
+   - Completion signal.
 
-2. **Agent roles and ownership**
+2. **Ownership**
    - PM/parent agent: decision owner, sequencing, final integration, commit/closeout.
    - `harness_architect`: architecture, protocol compliance, inventory/discovery updates.
    - Creator skill or specialist agent: exact generation/research responsibility.
    - Worker/explorer agents: bounded implementation or read-only discovery tasks.
    - File ownership for each role.
 
-3. **Execution sequence**
+3. **Scope**
+   - In scope.
+   - Out of scope.
+   - Files/directories to add or change.
+   - Files/directories that must not be touched.
+
+4. **Execution sequence**
    - Ordered steps.
    - Handoff points between roles.
    - Conditions for stopping or asking the user.
-
-4. **Files in scope and out of scope**
-   - List files/directories to add or change.
-   - List files/directories that must not be touched.
 
 5. **Validation**
    - Syntax/config parsing.
