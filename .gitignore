@@ -1,7 +1,10 @@
 .opencode/
 .opencode-data/
 .claude/
-.codex/
+.codex/*
+!.codex/
+!.codex/agents/
+!.codex/agents/*.toml
 .gemini/
 .copilot/
 .mise.local.toml

@@ -45,24 +45,26 @@ const OPENCODE_MOUNTS = {
   }),
 };
 
-export async function launchAgent(tool: string): Promise<never> {
+export async function launchAgent(tool: string, extraArgs: string[] = []): Promise<never> {
   const paths = resolvePaths();
   const session = `${tool}-${paths.projectName}`;
 
-  const args: string[] = [
-    "tmux", "new-session", "-A", "-s", session,
-    "yolobox", tool,
-  ];
-
+  // yolobox tool shortcuts don't accept extra args — must use `yolobox run <tool>` for passthrough.
+  // For opencode, project-specific --mount flags must appear before the subcommand.
+  const yoloboxFlags: string[] = [];
   if (tool === "opencode") {
     const cfg = OPENCODE_MOUNTS.config(paths.root);
     const data = OPENCODE_MOUNTS.data(paths.root);
     mkdirSync(cfg.src, { recursive: true });
     mkdirSync(data.src, { recursive: true });
-    args.push("--mount", `${cfg.src}:${cfg.dst}`);
-    args.push("--mount", `${data.src}:${data.dst}`);
+    yoloboxFlags.push("--mount", `${cfg.src}:${cfg.dst}`, "--mount", `${data.src}:${data.dst}`);
   }
 
+  const yoloboxCmd = extraArgs.length > 0
+    ? ["yolobox", ...yoloboxFlags, "run", tool, ...extraArgs]
+    : ["yolobox", tool, ...yoloboxFlags];
+
+  const args: string[] = ["tmux", "new-session", "-A", "-s", session, ...yoloboxCmd];
   const proc = Bun.spawn(args, { stdin: "inherit", stdout: "inherit", stderr: "inherit" });
   const code = await proc.exited;
   process.exit(code === 0 || code === 130 ? 0 : (code ?? 1));

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hook Creator"
+  short_description: "Design Codex hooks from official specs"
+  default_prompt: "Use $hook-creator to design Codex hooks for session hygiene or tool guardrails."

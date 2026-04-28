@@ -10,4 +10,4 @@ if (doctor.exitCode !== 0) process.exit(doctor.exitCode ?? 1);
 await Bun.sleep(1000);
 
 console.log(`${c.green}${c.bold}✓ 검증 통과. Codex 시작 중…${c.reset}\n`);
-await launchAgent("codex");
+await launchAgent("codex", process.argv.slice(2));

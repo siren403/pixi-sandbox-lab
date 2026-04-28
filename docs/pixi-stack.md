@@ -1,4 +1,4 @@
-# PixiJS Prototype Framework — 인수인계 문서
+# PixiJS Prototype Framework Research
 
 > 이 문서는 대화를 통해 설계된 프레임워크의 의도, 목표, 설계 결정 및 그 이유를 다른 에이전트(또는 개발자)가 컨텍스트 없이도 이어받을 수 있도록 작성되었다.
 

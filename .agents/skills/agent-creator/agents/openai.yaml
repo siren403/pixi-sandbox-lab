@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Creator"
+  short_description: "Create Codex custom agents and supporting skills"
+  default_prompt: "Use $agent-creator to design a Codex custom agent and any supporting skill."
