@@ -1,0 +1,77 @@
+#!/usr/bin/env bun
+//MISE description="초기 설정·수동 조정용 인터랙티브 bash로 샌드박스 진입"
+
+import { $ } from "bun";
+import { mkdirSync, writeFileSync, unlinkSync } from "node:fs";
+import { join } from "node:path";
+import { c, resolvePaths } from "./lib/shared.ts";
+
+// ─── 1. 환경 검증 ────────────────────────────────────────
+const doctor = await $`mise run doctor`.nothrow();
+if (doctor.exitCode !== 0) process.exit(doctor.exitCode ?? 1);
+await Bun.sleep(1000);
+
+// ─── 2. 경로·디렉토리 준비 ───────────────────────────────
+const paths = resolvePaths();
+const configDir = join(paths.root, ".opencode");
+const dataDir = join(paths.root, ".opencode-data");
+mkdirSync(configDir, { recursive: true });
+mkdirSync(dataDir, { recursive: true });
+
+console.log(`${c.yellow}${c.bold}→ bash 모드. 설정용 인터랙티브 쉘로 진입 중…${c.reset}\n`);
+
+// ─── 3. 부트스트랩 파일 작성 ─────────────────────────────
+const logFile = `${paths.root}/.mise/bootstrap.log`;
+const bootstrap = `#!/usr/bin/env bash
+LOG="${logFile}"
+echo "[$(date '+%H:%M:%S')] 부트스트랩 시작" | tee "$LOG"
+
+if ! command -v mise >/dev/null 2>&1; then
+  echo "→ mise 첫 설치 (named volume에 영속)" | tee -a "$LOG"
+  curl -fsSL https://mise.run | sh 2>&1 | tee -a "$LOG"
+fi
+
+export PATH="$HOME/.local/bin:$PATH"
+
+if ! grep -q 'mise activate' ~/.bashrc 2>/dev/null; then
+  echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+  echo 'eval "$(mise activate bash)"' >> ~/.bashrc
+  echo "→ ~/.bashrc에 mise activate 등록 완료" | tee -a "$LOG"
+fi
+
+eval "$(mise activate bash)"
+
+# core:bun이 mise-versions.jdx.dev의 잘못된 버전 목록(0.0.0-X)을 받는 버그 우회
+mise plugin list 2>/dev/null | grep -q '^bun$' \\
+  || mise plugin add bun https://github.com/cometkim/asdf-bun 2>&1 | tee -a "$LOG"
+
+mise install 2>&1 | tee -a "$LOG" || true
+
+echo "[$(date '+%H:%M:%S')] 부트스트랩 완료" | tee -a "$LOG"
+exec bash
+`;
+
+const bootstrapFile = `${paths.root}/.mise/.bootstrap-tmp.sh`;
+writeFileSync(bootstrapFile, bootstrap, { mode: 0o755 });
+
+// ─── 4. tmux + yolobox로 샌드박스 진입 ──────────────────
+const proc = Bun.spawn(
+  [
+    "tmux", "new-session", "-A", "-s", `bash-${paths.projectName}`,
+    "yolobox", "run",
+    "--mount", `${configDir}:/home/yolo/.config/opencode`,
+    "--mount", `${dataDir}:/home/yolo/.local/share/opencode`,
+    "bash", bootstrapFile,
+  ],
+  { stdin: "inherit", stdout: "inherit", stderr: "inherit" }
+);
+
+const code = await proc.exited;
+try { unlinkSync(bootstrapFile); } catch {}
+
+if (code === 0 || code === 130) {
+  console.log(`\n${c.dim}[harness] 세션 종료.${c.reset}`);
+  process.exit(0);
+}
+console.error(`\n${c.red}[harness] 실행 실패 (exit ${code})${c.reset}`);
+process.exit(code ?? 1);

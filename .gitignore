@@ -1,0 +1,9 @@
+.opencode/
+.opencode-data/
+.claude/
+.codex/
+.gemini/
+.copilot/
+.mise.local.toml
+.mise/bootstrap.log
+.mise/.bootstrap-tmp.sh

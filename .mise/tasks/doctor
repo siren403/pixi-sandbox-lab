@@ -1,0 +1,20 @@
+#!/usr/bin/env bun
+//MISE description="에이전트 하네스 환경 검증 (단독 실행 가능)"
+
+import { runDoctor } from "./lib/doctor.ts";
+import { c } from "./lib/shared.ts";
+
+const { failures, warnings } = await runDoctor();
+
+if (failures > 0) {
+  console.log(
+    `\n${c.red}${c.bold}✗ 필수 검증 ${failures}건 실패. 위 항목을 해결한 뒤 다시 실행하세요.${c.reset}\n`
+  );
+  process.exit(1);
+}
+
+if (warnings > 0) {
+  console.log(`\n${c.yellow}${c.bold}✓ 검증 통과 (경고 ${warnings}건).${c.reset}\n`);
+} else {
+  console.log(`\n${c.green}${c.bold}✓ 검증 통과.${c.reset}\n`);
+}
