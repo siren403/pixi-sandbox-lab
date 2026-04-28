@@ -43,11 +43,17 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 - `.agents/skills/agent-creator/references/codex-agent-spec.md`  
   Local reference for Codex custom agent locations, required fields, supported config, and Claude Code mapping.
 
+- `.agents/skills/agent-creator/agents/openai.yaml`  
+  UI metadata for the `agent-creator` skill.
+
 - `.agents/skills/hook-creator/SKILL.md`  
   Creates or updates Codex lifecycle hooks from official hook/config specs.
 
 - `.agents/skills/hook-creator/references/codex-hooks-spec.md`  
   Local reference for Codex hook events, command hook shape, stdin/stdout semantics, and guardrail limits.
+
+- `.agents/skills/hook-creator/agents/openai.yaml`  
+  UI metadata for the `hook-creator` skill.
 
 ### Codex Custom Agents
 
