@@ -51,6 +51,8 @@ Working rules:
 - When changing docs, keep the top-level README short and put domain details under docs/.
 - Prefer Bun/TypeScript for project-local harness scripts and hooks unless Python, shell, or another runtime is clearly better for the specific task.
 - Use Python primarily when matching official Codex examples, reusing Python-only tooling, or integrating with existing Python validation paths.
+- For non-trivial implementation plans, request `plan_reviewer` review before implementation.
+- Do not proceed when `plan_reviewer` blocks on unclear ownership, overengineering, runtime mismatch, irrelevant validation, missing inventory update, or missing closeout.
 
 Creator routing:
 - Custom agents: use agent-creator.
@@ -91,6 +93,7 @@ When asked for an implementation plan, use this format:
 4. Execution sequence with handoff points and stop/ask conditions.
 5. Validation and hook/task checks.
 6. Commit and clean-state closeout plan.
+7. Plan review result from `plan_reviewer` for non-trivial changes.
 """
 
 [[skills.config]]

@@ -18,6 +18,8 @@ Harness specs include:
 
 `harness_architect` is the gatekeeper for harness spec changes.
 
+`plan_reviewer` reviews non-trivial harness implementation plans before execution.
+
 The architect may use creator skills:
 
 - custom agent changes: `agent-creator`
@@ -45,14 +47,20 @@ The architect may use creator skills:
    - If role-specific, update the relevant `.codex/agents/*.toml`.
 
 5. **Validate**
-   - TOML: parse with Python `tomllib`.
+   - Prefer validation that proves the feature behavior.
+   - For project-local harness scripts and hooks, prefer Bun/TypeScript and direct command smoke tests.
+   - Use Python only for Python-native tools such as `quick_validate.py` or when explicitly justified.
    - Skills: check `SKILL.md` frontmatter has `name` and `description`; run `quick_validate.py` when PyYAML is available.
-   - Hooks: run the script with representative JSON stdin and validate config syntax.
+   - Hooks: run the hook command with representative JSON stdin and verify the user-visible outcome.
    - Tasks: run or dry-run the task where safe.
    - Skill validation: prefer `mise run validate-skills` so PyYAML and Python execution come from the project-scoped runtime.
    - Docs: search for stale paths or renamed files.
 
-6. **Report closeout**
+6. **Review the plan**
+   - For non-trivial changes, ask `plan_reviewer` to review the implementation plan before editing files.
+   - Do not proceed if the reviewer blocks on unclear ownership, overengineering, runtime mismatch, irrelevant validation, missing inventory update, or missing closeout.
+
+7. **Report closeout**
    - Summarize changed harness components.
    - Note validation results.
    - Note unresolved risks or setup requirements.
@@ -106,7 +114,7 @@ Use this format:
    - Conditions for stopping or asking the user.
 
 5. **Validation**
-   - Syntax/config parsing.
+   - Feature behavior checks.
    - Smoke tests.
    - Relevant `mise` tasks.
    - Dirty-state or hook checks when applicable.
@@ -116,10 +124,16 @@ Use this format:
    - Commit message suggestion.
    - Required final `git status --short` check.
 
+7. **Plan review**
+   - `plan_reviewer` verdict for non-trivial changes.
+   - Required plan edits before implementation.
+
 ## Anti-Patterns
 
 - Adding a skill, hook, custom agent, MCP server, plugin, or task without inventory registration.
 - Hiding project-wide policy inside one custom agent.
 - Using hooks for complex reasoning that belongs in a skill.
 - Using skills for deterministic checks that should be scripts or tasks.
+- Using shell or Python for project-local harness logic when Bun/TypeScript is sufficient.
+- Adding generic validation steps that do not prove the feature behavior.
 - Changing demo-project code as part of a harness spec change unless explicitly requested.

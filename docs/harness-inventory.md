@@ -60,6 +60,9 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 - `.codex/agents/harness-architect.toml`  
   Project-local custom agent responsible for cloud sandbox harness architecture, agent strategy, skills, hooks, MCP integration, and documentation boundaries.
 
+- `.codex/agents/plan-reviewer.toml`  
+  Project-local custom agent responsible for reviewing implementation plans before execution.
+
 ### Codex Hooks
 
 - None yet.

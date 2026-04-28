@@ -10,6 +10,7 @@ The current demonstration project is a PixiJS-based rapid game prototyping stack
 - `.agents/skills/agent-creator/` - project skill for designing Codex custom agents and related skill/plugin/MCP structure
 - `.agents/skills/hook-creator/` - project skill for designing Codex lifecycle hooks from official specs
 - `.codex/agents/harness-architect.toml` - Codex custom agent for sandbox harness architecture
+- `.codex/agents/plan-reviewer.toml` - Codex custom agent for implementation plan review
 - `.mise/tasks/validate-skills` - project-scoped Codex skill validation task
 - `docs/harness.md` - current PromptOps/yolobox agent harness notes
 - `docs/harness-inventory.md` - registry of current harness components and discovery paths
