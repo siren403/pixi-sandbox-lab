@@ -182,31 +182,27 @@ function animateTransition(
   return new Promise((resolve) => {
     const step = () => {
       const raw = durationMs <= 0 ? 1 : Math.min(1, (performance.now() - start) / durationMs);
-      const panelProgresses = panels.map((_panel, index) => {
-        const delay = index * 0.08;
-        const stretch = 0.82 + index * 0.04;
-        return clamp01((raw - delay) / stretch);
-      });
+      const travel = direction === "in" ? easeOutCubic(raw) : easeInCubic(raw);
       const panelProgress = direction === "in"
-        ? Math.max(...panelProgresses.map(easeOutExpo))
+        ? easeOutCubic(raw)
         : 1 - Math.min(1, easeInExpo(raw));
       const uiAlpha = direction === "in" ? smoothstep(raw) : 1 - smoothstep(raw);
 
       panels.forEach((panel, index) => {
-        const local = panelProgresses[index] ?? raw;
-        const eased = direction === "in" ? easeOutBack(local) : easeInBack(local);
         const targetX = width * (0.22 + index * 0.24);
         const offscreenLeft = -width * (0.86 + index * 0.16);
         const offscreenRight = width * (1.22 + index * 0.26);
+        const sweepOffset = Math.sin((raw * 1.45 + index * 0.18) * Math.PI) * width * 0.05;
+        const wobble = Math.sin((raw * 2.2 + index * 0.28) * Math.PI) * (20 + index * 6);
         panel.x = direction === "in"
-          ? lerp(offscreenLeft, targetX, eased)
-          : lerp(targetX, offscreenRight, eased);
-        panel.y = ctx.layout.visibleHeight / 2 + Math.sin((raw + index * 0.2) * Math.PI) * (26 + index * 8);
+          ? lerp(offscreenLeft, targetX, travel) + sweepOffset * (1 - raw)
+          : lerp(targetX, offscreenRight, travel) + sweepOffset * raw;
+        panel.y = ctx.layout.visibleHeight / 2 + wobble;
       });
 
       if (backdrop) backdrop.alpha = direction === "in" ? 0.54 * smoothstep(raw) : 0.54 * (1 - smoothstep(raw));
-      if (slashA) slashA.x = direction === "in" ? lerp(-width * 0.62, width * 0.58, easeOutBack(raw)) : lerp(width * 0.58, width * 1.34, easeInBack(raw));
-      if (slashB) slashB.x = direction === "in" ? lerp(-width * 0.78, width * 0.42, easeOutBack(clamp01(raw - 0.08))) : lerp(width * 0.42, width * 1.22, easeInBack(raw));
+      if (slashA) slashA.x = direction === "in" ? lerp(-width * 0.62, width * 0.58, easeOutCubic(raw)) : lerp(width * 0.58, width * 1.34, easeInCubic(raw));
+      if (slashB) slashB.x = direction === "in" ? lerp(-width * 0.78, width * 0.42, easeOutCubic(raw)) : lerp(width * 0.42, width * 1.22, easeInCubic(raw));
 
       setUiAlpha(root, uiAlpha);
       ctx.runtime.loadingOverlayAlpha = panelProgress;
@@ -274,14 +270,12 @@ function easeInExpo(value: number): number {
   return value <= 0 ? 0 : Math.pow(2, 10 * value - 10);
 }
 
-function easeOutBack(value: number): number {
-  const c1 = 1.42;
-  const c3 = c1 + 1;
-  return 1 + c3 * Math.pow(value - 1, 3) + c1 * Math.pow(value - 1, 2);
+function easeOutCubic(value: number): number {
+  const inverse = 1 - clamp01(value);
+  return 1 - inverse * inverse * inverse;
 }
 
-function easeInBack(value: number): number {
-  const c1 = 1.3;
-  const c3 = c1 + 1;
-  return c3 * value * value * value - c1 * value * value;
+function easeInCubic(value: number): number {
+  const clamped = clamp01(value);
+  return clamped * clamped * clamped;
 }
