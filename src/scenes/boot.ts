@@ -1,4 +1,5 @@
 import { Container, Graphics, Text } from "pixi.js";
+import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
 
 const speed = 260;
@@ -6,6 +7,12 @@ const speed = 260;
 type DemoState = {
   playerX: number;
   playerY: number;
+  canvasWidth: number;
+  canvasHeight: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  visibleWidth: number;
+  visibleHeight: number;
   rendered: boolean;
 };
 
@@ -16,7 +23,7 @@ declare global {
 }
 
 export const bootScene = scene({
-  load({ stage, app }) {
+  load({ stage, layout }) {
     const world = new Container();
 
     const player = new Graphics()
@@ -25,7 +32,7 @@ export const bootScene = scene({
       .stroke({ color: "#fef3c7", width: 3 });
 
     player.label = "player";
-    player.position.set(app.screen.width / 2, app.screen.height / 2);
+    player.position.set(layout.visibleWidth / 2, layout.visibleHeight / 2);
 
     const marker = new Graphics()
       .circle(0, 0, 7)
@@ -41,19 +48,25 @@ export const bootScene = scene({
         fontWeight: "600",
       },
     });
-    title.position.set(24, 22);
+    title.position.set(layout.referenceX + layout.safeArea.left + 36, layout.referenceY + layout.safeArea.top + 36);
 
     world.addChild(marker, player, title);
     stage.addChild(world);
 
-    window.__pixiDemoState = {
-      playerX: player.x,
-      playerY: player.y,
-      rendered: true,
-    };
+    syncDemoState(player.x, player.y, layout);
   },
 
-  update(dt, { stage, app, keyboard }) {
+  resize({ stage, layout }) {
+    const world = stage.children[0] as Container | undefined;
+    const player = world?.getChildByLabel("player") as Graphics | null;
+    if (!player) return;
+
+    player.x = clamp(player.x, 32, layout.visibleWidth - 32);
+    player.y = clamp(player.y, 32, layout.visibleHeight - 32);
+    syncDemoState(player.x, player.y, layout);
+  },
+
+  update(dt, { stage, keyboard, layout }) {
     const world = stage.children[0] as Container | undefined;
     const player = world?.getChildByLabel("player") as Graphics | null;
     if (!player) return;
@@ -72,13 +85,27 @@ export const bootScene = scene({
       player.y += (dy / length) * speed * dt;
     }
 
-    player.x = Math.max(32, Math.min(app.screen.width - 32, player.x));
-    player.y = Math.max(32, Math.min(app.screen.height - 32, player.y));
+    player.x = clamp(player.x, 32, layout.visibleWidth - 32);
+    player.y = clamp(player.y, 32, layout.visibleHeight - 32);
 
-    if (window.__pixiDemoState) {
-      window.__pixiDemoState.playerX = player.x;
-      window.__pixiDemoState.playerY = player.y;
-      window.__pixiDemoState.rendered = true;
-    }
+    syncDemoState(player.x, player.y, layout);
   },
 });
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function syncDemoState(playerX: number, playerY: number, layout: SurfaceLayout): void {
+  window.__pixiDemoState = {
+    playerX,
+    playerY,
+    canvasWidth: Math.round(layout.viewportWidth),
+    canvasHeight: Math.round(layout.viewportHeight),
+    viewportWidth: Math.round(window.innerWidth),
+    viewportHeight: Math.round(window.innerHeight),
+    visibleWidth: layout.visibleWidth,
+    visibleHeight: layout.visibleHeight,
+    rendered: true,
+  };
+}

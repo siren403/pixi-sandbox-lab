@@ -1,6 +1,6 @@
 import { Application, Container } from "pixi.js";
 import { createKeyboard } from "./keyboard";
-import type { Scene, SceneContext } from "./scene";
+import type { Scene, SceneContext, SurfaceLayout } from "./scene";
 
 export type GameOptions = {
   parent: string | HTMLElement;
@@ -22,6 +22,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
     autoDensity: true,
     resolution: Math.min(window.devicePixelRatio || 1, 2),
     preserveDrawingBuffer: true,
+    resizeTo: window,
   });
 
   parent.replaceChildren(app.canvas);
@@ -30,20 +31,90 @@ export async function createGame(options: GameOptions): Promise<Application> {
   app.stage.addChild(stage);
 
   const keyboard = createKeyboard();
-  const ctx: SceneContext = { app, stage, keyboard };
+  const layout = createSurfaceLayout(options.width, options.height, app.screen.width, app.screen.height);
+  const ctx: SceneContext = { app, stage, keyboard, layout };
+  updateSurfaceLayout(ctx, options.width, options.height);
   options.boot.load?.(ctx);
+
+  const onResize = () => {
+    updateSurfaceLayout(ctx, options.width, options.height);
+    options.boot.resize?.(ctx);
+  };
+  app.renderer.on("resize", onResize);
 
   app.ticker.add((ticker) => {
     options.boot.update?.(ticker.deltaMS / 1000, ctx);
   });
 
   window.addEventListener("beforeunload", () => {
+    app.renderer.off("resize", onResize);
     options.boot.unload?.(ctx);
     keyboard.destroy();
     app.destroy();
   });
 
   return app;
+}
+
+function createSurfaceLayout(
+  referenceWidth: number,
+  referenceHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): SurfaceLayout {
+  return {
+    referenceWidth,
+    referenceHeight,
+    viewportWidth,
+    viewportHeight,
+    scale: 1,
+    visibleWidth: viewportWidth,
+    visibleHeight: viewportHeight,
+    referenceX: 0,
+    referenceY: 0,
+    safeArea: { top: 0, right: 0, bottom: 0, left: 0 },
+  };
+}
+
+function updateSurfaceLayout(
+  ctx: SceneContext,
+  referenceWidth: number,
+  referenceHeight: number,
+): void {
+  const viewportWidth = ctx.app.screen.width;
+  const viewportHeight = ctx.app.screen.height;
+  const scale = Math.min(viewportWidth / referenceWidth, viewportHeight / referenceHeight);
+  const visibleWidth = viewportWidth / scale;
+  const visibleHeight = viewportHeight / scale;
+
+  ctx.layout.referenceWidth = referenceWidth;
+  ctx.layout.referenceHeight = referenceHeight;
+  ctx.layout.viewportWidth = viewportWidth;
+  ctx.layout.viewportHeight = viewportHeight;
+  ctx.layout.scale = scale;
+  ctx.layout.visibleWidth = visibleWidth;
+  ctx.layout.visibleHeight = visibleHeight;
+  ctx.layout.referenceX = (visibleWidth - referenceWidth) / 2;
+  ctx.layout.referenceY = (visibleHeight - referenceHeight) / 2;
+  ctx.layout.safeArea = readSafeArea(scale);
+
+  ctx.stage.scale.set(scale);
+}
+
+function readSafeArea(scale: number): SurfaceLayout["safeArea"] {
+  const style = getComputedStyle(document.documentElement);
+  return {
+    top: readCssPx(style, "--safe-area-inset-top") / scale,
+    right: readCssPx(style, "--safe-area-inset-right") / scale,
+    bottom: readCssPx(style, "--safe-area-inset-bottom") / scale,
+    left: readCssPx(style, "--safe-area-inset-left") / scale,
+  };
+}
+
+function readCssPx(style: CSSStyleDeclaration, name: string): number {
+  const value = style.getPropertyValue(name).trim();
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function resolveParent(parent: string | HTMLElement): HTMLElement {

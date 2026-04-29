@@ -5,6 +5,12 @@ declare global {
     __pixiDemoState?: {
       playerX: number;
       playerY: number;
+      canvasWidth: number;
+      canvasHeight: number;
+      viewportWidth: number;
+      viewportHeight: number;
+      visibleWidth: number;
+      visibleHeight: number;
       rendered: boolean;
     };
   }
@@ -27,13 +33,21 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
     .toBe(true);
 
   const box = await canvas.boundingBox();
-  expect(box?.width).toBeGreaterThan(100);
-  expect(box?.height).toBeGreaterThan(100);
+  const viewport = page.viewportSize();
+  expect(viewport).not.toBeNull();
+  expect(Math.round(box?.x ?? -1)).toBe(0);
+  expect(Math.round(box?.y ?? -1)).toBe(0);
+  expect(Math.round(box?.width ?? 0)).toBe(viewport?.width);
+  expect(Math.round(box?.height ?? 0)).toBe(viewport?.height);
 
   await expect.poll(() => hasVisibleCanvasPixels(page)).toBe(true);
 
   const before = await page.evaluate(() => window.__pixiDemoState);
   expect(before?.playerX).toBeGreaterThan(0);
+  expect(before?.canvasWidth).toBe(viewport?.width);
+  expect(before?.canvasHeight).toBe(viewport?.height);
+  expect(before?.visibleWidth).toBeGreaterThanOrEqual(1080);
+  expect(before?.visibleHeight).toBeGreaterThanOrEqual(1920);
 
   await page.keyboard.down("ArrowRight");
   await page.waitForTimeout(250);

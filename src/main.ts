@@ -4,8 +4,8 @@ import { bootScene } from "./scenes/boot";
 
 void createGame({
   parent: "#app",
-  width: 960,
-  height: 540,
+  width: 1080,
+  height: 1920,
   background: "#17202a",
   boot: bootScene,
 });

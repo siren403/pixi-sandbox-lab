@@ -13,8 +13,16 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "chromium",
-      use: { browserName: "chromium" },
+      name: "desktop-portrait",
+      use: { browserName: "chromium", viewport: { width: 540, height: 960 } },
+    },
+    {
+      name: "mobile-portrait",
+      use: {
+        ...devices["Pixel 7"],
+        browserName: "chromium",
+        viewport: { width: 412, height: 915 },
+      },
     },
   ],
   webServer: {
