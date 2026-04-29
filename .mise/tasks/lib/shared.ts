@@ -37,6 +37,7 @@ const YOLOBOX_FLAG_MAP: Record<string, string> = {
   "--host-auth":   "--codex-config",
   "--claude-auth": "--claude-config",
   "--gemini-auth": "--gemini-config",
+  "--gh-auth":     "--gh-token",
 };
 
 export function parseArgs(argv: string[]): { yoloboxFlags: string[]; toolArgs: string[] } {
