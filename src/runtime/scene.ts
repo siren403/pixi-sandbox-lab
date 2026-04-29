@@ -37,6 +37,8 @@ export type RuntimeState = {
   loadingProgress: number;
   loadingOverlayAlpha: number;
   loadingOverlayMaxAlpha: number;
+  transitionPanels: number;
+  transitionPanelMaxCount: number;
 };
 
 export type SceneContext = {

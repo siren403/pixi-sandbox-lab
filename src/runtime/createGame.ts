@@ -47,6 +47,8 @@ export async function createGame(options: GameOptions): Promise<Application> {
     loadingProgress: 0,
     loadingOverlayAlpha: 0,
     loadingOverlayMaxAlpha: 0,
+    transitionPanels: 0,
+    transitionPanelMaxCount: 0,
   };
   const layout = createSurfaceLayout(options.width, options.height, app.screen.width, app.screen.height);
   const pointer = createPointer(app.canvas, () => layout);

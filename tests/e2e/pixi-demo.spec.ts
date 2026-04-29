@@ -48,6 +48,8 @@ declare global {
       loadingProgress: number;
       loadingOverlayAlpha: number;
       loadingOverlayMaxAlpha: number;
+      transitionPanels: number;
+      transitionPanelMaxCount: number;
       loadingOverlayVisible: boolean;
     };
   }
@@ -96,6 +98,8 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(await page.evaluate(() => window.__pixiRuntimeState?.lastLoadingDurationMs ?? 0)).toBeGreaterThanOrEqual(490);
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingProgress ?? 0)).toBe(1);
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayMaxAlpha ?? 0)).toBeGreaterThan(0.95);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.transitionPanelMaxCount ?? 0)).toBeGreaterThanOrEqual(4);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.transitionPanels ?? 0)).toBe(0);
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingPhase)).toBe("idle");
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayAlpha ?? -1)).toBe(0);
 
