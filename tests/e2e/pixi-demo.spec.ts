@@ -110,6 +110,9 @@ test("renders the PixiJS demo with assets and input", async ({
     .poll(() => page.evaluate(() => window.__pixiDemoState?.rendered))
     .toBe(true);
   await expect.poll(() => page.evaluate(() => window.__pixiIntroState)).toBeUndefined();
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiRuntimeState?.lastLoadingDurationMs ?? 0))
+    .toBeGreaterThanOrEqual(490);
   const loadingDuration = await page.evaluate(() => window.__pixiRuntimeState?.lastLoadingDurationMs ?? 0);
   const loadingMinimumMs = await page.evaluate(() => window.__pixiRuntimeState?.loadingMinimumMs ?? 0);
   expect(loadingMinimumMs).toBeGreaterThanOrEqual(500);

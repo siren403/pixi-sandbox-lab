@@ -267,12 +267,16 @@ function countDebuggedNodes(container: Container): number {
 
 function buttonStyle(): Partial<CSSStyleDeclaration> {
   return {
+    alignItems: "center",
     minHeight: "36px",
     border: "1px solid rgba(238, 242, 246, 0.32)",
     borderRadius: "6px",
     background: "rgba(238, 242, 246, 0.08)",
     color: "#eef2f6",
+    display: "inline-flex",
     font: "600 12px Inter, system-ui, sans-serif",
+    justifyContent: "center",
+    lineHeight: "1",
     cursor: "pointer",
   };
 }

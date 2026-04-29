@@ -463,25 +463,27 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   });
 
   const componentY = y + margin * 0.4;
+  const buttonWidth = panelWidth * 0.38;
+  const buttonHeight = tokenValue(layout, { design: 92, minScreenPx: 48, maxScreenPx: 64 });
   const button = new Graphics()
-    .roundRect(0, 0, panelWidth * 0.38, tokenValue(layout, { design: 92, minScreenPx: 48, maxScreenPx: 64 }), 8 / layout.scale)
+    .roundRect(0, 0, buttonWidth, buttonHeight, 8 / layout.scale)
     .fill({ color: 0x0f766e, alpha: 0.94 })
     .stroke({ color: "#67e8f9", width: Math.max(2, 3 / layout.scale) });
   button.label = "ds-component-sample";
   button.position.set(startX, componentY);
   const buttonLabel = createLabel("Button", layout, { design: 34, minScreenPx: 18, maxScreenPx: 26 }, surfaceTheme.color.text);
   buttonLabel.anchor.set(0.5);
-  buttonLabel.position.set(button.x + button.width / 2, button.y + button.height / 2);
+  buttonLabel.position.set(button.x + buttonWidth / 2, button.y + buttonHeight / 2);
 
   const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
   const marker = new Graphics().circle(0, 0, markerRadius).fill(surfaceTheme.color.marker);
   marker.label = "ds-component-sample";
-  marker.position.set(startX + panelWidth * 0.55, componentY + button.height / 2);
+  marker.position.set(startX + panelWidth * 0.55, componentY + buttonHeight / 2);
 
   const motion = createInputTarget(layout);
   motion.label = "ds-motion-ring";
   motion.alpha = 0.78;
-  motion.position.set(startX + panelWidth * 0.76, componentY + button.height / 2);
+  motion.position.set(startX + panelWidth * 0.76, componentY + buttonHeight / 2);
 
   root.addChild(button, buttonLabel, marker, motion);
   layer.addChild(root);
