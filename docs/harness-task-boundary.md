@@ -75,7 +75,15 @@ Classify dirty files as:
 
 Clean only artifacts that are clearly temporary and created by the current task, or that the user explicitly asked to clean.
 
-Run relevant validation. Commit only when the user asked for commit closeout or clearly approved implementation with commit.
+Run relevant validation. For an approved implementation task, commit the intentional changes as part of closeout by default.
+
+Stop before committing when:
+
+- the user explicitly asked not to commit
+- validation failed
+- dirty files include unknown or user changes
+- the implementation scope no longer matches the approved plan
+- the work was exploratory and did not have prior implementation approval
 
 ### 5. Stop Hook
 
@@ -110,7 +118,7 @@ At task closeout, report:
 - validation run and result
 - files changed
 - files cleaned up
-- commit hash, if committed
+- commit hash, or why commit was intentionally skipped
 - remaining dirty files, if any
 - final `git status --short`
 

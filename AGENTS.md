@@ -75,6 +75,7 @@ Good future documents might include:
 ## Implementation Principles
 
 - For non-trivial work, use the task boundary flow: `task-plan` before implementation, `task-start` before editing, and `task-end` before final closeout.
+- Treat an approved implementation task as ending at a validated commit by default. Stop before committing only when the user explicitly says not to commit, validation fails, dirty files include unknown/user changes, or the implemented scope no longer matches the approved plan.
 - Start with the smallest runnable vertical slice before expanding architecture.
 - Prefer clear, inspectable code over engine-like generality.
 - Preserve the distinction between sandbox infrastructure and the demo application, but let discoveries in one inform the other.
