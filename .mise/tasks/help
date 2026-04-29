@@ -1,0 +1,49 @@
+#!/usr/bin/env bun
+//MISE description="태스크 사용법 출력"
+//MISE alias="h"
+
+import { c } from "./lib/shared.ts";
+
+const B = c.bold, R = c.reset, G = c.green, D = c.dim, Y = c.yellow, C = c.cyan;
+
+const section = (title: string) =>
+  console.log(`\n${B}${C}${title}${R}`);
+
+const task = (name: string, alias: string, desc: string) =>
+  console.log(`  ${B}${G}mise run ${name}${R}  ${D}(${alias})${R}  ${desc}`);
+
+const flag = (f: string, desc: string) =>
+  console.log(`    ${Y}${f}${R}  ${D}${desc}${R}`);
+
+const line = (text: string) => console.log(`  ${text}`);
+
+console.log(`\n${B}${C}Agent Harness — 사용법${R}`);
+
+section("에이전트 실행");
+task("codex",    "x", "OpenAI Codex  (full-auto)");
+task("claude",   "c", "Claude Code");
+task("gemini",   "g", "Gemini CLI");
+task("copilot",  "p", "GitHub Copilot");
+task("opencode", "o", "OpenCode");
+task("bash",     "  ", "수동 조정용 인터랙티브 bash");
+
+section("에이전트 공통 플래그");
+flag("--gh-auth",     "호스트 GitHub CLI 토큰을 샌드박스에 전달  (기본값: .mise.toml YOLOBOX_FLAGS)");
+flag("--claude-auth", "호스트 ~/.claude 인증 주입  (claude 전용)");
+flag("--gemini-auth", "호스트 ~/.gemini 인증 주입  (gemini 전용)");
+flag("--host-auth",   "호스트 ~/.codex  인증 주입  (codex 전용, 기본값: .mise.toml)");
+
+section("codex 서브커맨드 전달");
+line(`${B}mise run codex resume${R}           ${D}세션 picker 열기${R}`);
+line(`${B}mise run codex resume --last${R}    ${D}마지막 세션 바로 재개${R}`);
+line(`${B}mise run codex fork${R}             ${D}세션 분기${R}`);
+
+section("환경 검증 / 유틸");
+task("doctor",         "  ", "환경 검증");
+task("checkpoint",     "  ", "작업 checkpoint 생성 및 resume");
+task("task-flow",      "  ", "메인/detour 작업 흐름 상태 관리");
+task("validate-skills","  ", "Codex skill 구조 검증");
+
+section("설정");
+line(`${D}.mise.toml ${R}YOLOBOX_FLAGS  현재값: ${B}${process.env.YOLOBOX_FLAGS ?? "(없음)"}${R}`);
+console.log();
