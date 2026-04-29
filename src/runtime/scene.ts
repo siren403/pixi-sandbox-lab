@@ -28,6 +28,12 @@ export type SurfaceLayers = {
   debug: Container;
 };
 
+export type RuntimeState = {
+  loading: boolean;
+  sceneSwitches: number;
+  loadingOverlayShows: number;
+};
+
 export type SceneContext = {
   app: Application;
   stage: Container;
@@ -36,6 +42,7 @@ export type SceneContext = {
   keyboard: Keyboard;
   pointer: Pointer;
   layout: SurfaceLayout;
+  runtime: RuntimeState;
   switchScene: (scene: Scene) => void;
 };
 

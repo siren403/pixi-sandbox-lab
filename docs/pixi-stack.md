@@ -229,6 +229,8 @@ LÖVE는 비동기 문제가 없는 게 아니라 발생할 수 없는 구조다
 
 - `Scene.assets`는 정적 배열 또는 `(ctx) => 배열`을 받는다.
 - `SceneManager.switch()`는 기존 씬을 정리한 뒤 scene asset 목록을 평가하고 `ctx.assets.load()`를 await한다.
+- scene unload 이후 새 scene load 전까지 runtime-owned loading overlay를 `debug-layer`에 표시한다.
+- `window.__pixiRuntimeState`는 E2E용으로 loading 상태, scene switch 수, loading overlay 표시 수를 노출한다.
 - scene `load(ctx)`는 async가 아니며, 이 시점부터 `ctx.assets.get(source)`로 동기 접근한다.
 - `AssetRuntime`은 Pixi `Assets`를 감싸며, 준비되지 않은 asset을 `get()`하면 명시적으로 에러를 낸다.
 - 첫 검증 asset은 Vite import URL을 사용한다. Pages의 하위 경로 배포를 피하려고 `public` 절대 경로 대신 번들러가 관리하는 `src/assets/*` import를 쓴다.

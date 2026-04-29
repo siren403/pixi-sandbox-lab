@@ -38,6 +38,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
 
   const keyboard = createKeyboard();
   const assets = createAssetRuntime();
+  const runtime = { loading: false, sceneSwitches: 0, loadingOverlayShows: 0 };
   const layout = createSurfaceLayout(options.width, options.height, app.screen.width, app.screen.height);
   const pointer = createPointer(app.canvas, () => layout);
   const sceneManager = new SceneManager();
@@ -49,6 +50,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
     keyboard,
     pointer,
     layout,
+    runtime,
     switchScene: (scene) => {
       void sceneManager.switch(scene, ctx).catch((error: unknown) => {
         console.error(error);

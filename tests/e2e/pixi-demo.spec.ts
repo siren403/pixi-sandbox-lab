@@ -33,6 +33,12 @@ declare global {
       debuggedNodes: number;
       layerLabels: string[];
     };
+    __pixiRuntimeState?: {
+      loading: boolean;
+      sceneSwitches: number;
+      loadingOverlayShows: number;
+      loadingOverlayVisible: boolean;
+    };
   }
 }
 
@@ -79,6 +85,8 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(rectsOverlap(before?.titleBounds, before?.markerBounds)).toBe(false);
   expect(before?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
   expect(before?.scene).toBe("boot");
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.loading)).toBe(false);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayVisible)).toBe(false);
 
   await page.keyboard.down("ArrowRight");
   await page.waitForTimeout(250);
@@ -108,9 +116,19 @@ test("renders the PixiJS demo with assets and input", async ({
   const sceneSwitch = page.getByTestId("layout-debug-scene");
   await expect(layoutDebugPanel).toBeVisible();
   await expect(sceneSwitch).toBeVisible();
+  const runtimeSwitches = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitches ?? 0);
+  const loadingOverlayShows = await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0);
 
   await sceneSwitch.click();
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiRuntimeState?.sceneSwitches ?? 0))
+    .toBeGreaterThan(runtimeSwitches);
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0))
+    .toBeGreaterThan(loadingOverlayShows);
   await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("alternate");
+  await expect.poll(() => page.evaluate(() => window.__pixiRuntimeState?.loading)).toBe(false);
+  await expect.poll(() => page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayVisible)).toBe(false);
   const alternate = await page.evaluate(() => window.__pixiDemoState);
   expect(alternate?.sceneSwitches).toBe(1);
   expect(alternate?.titleBounds.width).toBeGreaterThan(0);
