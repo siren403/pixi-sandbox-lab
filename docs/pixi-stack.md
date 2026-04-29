@@ -24,6 +24,102 @@
 4. 매 프레임 로직은 LÖVE 스타일 콜백으로 작성한다.
 5. 오브젝트 단위 로직은 경량 ECS로 재사용 가능하게 한다.
 
+### 앱 서페이스 정책
+
+브라우저 게임 표면은 **portrait-first adaptive-expand** 정책을 기본으로 한다.
+
+이 정책은 Unity의 `Canvas Scaler > Scale With Screen Size > Expand`와 anchor layout 조합, Phaser의 `Scale.EXPAND`에 가까운 방향이다. PixiJS에는 동일한 고수준 정책이 없으므로 런타임이 viewport resize, visible bounds, anchor layout, safe area를 직접 계산한다.
+
+#### 기준
+
+- 기준 해상도: `1080 x 1920`
+- 방향: portrait-first
+- canvas: viewport 전체를 채운다.
+- 레터박스: 기본 정책에서 허용하지 않는다.
+- 비율 왜곡: 허용하지 않는다.
+- 중요 콘텐츠 crop: 허용하지 않는다.
+
+#### `adaptive-expand`
+
+```text
+referenceWidth = 1080
+referenceHeight = 1920
+
+scale = min(viewportWidth / referenceWidth, viewportHeight / referenceHeight)
+
+visibleDesignWidth = viewportWidth / scale
+visibleDesignHeight = viewportHeight / scale
+```
+
+의미:
+
+- 렌더러/canvas는 실제 viewport 전체 크기로 resize한다.
+- 게임 좌표는 기준 해상도 기반 design space를 사용한다.
+- 실제 viewport 비율이 기준 비율과 다르면 visible design bounds를 가로 또는 세로로 확장한다.
+- 중요한 게임플레이 영역과 UI는 확장된 bounds와 safe area 안에서 anchor 기반으로 재배치한다.
+- 배경과 비핵심 장식 요소만 확장 영역을 채우거나 넘칠 수 있다.
+
+```text
+┌──────────────────── actual viewport / canvas ───────────────────┐
+│ expanded area    ┌──── 1080 x 1920 reference area ────┐          │
+│                  │                                     │          │
+│                  │   gameplay-critical content          │          │
+│                  │   and UI stay visible                │          │
+│                  │                                     │          │
+│                  └─────────────────────────────────────┘          │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### Anchor layout
+
+씬과 UI는 절대 viewport 픽셀에 직접 고정하지 않는다. 배치 기준은 design space anchor와 offset이다.
+
+지원해야 할 anchor 예:
+
+- `center`
+- `top-left`, `top-center`, `top-right`
+- `middle-left`, `middle-right`
+- `bottom-left`, `bottom-center`, `bottom-right`
+
+anchor 계산은 `visibleDesignWidth`, `visibleDesignHeight`, safe area inset을 반영해야 한다.
+
+#### Safe area
+
+모바일 웹과 PWA 대응을 위해 edge-to-edge viewport를 쓰되, 중요한 UI는 safe area 밖으로 나가지 않는다.
+
+- HTML viewport meta는 `viewport-fit=cover`를 포함한다.
+- CSS `env(safe-area-inset-*)` 값을 수집한다.
+- 런타임 layout context에 safe area를 design-space 단위로 제공한다.
+- bottom/top anchored UI는 safe area inset을 기본 offset에 포함한다.
+
+#### 입력과 모바일 기본 동작
+
+게임 surface에서는 브라우저 기본 제스처가 게임 입력을 방해하지 않아야 한다.
+
+- `touch-action: none`
+- `user-select: none`
+- 필요 시 `contextmenu` 차단
+- long press text selection 방지
+- pointer/touch 입력은 keyboard 입력과 별도 런타임 모듈로 추가한다.
+
+#### 명시적으로 기본값에서 제외
+
+- `cover/crop`: 화면은 채우지만 중요한 콘텐츠가 잘릴 수 있으므로 기본 정책으로 쓰지 않는다.
+- `stretch`: 비율 왜곡이 발생하므로 쓰지 않는다.
+- `contain/fit` 단독: 중요한 콘텐츠는 보존하지만 레터박스가 생기므로 기본 정책으로 쓰지 않는다.
+
+#### 다음 구현 요구사항
+
+현재 vertical slice의 `960 x 540` 데모 설정은 임시 검증값이다. 런타임 확장 전 아래를 구현해야 한다.
+
+- `1080 x 1920` reference resolution 적용
+- renderer/canvas viewport resize
+- `adaptive-expand` visible bounds 계산
+- anchor-based layout helper
+- safe area 수집과 layout context 주입
+- desktop portrait, mobile portrait viewport E2E
+- canvas가 viewport 전체를 채우고, 중요 콘텐츠가 crop되지 않음을 검증하는 Playwright checks
+
 ---
 
 ## 2. 탐색했다 기각한 방향들

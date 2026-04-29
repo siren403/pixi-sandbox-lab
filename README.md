@@ -67,3 +67,5 @@ mise run check-browser
 ```
 
 The intended direct-play path for shared demos is GitHub Pages from a static Vite build. The initial slice keeps Pages to that direction only; deployment workflow details can be added after the local and headless checks are stable.
+
+Before expanding runtime features, define and implement the PixiJS app surface policy from `docs/pixi-stack.md`: `1080x1920` portrait-first `adaptive-expand`, safe-area aware anchor layout, and desktop/mobile viewport E2E coverage.
