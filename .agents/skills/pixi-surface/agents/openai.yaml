@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pixi Surface"
+  short_description: "Design and validate PixiJS app surface systems"
+  default_prompt: "Use pixi-surface to plan or review PixiJS responsive surface, safe area, tokens, UI components, and viewport E2E checks."

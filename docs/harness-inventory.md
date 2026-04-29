@@ -57,6 +57,15 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 - `.agents/skills/hook-creator/agents/openai.yaml`  
   UI metadata for the `hook-creator` skill.
 
+- `.agents/skills/pixi-surface/SKILL.md`
+  Provides PixiJS app surface architecture guidance for adaptive-expand, safe area, design tokens, Pixi UI primitives, `@pixi/layout`, `@pixi/ui`, and viewport E2E checks.
+  Discovery route: `pixi_surface_architect` reads this skill first; `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`.
+  Expected user/agent: parent Codex and Pixi surface specialists planning or reviewing browser game surface work.
+  Validation: `mise run validate-skills`.
+
+- `.agents/skills/pixi-surface/agents/openai.yaml`
+  UI metadata for the `pixi-surface` skill.
+
 - `.agents/skills/checkpoint/SKILL.md`
   Creates, verifies, and consumes project-local continuation checkpoints for context-boundary continuity and contamination prevention.
   Discovery route: `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`; users can invoke `$checkpoint`.
@@ -112,6 +121,12 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 
 - `.codex/agents/plan-reviewer.toml`  
   Project-local custom agent responsible for reviewing implementation plans before execution.
+
+- `.codex/agents/pixi-surface-architect.toml`
+  Project-local custom agent responsible for PixiJS app surface architecture, design tokens, safe-area aware layout, `@pixi/layout` / `@pixi/ui` boundaries, and viewport E2E validation.
+  Discovery route: `harness_architect` boot discovery reads `.codex/agents/*.toml`; parent Codex may spawn this specialist for Pixi surface planning or review.
+  Expected user/agent: parent Codex and Pixi implementation agents needing specialist review before surface/UI changes.
+  Validation: TOML syntax smoke check and `mise run validate-skills` for its supporting skill.
 
 ### Codex Hooks
 

@@ -9,12 +9,14 @@ The current demonstration project is a PixiJS-based rapid game prototyping stack
 - `AGENTS.md` - working instructions for agents in this repository
 - `.agents/skills/agent-creator/` - project skill for designing Codex custom agents and related skill/plugin/MCP structure
 - `.agents/skills/hook-creator/` - project skill for designing Codex lifecycle hooks from official specs
+- `.agents/skills/pixi-surface/` - project skill for PixiJS surface policy, layout, UI components, and viewport validation
 - `.agents/skills/checkpoint/` - project skill for creating and consuming continuation checkpoints
 - `.agents/skills/task-plan/` - project skill for implementation planning and plan review
 - `.agents/skills/task-start/` - project skill for recording task baseline before edits
 - `.agents/skills/task-end/` - project skill for validation, cleanup, optional commit, and clean closeout
 - `.codex/agents/harness-architect.toml` - Codex custom agent for sandbox harness architecture
 - `.codex/agents/plan-reviewer.toml` - Codex custom agent for implementation plan review
+- `.codex/agents/pixi-surface-architect.toml` - Codex custom agent for PixiJS app surface architecture
 - `.mise/tasks/checkpoint` - checkpoint state manager for context-boundary continuity
 - `.mise/tasks/validate-skills` - project-scoped Codex skill validation task
 - `docs/harness-task-boundary.md` - task planning, start, end, audit follow-up, and dirty-hook workflow
