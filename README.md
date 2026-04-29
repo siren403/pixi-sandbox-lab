@@ -40,3 +40,30 @@ Create a runnable browser demo inside the sandbox:
 - per-frame `update(dt)`
 - keyboard-controlled movement
 - notes on any sandbox networking or setup details discovered
+
+## PixiJS Demo
+
+The first runnable slice uses Bun, Vite, TypeScript, PixiJS, and headless Playwright.
+
+```bash
+bun install
+bun run pw:install
+bun run dev
+```
+
+Open the Vite URL shown by the dev server. Inside the sandbox the app binds to `0.0.0.0`, while automated checks use `http://127.0.0.1:5173` from inside the container.
+
+Build and E2E checks:
+
+```bash
+bun run build
+bun run test:e2e
+```
+
+`bun run pw:install` sets `PLAYWRIGHT_BROWSERS_PATH=0`, so the Chromium browser binary is installed under the project dependency tree instead of the user cache. If Chromium fails to launch because Linux libraries are missing, treat that as sandbox setup work and install the Chromium system dependencies separately:
+
+```bash
+sudo ./node_modules/.bin/playwright install-deps chromium
+```
+
+The intended direct-play path for shared demos is GitHub Pages from a static Vite build. The initial slice keeps Pages to that direction only; deployment workflow details can be added after the local and headless checks are stable.

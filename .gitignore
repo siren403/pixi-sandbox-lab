@@ -15,3 +15,7 @@
 .mise/.bootstrap-tmp.sh
 .codex-harness/
 .venv/
+node_modules/
+dist/
+test-results/
+playwright-report/
