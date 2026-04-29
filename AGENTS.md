@@ -8,6 +8,10 @@ The goal is to develop a practical workflow for building real projects inside a 
 
 The current demonstration domain is a fast PixiJS-based game prototyping stack inspired by LÖVE2D. It is being used as a concrete project to exercise the sandbox workflow, not as a detached design exercise.
 
+## Communication
+
+- Respond to the user in Korean unless they request another language.
+
 ## Current Context
 
 - `README.md` is the top-level orientation for the combined sandbox and demo-project workspace.
