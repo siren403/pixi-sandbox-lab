@@ -1,6 +1,16 @@
+import * as PIXI from "pixi.js";
+import type {} from "gsap";
 import { gsap } from "gsap/gsap-core";
+import { PixiPlugin } from "gsap/PixiPlugin";
+
+gsap.registerPlugin(PixiPlugin);
+PixiPlugin.registerPIXI(PIXI);
 
 export type MotionAnimation = ReturnType<typeof gsap.to>;
+type MotionTarget = object | null;
+type MotionVars = Omit<gsap.TweenVars, "pixi"> & {
+  pixi?: PixiPlugin.Vars;
+};
 
 type ProgressAnimationOptions = {
   durationMs: number;
@@ -36,7 +46,7 @@ export function createLoopingMotion(targets: Array<MotionAnimation | null>): Mot
 export function rotateLoop(target: object | null, rotation: number, duration: number): MotionAnimation | null {
   if (!target) return null;
   return gsap.to(target, {
-    rotation,
+    pixi: { rotation },
     duration,
     ease: "none",
     repeat: -1,
@@ -44,15 +54,19 @@ export function rotateLoop(target: object | null, rotation: number, duration: nu
 }
 
 export function pulseScaleLoop(target: { scale?: { x: number; y: number } } | null): MotionAnimation | null {
-  if (!target?.scale) return null;
-  return gsap.to(target.scale, {
-    x: 1.06,
-    y: 1.06,
+  if (!target) return null;
+  return gsap.to(target, {
+    pixi: { scaleX: 1.06, scaleY: 1.06 },
     duration: 0.42,
     ease: "sine.inOut",
     repeat: -1,
     yoyo: true,
   });
+}
+
+export function pixiTo(target: MotionTarget, vars: MotionVars): MotionAnimation | null {
+  if (!target) return null;
+  return gsap.to(target, vars);
 }
 
 export function stopMotion(animations: MotionAnimation[]): void {

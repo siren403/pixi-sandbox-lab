@@ -2,6 +2,7 @@ import { Container, Graphics } from "pixi.js";
 import {
   animateProgress,
   createLoopingMotion,
+  pixiTo,
   pulseScaleLoop,
   rotateLoop,
   stopMotion,
@@ -161,12 +162,42 @@ function createLoadingLoopMotion(root: Container): MotionAnimation[] {
   const loop = root.getChildByLabel("loading-loop", true);
   const loopInner = root.getChildByLabel("loading-loop-inner", true);
   const loopDot = root.getChildByLabel("loading-loop-dot", true);
+  const slashA = root.getChildByLabel("transition-slash-a", true);
+  const slashB = root.getChildByLabel("transition-slash-b", true);
 
   return createLoopingMotion([
-    rotateLoop(loop, Math.PI * 2, 1.12),
-    rotateLoop(loopInner, -Math.PI * 2, 1.72),
-    rotateLoop(loopDot, Math.PI * 2, 0.82),
+    rotateLoop(loop, 360, 1.12),
+    rotateLoop(loopInner, -360, 1.72),
+    rotateLoop(loopDot, 360, 0.82),
     pulseScaleLoop(loop),
+    pixiTo(loop, {
+      pixi: { skewX: 5, skewY: -3 },
+      duration: 0.68,
+      ease: "sine.inOut",
+      repeat: -1,
+      yoyo: true,
+    }),
+    pixiTo(loopInner, {
+      pixi: { scaleX: 0.92, scaleY: 1.12, skewX: -7 },
+      duration: 0.46,
+      ease: "sine.inOut",
+      repeat: -1,
+      yoyo: true,
+    }),
+    pixiTo(slashA, {
+      pixi: { tint: "#e0f2fe", scaleX: 1.08 },
+      duration: 0.52,
+      ease: "sine.inOut",
+      repeat: -1,
+      yoyo: true,
+    }),
+    pixiTo(slashB, {
+      pixi: { tint: "#fde68a", scaleX: 0.92 },
+      duration: 0.62,
+      ease: "sine.inOut",
+      repeat: -1,
+      yoyo: true,
+    }),
   ]);
 }
 
