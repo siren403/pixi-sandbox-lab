@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="메인 작업과 detour 작업 흐름 상태 관리"
+set -euo pipefail
+
+ROOT="${MISE_PROJECT_ROOT:-$(pwd)}"
+cd "$ROOT"
+
+exec bun scripts/harness/task-flow.ts "$@"

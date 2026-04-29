@@ -51,6 +51,41 @@ State flow:
 6. If approved, run `mise run task-plan-loop -- approve` and present the approved plan to the user.
 7. If blocked, out of loop budget, or redirected by the user, run `mise run task-plan-loop -- stop --reason "<reason>"` unless the state manager already moved the loop to `blocked`.
 
+## Detour Handling
+
+Use `task-flow` when planning reveals work that may interrupt or delay the current main task.
+
+Terms:
+
+- `main task`: the primary work stream.
+- `detour`: a temporary side path discovered during planning or implementation.
+- `main-first`: default decision; record or defer the detour and keep the main task moving.
+- `detour-first`: pause the main task and handle the detour first.
+
+Trigger kinds:
+
+- `explicit`: the user directly asks to handle, defer, or resume a detour.
+- `agent-detected`: the agent finds a prerequisite, harness gap, or workflow risk.
+- `policy`: harness policy requires a pause, such as validation failure, dirty-state risk, plan-review block, or scope drift.
+
+Rules:
+
+- Prefer `main-first` unless the detour blocks correctness, validation, clean closeout, reliable agent coordination, or the user explicitly chooses `detour-first`.
+- Persist detour decisions through `mise run task-flow -- ...`; do not rely only on chat memory to remember why the main task paused or where to resume.
+- Use the term `detour`, not `branch`, for task-flow work to avoid confusion with Git branches.
+- If task-flow shows an active paused or detoured flow, include the resume target in the plan.
+- Do not use detours to silently expand implementation scope. If a detour requires files outside the approved plan, stop and update the plan first.
+
+Common commands:
+
+- `mise run task-flow -- start --id <id> --title "<title>" --resume-hint "<next step>"`
+- `mise run task-flow -- detour propose --id <id> --title "<title>" --trigger <explicit|agent-detected|policy> --reason "<reason>"`
+- `mise run task-flow -- detour defer --id <id> --decision main-first --reason "<reason>"`
+- `mise run task-flow -- detour start --id <id> --decision detour-first --reason "<reason>"`
+- `mise run task-flow -- complete --id <id> --commit <hash>`
+- `mise run task-flow -- resume`
+- `mise run task-flow -- status`
+
 ## Plan Format
 
 1. **Feature Summary**

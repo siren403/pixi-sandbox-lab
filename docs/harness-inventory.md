@@ -171,6 +171,12 @@ When MCP config is added, register:
   Expected user/agent: parent Codex and harness agents running persisted plan/review loops.
   Validation: state transition smoke tests with `start`, `status`, `review`, `revise`, `approve`, and `stop`.
 
+- `.mise/tasks/task-flow`
+  Official mise execution surface for the task-flow detour state manager. Agents should call `mise run task-flow -- <command>` instead of invoking the Bun script directly.
+  Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
+  Expected user/agent: parent Codex and harness agents recording main tasks, detours, main-first/detour-first decisions, and resume targets.
+  Validation: state transition smoke tests with `start`, `status`, `detour propose`, `detour defer`, `detour start`, `complete`, `resume`, and invalid transition cases.
+
 - `.mise/tasks/lib/shared.ts`  
   Shared launcher utilities.
 
@@ -193,6 +199,12 @@ When MCP config is added, register:
   Expected user/agent: parent Codex and harness agents using review-loop planning.
   Validation: run through the mise wrapper so the same command surface is used by agents.
 
+- `scripts/harness/task-flow.ts`
+  Bun/TypeScript state manager for persisted main task and detour flow. It is the only supported writer for `.codex-harness/task-flow.json` and enforces single-active-task state, detour decisions, resume behavior, duplicate id rejection, and malformed state failures.
+  Discovery route: `.mise/tasks/task-flow` points to this script; `harness_architect` discovery includes `scripts/harness/*`.
+  Expected user/agent: parent Codex and harness agents coordinating detours without relying on chat memory.
+  Validation: run through the mise wrapper so the same command surface is used by agents.
+
 ### Tracking Policy
 
 - `.gitignore`  
@@ -202,10 +214,10 @@ When MCP config is added, register:
   Validation: `git check-ignore` for local state and tracked Codex config/hook exceptions, plus final `git status --short`.
 
 - `.codex-harness/`  
-  Ignored local runtime state directory for harness workflows. The first registered state file is `.codex-harness/task-plan-loop.json`, managed only by `scripts/harness/task-plan-loop.ts`.
+  Ignored local runtime state directory for harness workflows. Registered state files include `.codex-harness/task-plan-loop.json`, managed only by `scripts/harness/task-plan-loop.ts`, and `.codex-harness/task-flow.json`, managed only by `scripts/harness/task-flow.ts`.
   Discovery route: `.gitignore`, this inventory, and the relevant state manager documentation.
   Expected user/agent: parent Codex and harness agents recovering or inspecting active local harness workflow state.
-  Validation: `git check-ignore -v .codex-harness/task-plan-loop.json`.
+  Validation: `git check-ignore -v .codex-harness/task-plan-loop.json` and `git check-ignore -v .codex-harness/task-flow.json`.
 
 ### Harness Documentation
 

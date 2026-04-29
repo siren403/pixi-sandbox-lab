@@ -62,6 +62,40 @@ Keep implementation within the approved scope.
 
 If the task expands into new skills, hooks, agents, tasks, MCP config, or app/demo code that was not planned, stop and re-plan.
 
+### Detours
+
+A `detour` is a temporary side path discovered while a main task is being planned or implemented. Use this term instead of `branch` so it is not confused with Git branches.
+
+Use `task-flow` when a detour needs to be remembered across turns, commits, context compaction, or session restart:
+
+```bash
+mise run task-flow -- status
+```
+
+Decision policy:
+
+- `main-first` is the default. Record or defer the detour and keep the main task moving.
+- `detour-first` is for blockers. Pause the main task and handle the detour first only when it blocks correctness, validation, clean closeout, reliable agent coordination, or the user explicitly chooses it.
+
+Trigger types:
+
+- `explicit`: the user directly asks to handle, defer, or resume a detour.
+- `agent-detected`: an agent finds a prerequisite, harness gap, or workflow risk.
+- `policy`: harness policy requires a pause, such as validation failure, dirty-state risk, plan-review block, or scope drift.
+
+Typical flow:
+
+```text
+main task active
+  -> detour proposed
+  -> main-first: detour deferred, main continues
+  -> detour-first: main paused, detour active
+  -> detour completed
+  -> main resumed
+```
+
+Do not use a detour to silently expand scope. If the detour requires files outside the approved plan, stop and re-plan before editing those files.
+
 ### 4. End
 
 Use `$task-end` before final response or commit closeout.
