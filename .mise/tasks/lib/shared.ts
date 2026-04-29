@@ -33,6 +33,22 @@ export function resolvePaths(): HarnessPaths {
   return { root, projectName };
 }
 
+const YOLOBOX_FLAG_MAP: Record<string, string> = {
+  "--host-auth":   "--codex-config",
+  "--claude-auth": "--claude-config",
+  "--gemini-auth": "--gemini-config",
+};
+
+export function parseArgs(argv: string[]): { yoloboxFlags: string[]; toolArgs: string[] } {
+  const yoloboxFlags: string[] = [];
+  const toolArgs: string[] = [];
+  for (const arg of argv) {
+    const mapped = YOLOBOX_FLAG_MAP[arg];
+    mapped ? yoloboxFlags.push(mapped) : toolArgs.push(arg);
+  }
+  return { yoloboxFlags, toolArgs };
+}
+
 // opencode만 프로젝트별 마운트 사용; 나머지는 yolobox-home 공유 볼륨으로 관리
 const OPENCODE_MOUNTS = {
   config: (root: string) => ({
@@ -45,26 +61,29 @@ const OPENCODE_MOUNTS = {
   }),
 };
 
-export async function launchAgent(tool: string, extraArgs: string[] = []): Promise<never> {
+export async function launchAgent(
+  tool: string,
+  extraArgs: string[] = [],
+  yoloboxFlags: string[] = [],
+): Promise<never> {
   const paths = resolvePaths();
   const session = `${tool}-${paths.projectName}`;
 
-  // yolobox tool shortcuts don't accept extra args — must use `yolobox run <tool>` for passthrough.
-  // For opencode, project-specific --mount flags must appear before the subcommand.
-  const yoloboxFlags: string[] = [];
+  // opencode uses project-scoped mounts; collect them as yolobox global flags.
+  // All yolobox flags go before the subcommand so they aren't forwarded to the tool.
+  const allYoloboxFlags = [...yoloboxFlags];
   if (tool === "opencode") {
     const cfg = OPENCODE_MOUNTS.config(paths.root);
     const data = OPENCODE_MOUNTS.data(paths.root);
     mkdirSync(cfg.src, { recursive: true });
     mkdirSync(data.src, { recursive: true });
-    yoloboxFlags.push("--mount", `${cfg.src}:${cfg.dst}`, "--mount", `${data.src}:${data.dst}`);
+    allYoloboxFlags.push("--mount", `${cfg.src}:${cfg.dst}`, "--mount", `${data.src}:${data.dst}`);
   }
 
-  const yoloboxCmd = extraArgs.length > 0
-    ? ["yolobox", ...yoloboxFlags, "run", tool, ...extraArgs]
-    : ["yolobox", tool, ...yoloboxFlags];
+  // yolobox tool shortcuts don't accept extra args — must use `yolobox run <tool>` for passthrough.
+  const subCmd = extraArgs.length > 0 ? ["run", tool, ...extraArgs] : [tool];
+  const args = ["tmux", "new-session", "-A", "-s", session, "yolobox", ...allYoloboxFlags, ...subCmd];
 
-  const args: string[] = ["tmux", "new-session", "-A", "-s", session, ...yoloboxCmd];
   const proc = Bun.spawn(args, { stdin: "inherit", stdout: "inherit", stderr: "inherit" });
   const code = await proc.exited;
   process.exit(code === 0 || code === 130 ? 0 : (code ?? 1));
