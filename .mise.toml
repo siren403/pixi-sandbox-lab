@@ -1,3 +1,8 @@
 [tools]
 bun = "latest"
 python = "3.12"
+
+[env]
+# 모든 에이전트 태스크에 기본 적용할 yolobox 플래그 (공백 구분)
+# 가능한 값: --gh-auth --host-auth --claude-auth --gemini-auth
+YOLOBOX_FLAGS = "--gh-auth"

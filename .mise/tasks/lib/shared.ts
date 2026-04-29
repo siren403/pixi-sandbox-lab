@@ -41,11 +41,18 @@ const YOLOBOX_FLAG_MAP: Record<string, string> = {
 };
 
 export function parseArgs(argv: string[]): { yoloboxFlags: string[]; toolArgs: string[] } {
+  // Merge YOLOBOX_FLAGS env (from .mise.toml [env]) with argv; deduplicate mapped flags.
+  const envArgs = (process.env.YOLOBOX_FLAGS ?? "").split(/\s+/).filter(Boolean);
+  const seen = new Set<string>();
   const yoloboxFlags: string[] = [];
   const toolArgs: string[] = [];
-  for (const arg of argv) {
+  for (const arg of [...envArgs, ...argv]) {
     const mapped = YOLOBOX_FLAG_MAP[arg];
-    mapped ? yoloboxFlags.push(mapped) : toolArgs.push(arg);
+    if (mapped) {
+      if (!seen.has(mapped)) { seen.add(mapped); yoloboxFlags.push(mapped); }
+    } else {
+      toolArgs.push(arg);
+    }
   }
   return { yoloboxFlags, toolArgs };
 }
