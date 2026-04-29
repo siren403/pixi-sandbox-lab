@@ -1,4 +1,3 @@
-import { LayoutContainer } from "@pixi/layout/components";
 import { Container, Graphics, Text } from "pixi.js";
 import { screenValue, surfaceTheme, tokenValue } from "../runtime/surface";
 import type { SurfaceLayout } from "../runtime/scene";
@@ -38,7 +37,7 @@ export const bootScene = scene({
     const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
     const titleFontSize = tokenValue(layout, surfaceTheme.font.title);
 
-    const hud = new LayoutContainer();
+    const hud = new Container();
     hud.label = "hud";
     configureHudLayout(hud, layout);
 
@@ -86,7 +85,7 @@ export const bootScene = scene({
   resize({ app, stage, layout }) {
     const world = stage.children[0] as Container | undefined;
     const player = world?.getChildByLabel("player") as Graphics | null;
-    const hud = world?.getChildByLabel("hud") as LayoutContainer | null;
+    const hud = world?.getChildByLabel("hud") as Container | null;
     if (!player) return;
 
     const playerPadding = tokenValue(layout, surfaceTheme.size.player) / 2;
@@ -130,7 +129,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function configureHudLayout(hud: LayoutContainer, layout: SurfaceLayout): void {
+function configureHudLayout(hud: Container, layout: SurfaceLayout): void {
   const margin = tokenValue(layout, surfaceTheme.spacing.screen);
   const hudHeight = tokenValue(layout, surfaceTheme.font.title) * 1.25;
   hud.position.set(layout.referenceX + layout.safeArea.left + margin, layout.referenceY + layout.safeArea.top + margin);
