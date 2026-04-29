@@ -90,6 +90,16 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     marginBottom: "6px",
   });
 
+  const designSystemButton = document.createElement("button");
+  designSystemButton.type = "button";
+  designSystemButton.dataset.testid = "layout-debug-design-system";
+  designSystemButton.textContent = "DS";
+  Object.assign(designSystemButton.style, {
+    ...buttonStyle(),
+    width: "100%",
+    marginBottom: "6px",
+  });
+
   const reloadButton = document.createElement("button");
   reloadButton.type = "button";
   reloadButton.dataset.testid = "layout-debug-reload";
@@ -108,7 +118,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     lineHeight: "1.45",
   });
 
-  panel.append(header, filterRow, sceneButton, reloadButton, stats);
+  panel.append(header, filterRow, sceneButton, designSystemButton, reloadButton, stats);
 
   let enabled = false;
   let filter: LayoutDebugFilter = "all";
@@ -158,12 +168,17 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     window.dispatchEvent(new CustomEvent("pixi:scene-switch"));
   };
 
+  const onDesignSystemClick = () => {
+    window.dispatchEvent(new CustomEvent("pixi:design-system"));
+  };
+
   const onReloadClick = () => {
     window.location.reload();
   };
 
   toggle.addEventListener("click", onToggleClick);
   sceneButton.addEventListener("click", onSceneClick);
+  designSystemButton.addEventListener("click", onDesignSystemClick);
   reloadButton.addEventListener("click", onReloadClick);
   for (const [value, button] of filterButtons) {
     button.addEventListener("click", () => onFilterClick(value));
@@ -179,6 +194,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     app.ticker.remove(syncLayoutFlags);
     toggle.removeEventListener("click", onToggleClick);
     sceneButton.removeEventListener("click", onSceneClick);
+    designSystemButton.removeEventListener("click", onDesignSystemClick);
     reloadButton.removeEventListener("click", onReloadClick);
     panel.remove();
     void app.renderer.layout.enableDebug(false);

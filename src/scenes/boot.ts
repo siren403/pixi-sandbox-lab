@@ -33,14 +33,24 @@ type DemoState = {
   rendered: boolean;
 };
 
+type DesignSystemState = {
+  scene: "design-system";
+  swatches: number;
+  typeSamples: number;
+  componentSamples: number;
+  layerLabels: string[];
+  rendered: boolean;
+};
+
 declare global {
   interface Window {
     __pixiDemoState?: DemoState;
+    __pixiDesignSystemState?: DesignSystemState;
   }
 }
 
 let sceneSwitches = 0;
-let removeSceneSwitchListener: (() => void) | null = null;
+let removeDebugListeners: (() => void) | null = null;
 
 type MotionPlayer = Graphics & {
   targetX?: number;
@@ -106,8 +116,13 @@ export const bootScene = scene({
     layers.ui.addChild(hud);
     layers.world.addChild(assetOrb, inputTarget, player);
     app.renderer.layout.update(layers.root);
-    removeSceneSwitchListener = installSceneSwitchListener(() => {
-      if (switchScene(alternateScene, "debug")) sceneSwitches += 1;
+    removeDebugListeners = installDebugSceneListeners({
+      onScene: () => {
+        if (switchScene(alternateScene, "debug")) sceneSwitches += 1;
+      },
+      onDesignSystem: () => {
+        if (switchScene(designSystemScene, "debug")) sceneSwitches += 1;
+      },
     });
 
     syncDemoState("boot", player.x, player.y, layout, layers.root, undefined, assets.isReady(demoOrbUrl));
@@ -197,8 +212,8 @@ export const bootScene = scene({
   },
 
   unload({ layers }) {
-    removeSceneSwitchListener?.();
-    removeSceneSwitchListener = null;
+    removeDebugListeners?.();
+    removeDebugListeners = null;
     clearSceneLayers(layers.world, layers.ui);
     window.__pixiDemoState = undefined;
   },
@@ -254,8 +269,13 @@ export const alternateScene = scene({
     layers.ui.addChild(hud);
     layers.world.addChild(assetOrb, player);
     app.renderer.layout.update(layers.root);
-    removeSceneSwitchListener = installSceneSwitchListener(() => {
-      if (switchScene(bootScene, "debug")) sceneSwitches += 1;
+    removeDebugListeners = installDebugSceneListeners({
+      onScene: () => {
+        if (switchScene(bootScene, "debug")) sceneSwitches += 1;
+      },
+      onDesignSystem: () => {
+        if (switchScene(designSystemScene, "debug")) sceneSwitches += 1;
+      },
     });
 
     syncDemoState("alternate", player.x, player.y, layout, layers.root, undefined, assets.isReady(demoOrbUrl));
@@ -286,10 +306,54 @@ export const alternateScene = scene({
   },
 
   unload({ layers }) {
-    removeSceneSwitchListener?.();
-    removeSceneSwitchListener = null;
+    removeDebugListeners?.();
+    removeDebugListeners = null;
     clearSceneLayers(layers.world, layers.ui);
     window.__pixiDemoState = undefined;
+  },
+});
+
+export const designSystemScene = scene({
+  loading: { minimumMs: 0 },
+
+  load({ app, layers, layout, switchScene }) {
+    renderDesignSystem(layers.ui, layout);
+    app.renderer.layout.update(layers.root);
+    removeDebugListeners = installDebugSceneListeners({
+      onScene: () => {
+        if (switchScene(bootScene, "debug")) sceneSwitches += 1;
+      },
+      onDesignSystem: () => undefined,
+    });
+    syncDesignSystemState(layout, layers.root);
+  },
+
+  resize({ app, layers, layout }) {
+    clearSceneLayers(layers.ui);
+    renderDesignSystem(layers.ui, layout);
+    app.renderer.layout.update(layers.root);
+    syncDesignSystemState(layout, layers.root);
+  },
+
+  update(dt, { layers, keyboard, layout, switchScene }) {
+    if (keyboard.wasPressed("x")) {
+      if (switchScene(bootScene, "scene")) sceneSwitches += 1;
+      return;
+    }
+
+    const motion = layers.ui.getChildByLabel("ds-motion-ring", true) as Graphics | null;
+    if (motion) {
+      motion.rotation += dt * 1.8;
+      motion.alpha = 0.62 + Math.sin(performance.now() * 0.006) * 0.18;
+    }
+    syncDesignSystemState(layout, layers.root);
+  },
+
+  unload({ layers }) {
+    removeDebugListeners?.();
+    removeDebugListeners = null;
+    clearSceneLayers(layers.world, layers.ui);
+    window.__pixiDesignSystemState = undefined;
   },
 });
 
@@ -346,6 +410,100 @@ function createInputTarget(layout: SurfaceLayout): Graphics {
   return target;
 }
 
+function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
+  const root = new Container({ label: "design-system-root" });
+  const margin = tokenValue(layout, surfaceTheme.spacing.screen);
+  const panelWidth = Math.min(layout.visibleWidth - margin * 2, 900 / layout.scale);
+  const startX = layout.referenceX + layout.safeArea.left + margin;
+  let y = layout.referenceY + layout.safeArea.top + margin;
+
+  const title = createLabel("Design System", layout, { design: 68, minScreenPx: 28, maxScreenPx: 48 }, surfaceTheme.color.text);
+  title.label = "ds-title";
+  title.position.set(startX, y);
+  root.addChild(title);
+  y += tokenValue(layout, { design: 96, minScreenPx: 46, maxScreenPx: 72 });
+
+  const tokenLabel = createLabel("Color tokens", layout, { design: 34, minScreenPx: 18, maxScreenPx: 26 }, "#bfdbfe");
+  tokenLabel.label = "ds-token-label";
+  tokenLabel.position.set(startX, y);
+  root.addChild(tokenLabel);
+  y += tokenValue(layout, { design: 56, minScreenPx: 30, maxScreenPx: 42 });
+
+  const swatches = [
+    surfaceTheme.color.player,
+    surfaceTheme.color.playerStroke,
+    surfaceTheme.color.marker,
+    surfaceTheme.color.text,
+    "#38bdf8",
+    "#facc15",
+  ];
+  const swatchSize = tokenValue(layout, { design: 104, minScreenPx: 44, maxScreenPx: 70 });
+  swatches.forEach((color, index) => {
+    const swatch = new Graphics()
+      .roundRect(0, 0, swatchSize, swatchSize, 8 / layout.scale)
+      .fill(color)
+      .stroke({ color: "#e5e7eb", width: Math.max(1, 2 / layout.scale), alpha: 0.6 });
+    swatch.label = "ds-swatch";
+    swatch.position.set(startX + index * (swatchSize + margin * 0.42), y);
+    root.addChild(swatch);
+  });
+  y += swatchSize + margin;
+
+  const typeSamples = [
+    ["Title", surfaceTheme.font.title],
+    ["Body", { design: 34, minScreenPx: 18, maxScreenPx: 26 }],
+    ["Caption", { design: 24, minScreenPx: 14, maxScreenPx: 18 }],
+  ] as const;
+  typeSamples.forEach(([text, size], index) => {
+    const sample = createLabel(text, layout, size, index === 0 ? surfaceTheme.color.text : "#cbd5e1");
+    sample.label = "ds-type-sample";
+    sample.position.set(startX, y);
+    root.addChild(sample);
+    y += tokenValue(layout, { design: 60, minScreenPx: 30, maxScreenPx: 44 });
+  });
+
+  const componentY = y + margin * 0.4;
+  const button = new Graphics()
+    .roundRect(0, 0, panelWidth * 0.38, tokenValue(layout, { design: 92, minScreenPx: 48, maxScreenPx: 64 }), 8 / layout.scale)
+    .fill({ color: 0x0f766e, alpha: 0.94 })
+    .stroke({ color: "#67e8f9", width: Math.max(2, 3 / layout.scale) });
+  button.label = "ds-component-sample";
+  button.position.set(startX, componentY);
+  const buttonLabel = createLabel("Button", layout, { design: 34, minScreenPx: 18, maxScreenPx: 26 }, surfaceTheme.color.text);
+  buttonLabel.anchor.set(0.5);
+  buttonLabel.position.set(button.x + button.width / 2, button.y + button.height / 2);
+
+  const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
+  const marker = new Graphics().circle(0, 0, markerRadius).fill(surfaceTheme.color.marker);
+  marker.label = "ds-component-sample";
+  marker.position.set(startX + panelWidth * 0.55, componentY + button.height / 2);
+
+  const motion = createInputTarget(layout);
+  motion.label = "ds-motion-ring";
+  motion.alpha = 0.78;
+  motion.position.set(startX + panelWidth * 0.76, componentY + button.height / 2);
+
+  root.addChild(button, buttonLabel, marker, motion);
+  layer.addChild(root);
+}
+
+function createLabel(
+  text: string,
+  layout: SurfaceLayout,
+  size: { design: number; minScreenPx?: number; maxScreenPx?: number },
+  color: string,
+): Text {
+  return new Text({
+    text,
+    style: {
+      fill: color,
+      fontFamily: "Inter, system-ui, sans-serif",
+      fontSize: tokenValue(layout, size),
+      fontWeight: "600",
+    },
+  });
+}
+
 function updateInputTarget(target: Graphics | null, dt: number): void {
   if (!target || target.alpha <= 0) return;
   target.rotation += dt * 2.2;
@@ -392,6 +550,26 @@ function syncDemoState(
   };
 }
 
+function syncDesignSystemState(layout: SurfaceLayout, stage: Container): void {
+  window.__pixiDesignSystemState = {
+    scene: "design-system",
+    swatches: countChildrenByLabel(stage, "ds-swatch"),
+    typeSamples: countChildrenByLabel(stage, "ds-type-sample"),
+    componentSamples: countChildrenByLabel(stage, "ds-component-sample"),
+    layerLabels: stage.children.map((child) => child.label ?? ""),
+    rendered: layout.visibleWidth > 0,
+  };
+}
+
+function countChildrenByLabel(container: Container, label: string): number {
+  let count = 0;
+  for (const child of container.children) {
+    if (child.label === label) count += 1;
+    if (child instanceof Container) count += countChildrenByLabel(child, label);
+  }
+  return count;
+}
+
 function getPixiBounds(stage: Container, label: string): { x: number; y: number; width: number; height: number } {
   const child = stage.getChildByLabel(label, true);
   const bounds = child?.getBounds();
@@ -408,8 +586,13 @@ function clearSceneLayers(...layers: Container[]): void {
   }
 }
 
-function installSceneSwitchListener(handler: () => void): () => void {
-  const listener = () => handler();
-  window.addEventListener("pixi:scene-switch", listener);
-  return () => window.removeEventListener("pixi:scene-switch", listener);
+function installDebugSceneListeners(handlers: { onScene: () => void; onDesignSystem: () => void }): () => void {
+  const sceneListener = () => handlers.onScene();
+  const designSystemListener = () => handlers.onDesignSystem();
+  window.addEventListener("pixi:scene-switch", sceneListener);
+  window.addEventListener("pixi:design-system", designSystemListener);
+  return () => {
+    window.removeEventListener("pixi:scene-switch", sceneListener);
+    window.removeEventListener("pixi:design-system", designSystemListener);
+  };
 }

@@ -32,6 +32,14 @@ declare global {
       buttonBounds: { x: number; y: number; width: number; height: number };
       rendered: boolean;
     };
+    __pixiDesignSystemState?: {
+      scene: "design-system";
+      swatches: number;
+      typeSamples: number;
+      componentSamples: number;
+      layerLabels: string[];
+      rendered: boolean;
+    };
     __pixiLayoutDebug?: {
       enabled: boolean;
       filter: "all" | "world" | "ui";
@@ -163,8 +171,10 @@ test("renders the PixiJS demo with assets and input", async ({
   const layoutDebugPanel = page.getByTestId("layout-debug-panel");
   const layoutDebug = page.getByTestId("layout-debug-toggle");
   const sceneSwitch = page.getByTestId("layout-debug-scene");
+  const designSystem = page.getByTestId("layout-debug-design-system");
   await expect(layoutDebugPanel).toBeVisible();
   await expect(sceneSwitch).toBeVisible();
+  await expect(designSystem).toBeVisible();
   const runtimeSwitches = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitches ?? 0);
   const loadingOverlayShows = await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0);
   const sceneSwitchRequests = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitchRequests ?? 0);
@@ -202,6 +212,18 @@ test("renders the PixiJS demo with assets and input", async ({
   await sceneSwitch.click();
   await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("boot");
   expect(await page.evaluate(() => window.__pixiDemoState?.sceneSwitches)).toBe(2);
+
+  await designSystem.click();
+  await expect.poll(() => page.evaluate(() => window.__pixiDesignSystemState?.rendered)).toBe(true);
+  const designSystemState = await page.evaluate(() => window.__pixiDesignSystemState);
+  expect(designSystemState?.scene).toBe("design-system");
+  expect(designSystemState?.swatches).toBeGreaterThanOrEqual(6);
+  expect(designSystemState?.typeSamples).toBeGreaterThanOrEqual(3);
+  expect(designSystemState?.componentSamples).toBeGreaterThanOrEqual(2);
+  expect(designSystemState?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
+
+  await sceneSwitch.click();
+  await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("boot");
 
   await expect(layoutDebug).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByTestId("layout-debug-stats")).toContainText("world-layer");
