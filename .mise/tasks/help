@@ -9,8 +9,8 @@ const B = c.bold, R = c.reset, G = c.green, D = c.dim, Y = c.yellow, C = c.cyan;
 const section = (title: string) =>
   console.log(`\n${B}${C}${title}${R}`);
 
-const task = (name: string, alias: string, desc: string) =>
-  console.log(`  ${B}${G}mise run ${name}${R}  ${D}(${alias})${R}  ${desc}`);
+const task = (name: string, alias: string | null, desc: string) =>
+  console.log(`  ${B}${G}mise run ${name}${R}${alias ? `  ${D}(${alias})${R}` : ""}  ${desc}`);
 
 const flag = (f: string, desc: string) =>
   console.log(`    ${Y}${f}${R}  ${D}${desc}${R}`);
@@ -25,7 +25,7 @@ task("claude",   "c", "Claude Code");
 task("gemini",   "g", "Gemini CLI");
 task("copilot",  "p", "GitHub Copilot");
 task("opencode", "o", "OpenCode");
-task("bash",     "  ", "수동 조정용 인터랙티브 bash");
+task("bash",     null, "수동 조정용 인터랙티브 bash");
 
 section("에이전트 공통 플래그");
 flag("--gh-auth",     "호스트 GitHub CLI 토큰을 샌드박스에 전달  (기본값: .mise.toml YOLOBOX_FLAGS)");
@@ -39,10 +39,10 @@ line(`${B}mise run codex resume --last${R}    ${D}마지막 세션 바로 재개
 line(`${B}mise run codex fork${R}             ${D}세션 분기${R}`);
 
 section("환경 검증 / 유틸");
-task("doctor",         "  ", "환경 검증");
-task("checkpoint",     "  ", "작업 checkpoint 생성 및 resume");
-task("task-flow",      "  ", "메인/detour 작업 흐름 상태 관리");
-task("validate-skills","  ", "Codex skill 구조 검증");
+task("doctor",         null, "환경 검증");
+task("checkpoint",     null, "작업 checkpoint 생성 및 resume");
+task("task-flow",      null, "메인/detour 작업 흐름 상태 관리");
+task("validate-skills",null, "Codex skill 구조 검증");
 
 section("설정");
 line(`${D}.mise.toml ${R}YOLOBOX_FLAGS  현재값: ${B}${process.env.YOLOBOX_FLAGS ?? "(없음)"}${R}`);
