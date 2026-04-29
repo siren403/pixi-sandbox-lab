@@ -180,6 +180,18 @@ When MCP config is added, register:
 - `.mise/tasks/validate-skills`  
   Use the project-scoped mise Python runtime and `.venv` to run Codex skill validation. Reports each valid project skill by name and path.
 
+- `.mise/tasks/setup-browser`
+  Prepares the sandbox for headless browser validation. Runs Bun dependency install, project-local Playwright Chromium install, Chromium Linux dependency install, and the browser environment smoke check.
+  Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
+  Expected user/agent: parent Codex and harness agents preparing browser app/game validation before implementation or E2E runs.
+  Validation: `mise run setup-browser`.
+
+- `.mise/tasks/check-browser`
+  Verifies the prepared headless browser environment without changing app code. Checks project dependencies, project-local Playwright browser installation, Playwright version, and a headless Chromium launch.
+  Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
+  Expected user/agent: parent Codex and harness agents confirming browser validation readiness before app work.
+  Validation: `mise run check-browser`.
+
 - `.mise/tasks/checkpoint`
   Official mise execution surface for the checkpoint continuity guard. Agents should call `mise run checkpoint -- <command>` instead of invoking the Bun script directly.
   Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
@@ -219,6 +231,12 @@ When MCP config is added, register:
   Discovery route: `.mise/tasks/checkpoint` points to this script; `harness_architect` discovery includes `scripts/harness/*`.
   Expected user/agent: parent Codex and harness agents guarding context boundaries and continuation points.
   Validation: run through the mise wrapper so the same command surface is used by agents; resume smoke tests should verify the structured `continuation` output.
+
+- `scripts/harness/browser-env.ts`
+  Bun/TypeScript helper for headless browser validation setup and checks. It is invoked by `.mise/tasks/setup-browser` and `.mise/tasks/check-browser`.
+  Discovery route: `.mise/tasks/setup-browser`, `.mise/tasks/check-browser`, and harness script discovery.
+  Expected user/agent: parent Codex and harness agents preparing or verifying browser-app validation in the sandbox.
+  Validation: `mise run setup-browser` and `mise run check-browser`.
 
 - `scripts/harness/task-plan-loop.ts`  
   Bun/TypeScript state manager for persisted task-plan review loops. It is the only supported writer for `.codex-harness/task-plan-loop.json` and enforces loop bounds, terminal states, and invalid transition failures.

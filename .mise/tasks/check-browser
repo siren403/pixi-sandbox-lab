@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Headless browser 검증 환경 확인"
+set -euo pipefail
+
+ROOT="${MISE_PROJECT_ROOT:-$(pwd)}"
+cd "$ROOT"
+
+exec mise exec bun -- bun scripts/harness/browser-env.ts check

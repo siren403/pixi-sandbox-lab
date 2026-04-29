@@ -47,7 +47,7 @@ The first runnable slice uses Bun, Vite, TypeScript, PixiJS, and headless Playwr
 
 ```bash
 bun install
-bun run pw:install
+mise run setup-browser
 bun run dev
 ```
 
@@ -60,10 +60,10 @@ bun run build
 bun run test:e2e
 ```
 
-`bun run pw:install` sets `PLAYWRIGHT_BROWSERS_PATH=0`, so the Chromium browser binary is installed under the project dependency tree instead of the user cache. If Chromium fails to launch because Linux libraries are missing, treat that as sandbox setup work and install the Chromium system dependencies separately:
+`mise run setup-browser` installs Bun dependencies, installs the Playwright Chromium binary with `PLAYWRIGHT_BROWSERS_PATH=0`, installs Chromium Linux dependencies for the sandbox, and runs a headless Chromium launch smoke check. To verify an already prepared sandbox:
 
 ```bash
-sudo ./node_modules/.bin/playwright install-deps chromium
+mise run check-browser
 ```
 
 The intended direct-play path for shared demos is GitHub Pages from a static Vite build. The initial slice keeps Pages to that direction only; deployment workflow details can be added after the local and headless checks are stable.
