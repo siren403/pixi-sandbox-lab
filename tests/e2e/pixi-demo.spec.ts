@@ -40,9 +40,14 @@ declare global {
       layerLabels: string[];
     };
     __pixiRuntimeState?: {
+      appMode: "interactive" | "transitioning" | "loading" | "destroyed";
       loading: boolean;
       loadingPhase: "idle" | "in" | "loading" | "out";
       sceneSwitches: number;
+      sceneSwitchRequests: number;
+      acceptedCommands: number;
+      ignoredCommands: number;
+      runningCommands: string[];
       loadingOverlayShows: number;
       loadingMinimumMs: number;
       lastLoadingDurationMs: number;
@@ -107,6 +112,9 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(await page.evaluate(() => window.__pixiRuntimeState?.transitionPanels ?? 0)).toBe(0);
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingPhase)).toBe("idle");
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayAlpha ?? -1)).toBe(0);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.appMode)).toBe("interactive");
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.acceptedCommands ?? 0)).toBe(1);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.runningCommands ?? [])).toEqual([]);
 
   const before = await page.evaluate(() => window.__pixiDemoState);
   expect(before?.playerX).toBeGreaterThan(0);
@@ -158,8 +166,15 @@ test("renders the PixiJS demo with assets and input", async ({
   await expect(sceneSwitch).toBeVisible();
   const runtimeSwitches = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitches ?? 0);
   const loadingOverlayShows = await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0);
+  const sceneSwitchRequests = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitchRequests ?? 0);
+  const acceptedCommands = await page.evaluate(() => window.__pixiRuntimeState?.acceptedCommands ?? 0);
+  const ignoredCommands = await page.evaluate(() => window.__pixiRuntimeState?.ignoredCommands ?? 0);
 
-  await sceneSwitch.click();
+  await sceneSwitch.evaluate((button) => {
+    for (let index = 0; index < 5; index += 1) {
+      (button as HTMLButtonElement).click();
+    }
+  });
   await expect
     .poll(() => page.evaluate(() => window.__pixiRuntimeState?.sceneSwitches ?? 0))
     .toBeGreaterThan(runtimeSwitches);
@@ -169,6 +184,13 @@ test("renders the PixiJS demo with assets and input", async ({
   await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("alternate");
   await expect.poll(() => page.evaluate(() => window.__pixiRuntimeState?.loading)).toBe(false);
   await expect.poll(() => page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayVisible)).toBe(false);
+  await expect.poll(() => page.evaluate(() => window.__pixiRuntimeState?.appMode)).toBe("interactive");
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitchRequests ?? 0)).toBe(sceneSwitchRequests + 5);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.acceptedCommands ?? 0)).toBe(acceptedCommands + 1);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.ignoredCommands ?? 0)).toBeGreaterThanOrEqual(ignoredCommands + 4);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0)).toBe(loadingOverlayShows + 1);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.transitionPanels ?? 0)).toBe(0);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.runningCommands ?? [])).toEqual([]);
   const alternate = await page.evaluate(() => window.__pixiDemoState);
   expect(alternate?.sceneSwitches).toBe(1);
   expect(alternate?.titleBounds.width).toBeGreaterThan(0);

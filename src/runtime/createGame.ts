@@ -1,10 +1,12 @@
 import "@pixi/layout";
 import { Application, Container } from "pixi.js";
 import { createAssetRuntime } from "./assets";
+import { createCommandRuntime } from "./commandRuntime";
 import { createKeyboard } from "./keyboard";
 import { createPointer } from "./pointer";
 import type { Scene, SceneContext, SurfaceLayers, SurfaceLayout } from "./scene";
 import { SceneManager } from "./sceneManager";
+import { syncTransitionState } from "./transition";
 
 export type GameOptions = {
   parent: string | HTMLElement;
@@ -39,9 +41,14 @@ export async function createGame(options: GameOptions): Promise<Application> {
   const keyboard = createKeyboard();
   const assets = createAssetRuntime();
   const runtime = {
+    appMode: "interactive" as const,
     loading: false,
     loadingPhase: "idle" as const,
     sceneSwitches: 0,
+    sceneSwitchRequests: 0,
+    acceptedCommands: 0,
+    ignoredCommands: 0,
+    runningCommands: [],
     loadingOverlayShows: 0,
     loadingMinimumMs: 0,
     lastLoadingDurationMs: 0,
@@ -54,6 +61,10 @@ export async function createGame(options: GameOptions): Promise<Application> {
   const layout = createSurfaceLayout(options.width, options.height, app.screen.width, app.screen.height);
   const pointer = createPointer(app.canvas, () => layout);
   const sceneManager = new SceneManager();
+  const commands = createCommandRuntime({
+    runtime,
+    onChange: () => syncTransitionState(ctx),
+  });
   const ctx: SceneContext = {
     app,
     stage,
@@ -63,14 +74,13 @@ export async function createGame(options: GameOptions): Promise<Application> {
     pointer,
     layout,
     runtime,
-    switchScene: (scene) => {
-      void sceneManager.switch(scene, ctx).catch((error: unknown) => {
-        console.error(error);
-      });
+    switchScene: (scene, source = "scene") => {
+      return commands.requestSceneSwitch(scene, source, () => sceneManager.switch(scene, ctx));
     },
   };
   updateSurfaceLayout(ctx, options.width, options.height);
   await sceneManager.start(options.boot, ctx);
+  syncTransitionState(ctx);
   const destroyLayoutDebug = await maybeInstallLayoutDebug(app, layers.root);
 
   const onResize = () => {
@@ -86,6 +96,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
   window.addEventListener("beforeunload", () => {
     app.renderer.off("resize", onResize);
     destroyLayoutDebug();
+    commands.destroy();
     sceneManager.destroy(ctx);
     keyboard.destroy();
     pointer.destroy();

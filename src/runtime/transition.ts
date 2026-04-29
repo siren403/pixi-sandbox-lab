@@ -59,9 +59,14 @@ export function createTransition(ctx: SceneContext): TransitionController {
 
 export function syncTransitionState(ctx: SceneContext): void {
   window.__pixiRuntimeState = {
+    appMode: ctx.runtime.appMode,
     loading: ctx.runtime.loading,
     loadingPhase: ctx.runtime.loadingPhase,
     sceneSwitches: ctx.runtime.sceneSwitches,
+    sceneSwitchRequests: ctx.runtime.sceneSwitchRequests,
+    acceptedCommands: ctx.runtime.acceptedCommands,
+    ignoredCommands: ctx.runtime.ignoredCommands,
+    runningCommands: ctx.runtime.runningCommands,
     loadingOverlayShows: ctx.runtime.loadingOverlayShows,
     loadingMinimumMs: ctx.runtime.loadingMinimumMs,
     lastLoadingDurationMs: ctx.runtime.lastLoadingDurationMs,

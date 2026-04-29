@@ -4,9 +4,14 @@ import { createTransition, minimumLoadingMsRange, syncTransitionState } from "./
 declare global {
   interface Window {
     __pixiRuntimeState?: {
+      appMode: "interactive" | "transitioning" | "loading" | "destroyed";
       loading: boolean;
       loadingPhase: "idle" | "in" | "loading" | "out";
       sceneSwitches: number;
+      sceneSwitchRequests: number;
+      acceptedCommands: number;
+      ignoredCommands: number;
+      runningCommands: string[];
       loadingOverlayShows: number;
       loadingMinimumMs: number;
       lastLoadingDurationMs: number;
@@ -52,6 +57,7 @@ export class SceneManager {
 
       if (transition) {
         ctx.runtime.loadingPhase = "loading";
+        ctx.runtime.appMode = "loading";
         syncTransitionState(ctx);
       }
 
@@ -67,6 +73,7 @@ export class SceneManager {
       if (transition) {
         transition.updateProgress(1);
         ctx.runtime.loadingPhase = "out";
+        ctx.runtime.appMode = "transitioning";
         syncTransitionState(ctx);
         await transition.animateOut();
       }
@@ -95,6 +102,7 @@ export class SceneManager {
   destroy(ctx: SceneContext): void {
     this.switchId += 1;
     ctx.runtime.loading = false;
+    ctx.runtime.appMode = "destroyed";
     ctx.runtime.loadingPhase = "idle";
     ctx.runtime.loadingOverlayAlpha = 0;
     this.current?.unload?.(ctx);

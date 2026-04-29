@@ -36,7 +36,7 @@ export const introScene = scene({
     const startByPointer = pointer.wasPressed() && containsPoint(startButtonBounds, pointerPosition.x, pointerPosition.y);
     const startByKeyboard = keyboard.wasPressed("enter") || keyboard.wasPressed(" ");
     if (startByPointer || startByKeyboard) {
-      switchScene(bootScene);
+      switchScene(bootScene, "intro");
     }
   },
 

@@ -94,8 +94,7 @@ export const bootScene = scene({
     layers.world.addChild(assetOrb, player);
     app.renderer.layout.update(layers.root);
     removeSceneSwitchListener = installSceneSwitchListener(() => {
-      sceneSwitches += 1;
-      switchScene(alternateScene);
+      if (switchScene(alternateScene, "debug")) sceneSwitches += 1;
     });
 
     syncDemoState("boot", player.x, player.y, layout, layers.root, undefined, assets.isReady(demoOrbUrl));
@@ -121,8 +120,7 @@ export const bootScene = scene({
     if (!player) return;
 
     if (keyboard.wasPressed("x")) {
-      sceneSwitches += 1;
-      switchScene(alternateScene);
+      if (switchScene(alternateScene, "scene")) sceneSwitches += 1;
       return;
     }
 
@@ -215,8 +213,7 @@ export const alternateScene = scene({
     layers.world.addChild(assetOrb, player);
     app.renderer.layout.update(layers.root);
     removeSceneSwitchListener = installSceneSwitchListener(() => {
-      sceneSwitches += 1;
-      switchScene(bootScene);
+      if (switchScene(bootScene, "debug")) sceneSwitches += 1;
     });
 
     syncDemoState("alternate", player.x, player.y, layout, layers.root, undefined, assets.isReady(demoOrbUrl));
@@ -239,8 +236,7 @@ export const alternateScene = scene({
     if (!player) return;
 
     if (keyboard.wasPressed("x")) {
-      sceneSwitches += 1;
-      switchScene(bootScene);
+      if (switchScene(bootScene, "scene")) sceneSwitches += 1;
       return;
     }
 

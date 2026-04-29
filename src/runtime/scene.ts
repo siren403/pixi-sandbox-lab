@@ -1,5 +1,6 @@
 import type { Application, Container } from "pixi.js";
 import type { AssetList, AssetRuntime } from "./assets";
+import type { AppMode, CommandSource } from "./commandRuntime";
 import type { Keyboard } from "./keyboard";
 import type { Pointer } from "./pointer";
 
@@ -29,9 +30,14 @@ export type SurfaceLayers = {
 };
 
 export type RuntimeState = {
+  appMode: AppMode;
   loading: boolean;
   loadingPhase: "idle" | "in" | "loading" | "out";
   sceneSwitches: number;
+  sceneSwitchRequests: number;
+  acceptedCommands: number;
+  ignoredCommands: number;
+  runningCommands: string[];
   loadingOverlayShows: number;
   loadingMinimumMs: number;
   lastLoadingDurationMs: number;
@@ -51,7 +57,7 @@ export type SceneContext = {
   pointer: Pointer;
   layout: SurfaceLayout;
   runtime: RuntimeState;
-  switchScene: (scene: Scene) => void;
+  switchScene: (scene: Scene, source?: CommandSource) => boolean;
 };
 
 export type Scene = {

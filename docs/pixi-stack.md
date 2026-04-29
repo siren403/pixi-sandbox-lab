@@ -231,11 +231,12 @@ LÖVE는 비동기 문제가 없는 게 아니라 발생할 수 없는 구조다
 - `SceneManager.switch()`는 기존 씬을 정리한 뒤 scene asset 목록을 평가하고 `ctx.assets.load()`를 await한다.
 - 앱은 loading overlay 없이 즉시 표시되는 splash/intro scene에서 시작하며, `Tap to start` 버튼 또는 Enter/Space 입력 후 boot scene으로 전환한다.
 - scene 전환 시 기존 화면 위로 runtime-owned transition overlay가 화면 밖에서 들어오는 사선 패널과 슬래시 패턴으로 덮이고, 새 scene load 완료 후 패널이 빠져나가며 로드된 화면을 드러낸다.
+- scene 전환 요청은 `src/runtime/commandRuntime.ts`의 app command gate를 통과한다. 현재 정책은 scene switch 실행 중 추가 요청을 drop하고 accepted/ignored/request count를 runtime state에 기록한다.
 - loading overlay는 progress bar와 GSAP/PixiPlugin 기반 원형 loop animation을 포함하고, 연출 확인을 위해 500-1000ms 사이의 랜덤 최소 유지 시간을 갖는다.
 - motion library는 `src/runtime/motion.ts` 어댑터에 격리한다. 현재 transition은 PixiPlugin으로 degree rotation, scale, skew, tint를 실험 적용한다. PixiPlugin의 filter 계열은 Pixi v8 조합에서 추가 검증이 필요하므로 이 단계에서는 제외한다.
 - 데모 빌드는 코드 스플리팅 골격을 사용한다. 현재 chunk 경계는 entry `index`, `pixi-vendor`, `motion-vendor`, `vendor`, debug-only dynamic chunk다.
 - Vite `chunkSizeWarningLimit`은 1100kB로 명시한다. `bun run check:bundle`은 total JS 1250kB, total gzip 390kB, max chunk 1050kB, entry 120kB 예산을 검증한다.
-- `window.__pixiRuntimeState`는 E2E용으로 loading 상태, loading phase, scene switch 수, loading overlay 표시 수, 샘플링된 최소 loading 시간, 마지막 loading duration, progress, overlay alpha와 최대 alpha, 현재/최대 transition panel 수를 노출한다.
+- `window.__pixiRuntimeState`는 E2E용으로 app mode, command counts, loading 상태, loading phase, scene switch 수, loading overlay 표시 수, 샘플링된 최소 loading 시간, 마지막 loading duration, progress, overlay alpha와 최대 alpha, 현재/최대 transition panel 수를 노출한다.
 - scene `load(ctx)`는 async가 아니며, 이 시점부터 `ctx.assets.get(source)`로 동기 접근한다.
 - `AssetRuntime`은 Pixi `Assets`를 감싸며, 준비되지 않은 asset을 `get()`하면 명시적으로 에러를 낸다.
 - 첫 검증 asset은 Vite import URL을 사용한다. Pages의 하위 경로 배포를 피하려고 `public` 절대 경로 대신 번들러가 관리하는 `src/assets/*` import를 쓴다.
