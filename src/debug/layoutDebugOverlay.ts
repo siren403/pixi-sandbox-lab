@@ -17,6 +17,10 @@ declare global {
       layoutNodes: number;
       debuggedNodes: number;
       layerLabels: string[];
+      installedAt: number;
+      panelConnected: boolean;
+      restoreCount: number;
+      visibilityState: DocumentVisibilityState;
     };
   }
 }
@@ -123,12 +127,33 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   let enabled = false;
   let filter: LayoutDebugFilter = "all";
   let destroyed = false;
+  let restoreCount = 0;
+  let mountedOnce = false;
+  const installedAt = performance.now();
+
+  const ensurePanelConnected = () => {
+    if (destroyed || panel.isConnected) return;
+    document.body.appendChild(panel);
+    if (mountedOnce) restoreCount += 1;
+    mountedOnce = true;
+  };
 
   const syncState = () => {
+    ensurePanelConnected();
     const layoutNodes = countLayoutNodes(root);
     const debuggedNodes = countDebuggedNodes(root);
     const layerLabels = root.children.map((child) => child.label ?? "");
-    window.__pixiLayoutDebug = { enabled, filter, layoutNodes, debuggedNodes, layerLabels };
+    window.__pixiLayoutDebug = {
+      enabled,
+      filter,
+      layoutNodes,
+      debuggedNodes,
+      layerLabels,
+      installedAt,
+      panelConnected: panel.isConnected,
+      restoreCount,
+      visibilityState: document.visibilityState,
+    };
 
     toggle.textContent = enabled ? "On" : "Off";
     toggle.setAttribute("aria-pressed", String(enabled));
@@ -183,9 +208,13 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   for (const [value, button] of filterButtons) {
     button.addEventListener("click", () => onFilterClick(value));
   }
-  document.body.appendChild(panel);
+  ensurePanelConnected();
   syncState();
 
+  const onPageShow = () => syncState();
+  const onVisibilityChange = () => syncState();
+  window.addEventListener("pageshow", onPageShow);
+  document.addEventListener("visibilitychange", onVisibilityChange);
   app.ticker.add(syncLayoutFlags);
 
   return () => {
@@ -196,10 +225,22 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     sceneButton.removeEventListener("click", onSceneClick);
     designSystemButton.removeEventListener("click", onDesignSystemClick);
     reloadButton.removeEventListener("click", onReloadClick);
+    window.removeEventListener("pageshow", onPageShow);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
     panel.remove();
     void app.renderer.layout.enableDebug(false);
     applyDebugFlag(root, false, "all");
-    window.__pixiLayoutDebug = { enabled: false, filter, layoutNodes: 0, debuggedNodes: 0, layerLabels: [] };
+    window.__pixiLayoutDebug = {
+      enabled: false,
+      filter,
+      layoutNodes: 0,
+      debuggedNodes: 0,
+      layerLabels: [],
+      installedAt,
+      panelConnected: false,
+      restoreCount,
+      visibilityState: document.visibilityState,
+    };
   };
 }
 

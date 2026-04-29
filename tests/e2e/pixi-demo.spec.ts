@@ -47,6 +47,10 @@ declare global {
       layoutNodes: number;
       debuggedNodes: number;
       layerLabels: string[];
+      installedAt: number;
+      panelConnected: boolean;
+      restoreCount: number;
+      visibilityState: DocumentVisibilityState;
     };
     __pixiRuntimeState?: {
       appMode: "interactive" | "transitioning" | "loading" | "destroyed";
@@ -179,6 +183,8 @@ test("renders the PixiJS demo with assets and input", async ({
   await expect(layoutDebugPanel).toBeVisible();
   await expect(sceneSwitch).toBeVisible();
   await expect(designSystem).toBeVisible();
+  expect(await page.evaluate(() => window.__pixiLayoutDebug?.panelConnected)).toBe(true);
+  expect(await page.evaluate(() => window.__pixiLayoutDebug?.installedAt ?? 0)).toBeGreaterThan(0);
   const runtimeSwitches = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitches ?? 0);
   const loadingOverlayShows = await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0);
   const sceneSwitchRequests = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitchRequests ?? 0);
@@ -272,6 +278,7 @@ test("reload button reloads the page", async ({ page }) => {
 
   await expect.poll(() => page.evaluate(() => window.__pixiIntroState?.rendered)).toBe(true);
   await expect(page.getByTestId("layout-debug-panel")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.panelConnected)).toBe(true);
 });
 
 async function hasVisibleCanvasPixels(page: Page): Promise<boolean> {

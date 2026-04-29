@@ -79,9 +79,9 @@ export async function createGame(options: GameOptions): Promise<Application> {
     },
   };
   updateSurfaceLayout(ctx, options.width, options.height);
+  const destroyLayoutDebug = await maybeInstallLayoutDebug(app, layers.root);
   await sceneManager.start(options.boot, ctx);
   syncTransitionState(ctx);
-  const destroyLayoutDebug = await maybeInstallLayoutDebug(app, layers.root);
 
   const onResize = () => {
     updateSurfaceLayout(ctx, options.width, options.height);

@@ -125,10 +125,11 @@ app.stage
 layout debug panel:
 
 - DOM overlay로 구현한다. Pixi scene/layer 구조에 섞지 않는다.
+- app surface 생성 직후 scene start보다 먼저 설치한다. `pageshow`/`visibilitychange`/ticker sync에서 DOM 연결 상태를 확인하고, 패널이 분리되면 다시 붙인다.
 - `@pixi/layout` 내장 debug renderer를 토글한다.
 - `All / World / UI` 필터로 layout debug 대상 노드를 제한한다.
 - `DS` 버튼은 Storybook 대체용 runtime design system scene으로 이동한다.
-- `window.__pixiLayoutDebug`에는 E2E용 상태만 노출한다.
+- `window.__pixiLayoutDebug`에는 E2E용 상태와 panel connection/visibility 진단값만 노출한다.
 
 #### Current validation
 
