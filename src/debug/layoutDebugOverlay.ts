@@ -87,6 +87,16 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   Object.assign(sceneButton.style, {
     ...buttonStyle(),
     width: "100%",
+    marginBottom: "6px",
+  });
+
+  const reloadButton = document.createElement("button");
+  reloadButton.type = "button";
+  reloadButton.dataset.testid = "layout-debug-reload";
+  reloadButton.textContent = "Reload";
+  Object.assign(reloadButton.style, {
+    ...buttonStyle(),
+    width: "100%",
     marginBottom: "8px",
   });
 
@@ -98,7 +108,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     lineHeight: "1.45",
   });
 
-  panel.append(header, filterRow, sceneButton, stats);
+  panel.append(header, filterRow, sceneButton, reloadButton, stats);
 
   let enabled = false;
   let filter: LayoutDebugFilter = "all";
@@ -148,8 +158,13 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     window.dispatchEvent(new CustomEvent("pixi:scene-switch"));
   };
 
+  const onReloadClick = () => {
+    window.location.reload();
+  };
+
   toggle.addEventListener("click", onToggleClick);
   sceneButton.addEventListener("click", onSceneClick);
+  reloadButton.addEventListener("click", onReloadClick);
   for (const [value, button] of filterButtons) {
     button.addEventListener("click", () => onFilterClick(value));
   }
@@ -164,6 +179,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     app.ticker.remove(syncLayoutFlags);
     toggle.removeEventListener("click", onToggleClick);
     sceneButton.removeEventListener("click", onSceneClick);
+    reloadButton.removeEventListener("click", onReloadClick);
     panel.remove();
     void app.renderer.layout.enableDebug(false);
     applyDebugFlag(root, false, "all");

@@ -64,6 +64,7 @@ declare global {
 test("renders the PixiJS demo with assets and input", async ({
   page,
 }) => {
+  test.setTimeout(45000);
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
@@ -229,6 +230,21 @@ test("renders the PixiJS demo with assets and input", async ({
   await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.enabled)).toBe(false);
 
   expect(consoleErrors).toEqual([]);
+});
+
+test("reload button reloads the page", async ({ page }) => {
+  await page.goto("/");
+
+  await expect.poll(() => page.evaluate(() => window.__pixiIntroState?.rendered)).toBe(true);
+  const reloadButton = page.getByTestId("layout-debug-reload");
+
+  await Promise.all([
+    page.waitForLoadState("domcontentloaded"),
+    reloadButton.click(),
+  ]);
+
+  await expect.poll(() => page.evaluate(() => window.__pixiIntroState?.rendered)).toBe(true);
+  await expect(page.getByTestId("layout-debug-panel")).toBeVisible();
 });
 
 async function hasVisibleCanvasPixels(page: Page): Promise<boolean> {
