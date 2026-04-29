@@ -8,12 +8,13 @@ declare global {
       sceneSwitches: number;
       loadingOverlayShows: number;
       lastLoadingDurationMs: number;
+      loadingProgress: number;
       loadingOverlayVisible: boolean;
     };
   }
 }
 
-const minimumLoadingMs = 500;
+const defaultMinimumLoadingMs = 500;
 
 export class SceneManager {
   private current: Scene | null = null;
@@ -27,26 +28,31 @@ export class SceneManager {
     const switchId = ++this.switchId;
     this.current?.unload?.(ctx);
     this.current = null;
-    ctx.runtime.loading = true;
     ctx.runtime.sceneSwitches += 1;
-    ctx.runtime.loadingOverlayShows += 1;
-    showLoadingOverlay(ctx);
 
+    const loadingOptions = scene.loading ?? {};
+    const showOverlay = loadingOptions.overlay !== false;
+    const minimumLoadingMs = loadingOptions.minimumMs ?? defaultMinimumLoadingMs;
     const loadingStartedAt = performance.now();
+    const stopProgress = showOverlay ? startLoadingOverlay(ctx, loadingStartedAt, minimumLoadingMs) : () => {};
     const assets = typeof scene.assets === "function" ? scene.assets(ctx) : (scene.assets ?? []);
     try {
-      await waitForLoadingFrame();
+      if (showOverlay) await waitForLoadingFrame();
       await ctx.assets.load(assets);
-      await waitForMinimumLoadingTime(loadingStartedAt, minimumLoadingMs);
+      if (showOverlay) await waitForMinimumLoadingTime(loadingStartedAt, minimumLoadingMs);
       if (switchId !== this.switchId) return;
 
       this.current = scene;
       this.current.load?.(ctx);
     } finally {
       if (switchId === this.switchId) {
-        ctx.runtime.lastLoadingDurationMs = performance.now() - loadingStartedAt;
-        ctx.runtime.loading = false;
-        hideLoadingOverlay(ctx);
+        stopProgress();
+        if (showOverlay) {
+          ctx.runtime.lastLoadingDurationMs = performance.now() - loadingStartedAt;
+          ctx.runtime.loadingProgress = 1;
+          ctx.runtime.loading = false;
+          hideLoadingOverlay(ctx);
+        }
       }
     }
   }
@@ -89,6 +95,25 @@ function waitForMinimumLoadingTime(startedAt: number, minimumMs: number): Promis
   });
 }
 
+function startLoadingOverlay(ctx: SceneContext, startedAt: number, minimumMs: number): () => void {
+  ctx.runtime.loading = true;
+  ctx.runtime.loadingProgress = 0;
+  ctx.runtime.loadingOverlayShows += 1;
+  showLoadingOverlay(ctx);
+
+  let frame = 0;
+  const update = () => {
+    const progress = minimumMs <= 0 ? 1 : Math.min(0.96, (performance.now() - startedAt) / minimumMs);
+    ctx.runtime.loadingProgress = progress;
+    updateLoadingProgress(ctx, progress);
+    syncLoadingDebugState(ctx);
+    frame = requestAnimationFrame(update);
+  };
+  frame = requestAnimationFrame(update);
+
+  return () => cancelAnimationFrame(frame);
+}
+
 function showLoadingOverlay(ctx: SceneContext): void {
   let overlay = ctx.layers.debug.getChildByLabel("loading-overlay");
   if (!overlay) {
@@ -109,15 +134,40 @@ function showLoadingOverlay(ctx: SceneContext): void {
     });
     text.label = "loading-text";
     text.anchor.set(0.5);
-    text.position.set(ctx.layout.visibleWidth / 2, ctx.layout.visibleHeight / 2);
+    text.position.set(ctx.layout.visibleWidth / 2, ctx.layout.visibleHeight * 0.47);
 
-    group.addChild(backdrop, text);
+    const trackWidth = Math.min(ctx.layout.visibleWidth * 0.54, 520 / ctx.layout.scale);
+    const trackHeight = Math.max(10 / ctx.layout.scale, 18);
+    const track = new Graphics()
+      .roundRect(-trackWidth / 2, -trackHeight / 2, trackWidth, trackHeight, trackHeight / 2)
+      .fill({ color: 0x334155, alpha: 0.92 });
+    track.label = "loading-progress-track";
+    track.position.set(ctx.layout.visibleWidth / 2, ctx.layout.visibleHeight * 0.54);
+
+    const fill = new Graphics();
+    fill.label = "loading-progress-fill";
+    fill.position.set(ctx.layout.visibleWidth / 2 - trackWidth / 2, ctx.layout.visibleHeight * 0.54 - trackHeight / 2);
+
+    group.addChild(backdrop, text, track, fill);
     ctx.layers.debug.addChild(group);
     overlay = group;
   }
 
   overlay.visible = true;
+  updateLoadingProgress(ctx, ctx.runtime.loadingProgress);
   syncLoadingDebugState(ctx);
+}
+
+function updateLoadingProgress(ctx: SceneContext, progress: number): void {
+  const fill = ctx.layers.debug.getChildByLabel("loading-progress-fill", true) as Graphics | null;
+  if (!fill) return;
+
+  const width = Math.min(ctx.layout.visibleWidth * 0.54, 520 / ctx.layout.scale);
+  const height = Math.max(10 / ctx.layout.scale, 18);
+  fill.clear();
+  fill
+    .roundRect(0, 0, width * progress, height, height / 2)
+    .fill("#38bdf8");
 }
 
 function hideLoadingOverlay(ctx: SceneContext): void {
@@ -132,6 +182,7 @@ function syncLoadingDebugState(ctx: SceneContext): void {
     sceneSwitches: ctx.runtime.sceneSwitches,
     loadingOverlayShows: ctx.runtime.loadingOverlayShows,
     lastLoadingDurationMs: ctx.runtime.lastLoadingDurationMs,
+    loadingProgress: ctx.runtime.loadingProgress,
     loadingOverlayVisible: ctx.layers.debug.getChildByLabel("loading-overlay")?.visible === true,
   };
 }

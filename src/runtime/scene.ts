@@ -33,6 +33,7 @@ export type RuntimeState = {
   sceneSwitches: number;
   loadingOverlayShows: number;
   lastLoadingDurationMs: number;
+  loadingProgress: number;
 };
 
 export type SceneContext = {
@@ -49,6 +50,10 @@ export type SceneContext = {
 
 export type Scene = {
   assets?: AssetList | ((ctx: SceneContext) => AssetList);
+  loading?: {
+    overlay?: boolean;
+    minimumMs?: number;
+  };
   load?: (ctx: SceneContext) => void;
   update?: (dt: number, ctx: SceneContext) => void;
   resize?: (ctx: SceneContext) => void;

@@ -7,6 +7,7 @@ import { surfaceTheme, tokenValue } from "../runtime/surface";
 type IntroState = {
   scene: "intro";
   promptBounds: { x: number; y: number; width: number; height: number };
+  buttonBounds: { x: number; y: number; width: number; height: number };
   rendered: boolean;
 };
 
@@ -16,7 +17,11 @@ declare global {
   }
 }
 
+let startButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
+
 export const introScene = scene({
+  loading: { overlay: false, minimumMs: 0 },
+
   load({ layers, layout }) {
     renderIntro(layers.ui, layout);
   },
@@ -27,7 +32,8 @@ export const introScene = scene({
   },
 
   update(_dt, { keyboard, pointer, switchScene }) {
-    const startByPointer = pointer.wasPressed();
+    const pointerPosition = pointer.position();
+    const startByPointer = pointer.wasPressed() && containsPoint(startButtonBounds, pointerPosition.x, pointerPosition.y);
     const startByKeyboard = keyboard.wasPressed("enter") || keyboard.wasPressed(" ");
     if (startByPointer || startByKeyboard) {
       switchScene(bootScene);
@@ -73,7 +79,22 @@ function renderIntro(layer: Container, layout: SurfaceLayout): void {
   prompt.anchor.set(0.5);
   prompt.position.set(layout.visibleWidth / 2, layout.visibleHeight * 0.55);
 
-  root.addChild(backdrop, title, prompt);
+  const buttonWidth = Math.min(layout.visibleWidth * 0.58, 520 / layout.scale);
+  const buttonHeight = Math.max(86, 48 / layout.scale);
+  const button = new Graphics()
+    .roundRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, buttonHeight / 2)
+    .fill({ color: 0x0f766e, alpha: 0.94 })
+    .stroke({ color: "#67e8f9", width: Math.max(2, 3 / layout.scale) });
+  button.label = "tap-start-button";
+  button.position.set(layout.visibleWidth / 2, layout.visibleHeight * 0.55);
+  startButtonBounds = {
+    x: button.position.x - buttonWidth / 2,
+    y: button.position.y - buttonHeight / 2,
+    width: buttonWidth,
+    height: buttonHeight,
+  };
+
+  root.addChild(backdrop, title, button, prompt);
   layer.addChild(root);
   syncIntroState(layout, root);
 }
@@ -86,8 +107,13 @@ function syncIntroState(layout: SurfaceLayout, root: Container): void {
     promptBounds: bounds
       ? { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }
       : { x: 0, y: 0, width: 0, height: 0 },
+    buttonBounds: startButtonBounds,
     rendered: layout.visibleWidth > 0,
   };
+}
+
+function containsPoint(bounds: { x: number; y: number; width: number; height: number }, x: number, y: number): boolean {
+  return x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height;
 }
 
 function clearLayer(layer: Container): void {

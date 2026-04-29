@@ -29,6 +29,7 @@ declare global {
     __pixiIntroState?: {
       scene: "intro";
       promptBounds: { x: number; y: number; width: number; height: number };
+      buttonBounds: { x: number; y: number; width: number; height: number };
       rendered: boolean;
     };
     __pixiLayoutDebug?: {
@@ -43,6 +44,7 @@ declare global {
       sceneSwitches: number;
       loadingOverlayShows: number;
       lastLoadingDurationMs: number;
+      loadingProgress: number;
       loadingOverlayVisible: boolean;
     };
   }
@@ -76,6 +78,8 @@ test("renders the PixiJS demo with assets and input", async ({
   const intro = await page.evaluate(() => window.__pixiIntroState);
   expect(intro?.scene).toBe("intro");
   expect(intro?.promptBounds.width).toBeGreaterThan(0);
+  expect(intro?.buttonBounds.width).toBeGreaterThan(intro?.promptBounds.width ?? 0);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0)).toBe(0);
 
   const bootLoadingShows = await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0);
   await canvas.click({ position: { x: Math.floor((box?.width ?? 0) / 2), y: Math.floor((box?.height ?? 0) * 0.56) } });
@@ -87,6 +91,7 @@ test("renders the PixiJS demo with assets and input", async ({
     .toBe(true);
   await expect.poll(() => page.evaluate(() => window.__pixiIntroState)).toBeUndefined();
   expect(await page.evaluate(() => window.__pixiRuntimeState?.lastLoadingDurationMs ?? 0)).toBeGreaterThanOrEqual(490);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingProgress ?? 0)).toBe(1);
 
   const before = await page.evaluate(() => window.__pixiDemoState);
   expect(before?.playerX).toBeGreaterThan(0);
