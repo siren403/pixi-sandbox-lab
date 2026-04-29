@@ -32,9 +32,10 @@ declare global {
 }
 
 let sceneSwitches = 0;
+let removeSceneSwitchListener: (() => void) | null = null;
 
 export const bootScene = scene({
-  load({ app, layers, layout }) {
+  load({ app, layers, layout, switchScene }) {
     const playerSize = tokenValue(layout, surfaceTheme.size.player);
     const playerRadius = tokenValue(layout, surfaceTheme.radius.player);
     const playerStroke = tokenValue(layout, surfaceTheme.size.playerStroke);
@@ -82,6 +83,10 @@ export const bootScene = scene({
     layers.ui.addChild(hud);
     layers.world.addChild(player);
     app.renderer.layout.update(layers.root);
+    removeSceneSwitchListener = installSceneSwitchListener(() => {
+      sceneSwitches += 1;
+      switchScene(alternateScene);
+    });
 
     syncDemoState("boot", player.x, player.y, layout, layers.root);
   },
@@ -133,13 +138,15 @@ export const bootScene = scene({
   },
 
   unload({ layers }) {
+    removeSceneSwitchListener?.();
+    removeSceneSwitchListener = null;
     clearSceneLayers(layers.world, layers.ui);
     window.__pixiDemoState = undefined;
   },
 });
 
 export const alternateScene = scene({
-  load({ app, layers, layout }) {
+  load({ app, layers, layout, switchScene }) {
     const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius) * 1.35;
     const titleFontSize = tokenValue(layout, surfaceTheme.font.title);
 
@@ -184,6 +191,10 @@ export const alternateScene = scene({
     layers.ui.addChild(hud);
     layers.world.addChild(player);
     app.renderer.layout.update(layers.root);
+    removeSceneSwitchListener = installSceneSwitchListener(() => {
+      sceneSwitches += 1;
+      switchScene(bootScene);
+    });
 
     syncDemoState("alternate", player.x, player.y, layout, layers.root);
   },
@@ -214,6 +225,8 @@ export const alternateScene = scene({
   },
 
   unload({ layers }) {
+    removeSceneSwitchListener?.();
+    removeSceneSwitchListener = null;
     clearSceneLayers(layers.world, layers.ui);
     window.__pixiDemoState = undefined;
   },
@@ -275,4 +288,10 @@ function clearSceneLayers(...layers: Container[]): void {
       child.destroy({ children: true });
     }
   }
+}
+
+function installSceneSwitchListener(handler: () => void): () => void {
+  const listener = () => handler();
+  window.addEventListener("pixi:scene-switch", listener);
+  return () => window.removeEventListener("pixi:scene-switch", listener);
 }

@@ -79,20 +79,23 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
   const after = await page.evaluate(() => window.__pixiDemoState);
   expect(after?.playerX).toBeGreaterThan(before?.playerX ?? 0);
 
-  await page.keyboard.press("x");
+  const layoutDebugPanel = page.getByTestId("layout-debug-panel");
+  const layoutDebug = page.getByTestId("layout-debug-toggle");
+  const sceneSwitch = page.getByTestId("layout-debug-scene");
+  await expect(layoutDebugPanel).toBeVisible();
+  await expect(sceneSwitch).toBeVisible();
+
+  await sceneSwitch.click();
   await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("alternate");
   const alternate = await page.evaluate(() => window.__pixiDemoState);
   expect(alternate?.sceneSwitches).toBe(1);
   expect(alternate?.titleBounds.width).toBeGreaterThan(0);
   expect(alternate?.markerBounds.width).toBeGreaterThan(0);
 
-  await page.keyboard.press("x");
+  await sceneSwitch.click();
   await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("boot");
   expect(await page.evaluate(() => window.__pixiDemoState?.sceneSwitches)).toBe(2);
 
-  const layoutDebugPanel = page.getByTestId("layout-debug-panel");
-  const layoutDebug = page.getByTestId("layout-debug-toggle");
-  await expect(layoutDebugPanel).toBeVisible();
   await expect(layoutDebug).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByTestId("layout-debug-stats")).toContainText("world-layer");
   expect(await page.evaluate(() => window.__pixiLayoutDebug?.layoutNodes)).toBeGreaterThan(0);
