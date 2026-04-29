@@ -85,7 +85,11 @@ export async function launchAgent(
   const subCmd = extraArgs.length > 0
     ? ["run", ...allYoloboxFlags, tool, ...extraArgs]
     : [tool, ...allYoloboxFlags];
-  const args = ["tmux", "new-session", "-A", "-s", session, "yolobox", ...subCmd];
+
+  // Wrap in sh -c so the pane stays open on error (tmux alternate screen hides error output on exit).
+  const cmdStr = ["yolobox", ...subCmd].map(a => `'${a.replace(/'/g, "'\\''")}'`).join(" ");
+  const shellScript = `${cmdStr}; _ec=$?; if [ $_ec -ne 0 ] && [ $_ec -ne 130 ]; then printf '\\n\\033[31m✗ 오류 (exit %d). Enter 키를 누르면 닫힙니다.\\033[0m\\n' $_ec; read; fi`;
+  const args = ["tmux", "new-session", "-A", "-s", session, "sh", "-c", shellScript];
 
   const proc = Bun.spawn(args, { stdin: "inherit", stdout: "inherit", stderr: "inherit" });
   const code = await proc.exited;
