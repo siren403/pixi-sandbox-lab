@@ -47,8 +47,9 @@ After reporting audit findings:
 1. If there are no findings, stop after reporting residual risks.
 2. If there are findings, convert them into candidate follow-up tasks.
 3. If a fix changes harness specs, recommend `$task-plan <follow-up task>` before implementation.
-4. Do not edit files directly from audit mode unless the user explicitly asks to apply a specific fix.
-5. For each recommended fix, include:
+4. If the user says "proceed" after audit findings, proceed to the recommended `$task-plan` step first. Do not implement the fix unless the user explicitly says to apply or implement the fix.
+5. Do not edit files directly from audit mode unless the user explicitly asks to apply a specific fix.
+6. For each recommended fix, include:
    - Finding
    - Proposed task
    - Suggested skill, usually `$task-plan`

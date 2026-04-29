@@ -11,6 +11,8 @@ Use this skill before non-trivial work. The output must be a plan the user can a
 
 For harness changes, follow `docs/harness-change-protocol.md` and use `harness_architect` plus `plan_reviewer`.
 
+If invoked as a follow-up from `harness-audit`, treat "proceed" as permission to produce the plan, not permission to implement it. Wait for explicit implementation approval after presenting the plan.
+
 ## Missing Target Behavior
 
 If this skill is invoked without a clear planning target:
