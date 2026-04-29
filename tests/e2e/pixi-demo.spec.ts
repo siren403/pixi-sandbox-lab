@@ -11,6 +11,9 @@ declare global {
       viewportHeight: number;
       visibleWidth: number;
       visibleHeight: number;
+      playerScreenSize: number;
+      markerScreenRadius: number;
+      titleScreenFontSize: number;
       rendered: boolean;
     };
   }
@@ -48,6 +51,9 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
   expect(before?.canvasHeight).toBe(viewport?.height);
   expect(before?.visibleWidth).toBeGreaterThanOrEqual(1080);
   expect(before?.visibleHeight).toBeGreaterThanOrEqual(1920);
+  expect(before?.playerScreenSize).toBeGreaterThanOrEqual(52);
+  expect(before?.markerScreenRadius).toBeGreaterThanOrEqual(10);
+  expect(before?.titleScreenFontSize).toBeGreaterThanOrEqual(22);
 
   await page.keyboard.down("ArrowRight");
   await page.waitForTimeout(250);

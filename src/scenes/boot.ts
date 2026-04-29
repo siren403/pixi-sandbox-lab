@@ -1,8 +1,9 @@
 import { Container, Graphics, Text } from "pixi.js";
+import { anchorPoint, screenValue, surfaceTheme, tokenValue } from "../runtime/surface";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
 
-const speed = 260;
+const speed = 520;
 
 type DemoState = {
   playerX: number;
@@ -13,6 +14,9 @@ type DemoState = {
   viewportHeight: number;
   visibleWidth: number;
   visibleHeight: number;
+  playerScreenSize: number;
+  markerScreenRadius: number;
+  titleScreenFontSize: number;
   rendered: boolean;
 };
 
@@ -25,30 +29,39 @@ declare global {
 export const bootScene = scene({
   load({ stage, layout }) {
     const world = new Container();
+    const playerSize = tokenValue(layout, surfaceTheme.size.player);
+    const playerRadius = tokenValue(layout, surfaceTheme.radius.player);
+    const playerStroke = tokenValue(layout, surfaceTheme.size.playerStroke);
+    const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
+    const markerPosition = anchorPoint(layout, "top-left", surfaceTheme.spacing.markerInset);
+    const titlePosition = anchorPoint(layout, "top-left");
+    const titleFontSize = tokenValue(layout, surfaceTheme.font.title);
 
     const player = new Graphics()
-      .roundRect(-24, -24, 48, 48, 8)
-      .fill("#f7c948")
-      .stroke({ color: "#fef3c7", width: 3 });
+      .roundRect(-playerSize / 2, -playerSize / 2, playerSize, playerSize, playerRadius)
+      .fill(surfaceTheme.color.player)
+      .stroke({ color: surfaceTheme.color.playerStroke, width: playerStroke });
 
     player.label = "player";
-    player.position.set(layout.visibleWidth / 2, layout.visibleHeight / 2);
+    player.position.copyFrom(anchorPoint(layout, "center"));
 
     const marker = new Graphics()
-      .circle(0, 0, 7)
-      .fill("#4cc9f0");
-    marker.position.set(72, 72);
+      .circle(0, 0, markerRadius)
+      .fill(surfaceTheme.color.marker);
+    marker.label = "marker";
+    marker.position.set(markerPosition.x, markerPosition.y);
 
     const title = new Text({
       text: "PixiJS vertical slice",
       style: {
-        fill: "#eef2f6",
+        fill: surfaceTheme.color.text,
         fontFamily: "Inter, system-ui, sans-serif",
-        fontSize: 22,
+        fontSize: titleFontSize,
         fontWeight: "600",
       },
     });
-    title.position.set(layout.referenceX + layout.safeArea.left + 36, layout.referenceY + layout.safeArea.top + 36);
+    title.label = "title";
+    title.position.set(titlePosition.x, titlePosition.y);
 
     world.addChild(marker, player, title);
     stage.addChild(world);
@@ -59,10 +72,20 @@ export const bootScene = scene({
   resize({ stage, layout }) {
     const world = stage.children[0] as Container | undefined;
     const player = world?.getChildByLabel("player") as Graphics | null;
+    const marker = world?.getChildByLabel("marker") as Graphics | null;
+    const title = world?.getChildByLabel("title") as Text | null;
     if (!player) return;
 
-    player.x = clamp(player.x, 32, layout.visibleWidth - 32);
-    player.y = clamp(player.y, 32, layout.visibleHeight - 32);
+    const playerPadding = tokenValue(layout, surfaceTheme.size.player) / 2;
+    player.x = clamp(player.x, playerPadding, layout.visibleWidth - playerPadding);
+    player.y = clamp(player.y, playerPadding, layout.visibleHeight - playerPadding);
+
+    const markerPosition = anchorPoint(layout, "top-left", surfaceTheme.spacing.markerInset);
+    marker?.position.set(markerPosition.x, markerPosition.y);
+
+    const titlePosition = anchorPoint(layout, "top-left");
+    title?.position.set(titlePosition.x, titlePosition.y);
+
     syncDemoState(player.x, player.y, layout);
   },
 
@@ -85,8 +108,9 @@ export const bootScene = scene({
       player.y += (dy / length) * speed * dt;
     }
 
-    player.x = clamp(player.x, 32, layout.visibleWidth - 32);
-    player.y = clamp(player.y, 32, layout.visibleHeight - 32);
+    const playerPadding = tokenValue(layout, surfaceTheme.size.player) / 2;
+    player.x = clamp(player.x, playerPadding, layout.visibleWidth - playerPadding);
+    player.y = clamp(player.y, playerPadding, layout.visibleHeight - playerPadding);
 
     syncDemoState(player.x, player.y, layout);
   },
@@ -106,6 +130,9 @@ function syncDemoState(playerX: number, playerY: number, layout: SurfaceLayout):
     viewportHeight: Math.round(window.innerHeight),
     visibleWidth: layout.visibleWidth,
     visibleHeight: layout.visibleHeight,
+    playerScreenSize: screenValue(layout, surfaceTheme.size.player),
+    markerScreenRadius: screenValue(layout, surfaceTheme.size.markerRadius),
+    titleScreenFontSize: screenValue(layout, surfaceTheme.font.title),
     rendered: true,
   };
 }
