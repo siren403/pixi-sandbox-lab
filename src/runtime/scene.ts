@@ -30,10 +30,13 @@ export type SurfaceLayers = {
 
 export type RuntimeState = {
   loading: boolean;
+  loadingPhase: "idle" | "in" | "loading" | "out";
   sceneSwitches: number;
   loadingOverlayShows: number;
   lastLoadingDurationMs: number;
   loadingProgress: number;
+  loadingOverlayAlpha: number;
+  loadingOverlayMaxAlpha: number;
 };
 
 export type SceneContext = {

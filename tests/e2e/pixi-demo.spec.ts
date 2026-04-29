@@ -41,10 +41,13 @@ declare global {
     };
     __pixiRuntimeState?: {
       loading: boolean;
+      loadingPhase: "idle" | "in" | "loading" | "out";
       sceneSwitches: number;
       loadingOverlayShows: number;
       lastLoadingDurationMs: number;
       loadingProgress: number;
+      loadingOverlayAlpha: number;
+      loadingOverlayMaxAlpha: number;
       loadingOverlayVisible: boolean;
     };
   }
@@ -92,6 +95,9 @@ test("renders the PixiJS demo with assets and input", async ({
   await expect.poll(() => page.evaluate(() => window.__pixiIntroState)).toBeUndefined();
   expect(await page.evaluate(() => window.__pixiRuntimeState?.lastLoadingDurationMs ?? 0)).toBeGreaterThanOrEqual(490);
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingProgress ?? 0)).toBe(1);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayMaxAlpha ?? 0)).toBeGreaterThan(0.95);
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingPhase)).toBe("idle");
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayAlpha ?? -1)).toBe(0);
 
   const before = await page.evaluate(() => window.__pixiDemoState);
   expect(before?.playerX).toBeGreaterThan(0);

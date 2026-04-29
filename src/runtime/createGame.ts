@@ -40,10 +40,13 @@ export async function createGame(options: GameOptions): Promise<Application> {
   const assets = createAssetRuntime();
   const runtime = {
     loading: false,
+    loadingPhase: "idle" as const,
     sceneSwitches: 0,
     loadingOverlayShows: 0,
     lastLoadingDurationMs: 0,
     loadingProgress: 0,
+    loadingOverlayAlpha: 0,
+    loadingOverlayMaxAlpha: 0,
   };
   const layout = createSurfaceLayout(options.width, options.height, app.screen.width, app.screen.height);
   const pointer = createPointer(app.canvas, () => layout);
