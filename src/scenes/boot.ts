@@ -20,6 +20,8 @@ type DemoState = {
   titleBounds: { x: number; y: number; width: number; height: number };
   markerBounds: { x: number; y: number; width: number; height: number };
   layerLabels: string[];
+  scene: string;
+  sceneSwitches: number;
   rendered: boolean;
 };
 
@@ -28,6 +30,8 @@ declare global {
     __pixiDemoState?: DemoState;
   }
 }
+
+let sceneSwitches = 0;
 
 export const bootScene = scene({
   load({ app, layers, layout }) {
@@ -79,7 +83,7 @@ export const bootScene = scene({
     layers.world.addChild(player);
     app.renderer.layout.update(layers.root);
 
-    syncDemoState(player.x, player.y, layout, layers.root);
+    syncDemoState("boot", player.x, player.y, layout, layers.root);
   },
 
   resize({ app, layers, layout }) {
@@ -94,12 +98,18 @@ export const bootScene = scene({
     if (hud) configureHudLayout(hud, layout);
     app.renderer.layout.update(layers.root);
 
-    syncDemoState(player.x, player.y, layout, layers.root);
+    syncDemoState("boot", player.x, player.y, layout, layers.root);
   },
 
-  update(dt, { layers, keyboard, layout }) {
+  update(dt, { layers, keyboard, layout, switchScene }) {
     const player = layers.world.getChildByLabel("player") as Graphics | null;
     if (!player) return;
+
+    if (keyboard.wasPressed("x")) {
+      sceneSwitches += 1;
+      switchScene(alternateScene);
+      return;
+    }
 
     let dx = 0;
     let dy = 0;
@@ -119,7 +129,93 @@ export const bootScene = scene({
     player.x = clamp(player.x, playerPadding, layout.visibleWidth - playerPadding);
     player.y = clamp(player.y, playerPadding, layout.visibleHeight - playerPadding);
 
-    syncDemoState(player.x, player.y, layout, layers.root);
+    syncDemoState("boot", player.x, player.y, layout, layers.root);
+  },
+
+  unload({ layers }) {
+    clearSceneLayers(layers.world, layers.ui);
+    window.__pixiDemoState = undefined;
+  },
+});
+
+export const alternateScene = scene({
+  load({ app, layers, layout }) {
+    const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius) * 1.35;
+    const titleFontSize = tokenValue(layout, surfaceTheme.font.title);
+
+    const hud = new Container();
+    hud.label = "hud";
+    configureHudLayout(hud, layout);
+
+    const marker = new Graphics()
+      .circle(markerRadius, markerRadius, markerRadius)
+      .fill("#80ed99");
+    marker.label = "marker";
+    marker.layout = {
+      width: markerRadius * 2,
+      height: markerRadius * 2,
+    };
+
+    const title = new Text({
+      text: "Alternate scene",
+      style: {
+        fill: surfaceTheme.color.text,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: titleFontSize,
+        fontWeight: "600",
+      },
+    });
+    title.label = "title";
+    title.layout = true;
+
+    const spacer = new Container();
+    spacer.label = "hud-spacer";
+    spacer.layout = { flexGrow: 1 };
+
+    const playerSize = tokenValue(layout, surfaceTheme.size.player);
+    const player = new Graphics()
+      .circle(0, 0, playerSize / 2)
+      .fill("#c77dff")
+      .stroke({ color: "#f3c4fb", width: tokenValue(layout, surfaceTheme.size.playerStroke) });
+    player.label = "player";
+    player.position.set(layout.visibleWidth / 2, layout.visibleHeight / 2);
+
+    hud.addChild(title, spacer, marker);
+    layers.ui.addChild(hud);
+    layers.world.addChild(player);
+    app.renderer.layout.update(layers.root);
+
+    syncDemoState("alternate", player.x, player.y, layout, layers.root);
+  },
+
+  resize({ app, layers, layout }) {
+    const player = layers.world.getChildByLabel("player") as Graphics | null;
+    const hud = layers.ui.getChildByLabel("hud") as Container | null;
+    if (!player) return;
+
+    player.position.set(layout.visibleWidth / 2, layout.visibleHeight / 2);
+    if (hud) configureHudLayout(hud, layout);
+    app.renderer.layout.update(layers.root);
+
+    syncDemoState("alternate", player.x, player.y, layout, layers.root);
+  },
+
+  update(_dt, { layers, keyboard, layout, switchScene }) {
+    const player = layers.world.getChildByLabel("player") as Graphics | null;
+    if (!player) return;
+
+    if (keyboard.wasPressed("x")) {
+      sceneSwitches += 1;
+      switchScene(bootScene);
+      return;
+    }
+
+    syncDemoState("alternate", player.x, player.y, layout, layers.root);
+  },
+
+  unload({ layers }) {
+    clearSceneLayers(layers.world, layers.ui);
+    window.__pixiDemoState = undefined;
   },
 });
 
@@ -141,7 +237,7 @@ function configureHudLayout(hud: Container, layout: SurfaceLayout): void {
   };
 }
 
-function syncDemoState(playerX: number, playerY: number, layout: SurfaceLayout, stage: Container): void {
+function syncDemoState(sceneName: string, playerX: number, playerY: number, layout: SurfaceLayout, stage: Container): void {
   const title = getPixiBounds(stage, "title");
   const marker = getPixiBounds(stage, "marker");
   window.__pixiDemoState = {
@@ -159,6 +255,8 @@ function syncDemoState(playerX: number, playerY: number, layout: SurfaceLayout, 
     titleBounds: title,
     markerBounds: marker,
     layerLabels: stage.children.map((child) => child.label ?? ""),
+    scene: sceneName,
+    sceneSwitches,
     rendered: true,
   };
 }
@@ -169,4 +267,12 @@ function getPixiBounds(stage: Container, label: string): { x: number; y: number;
   return bounds
     ? { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }
     : { x: 0, y: 0, width: 0, height: 0 };
+}
+
+function clearSceneLayers(...layers: Container[]): void {
+  for (const layer of layers) {
+    for (const child of layer.removeChildren()) {
+      child.destroy({ children: true });
+    }
+  }
 }

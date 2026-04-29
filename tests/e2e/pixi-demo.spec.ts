@@ -17,6 +17,8 @@ declare global {
       titleBounds: { x: number; y: number; width: number; height: number };
       markerBounds: { x: number; y: number; width: number; height: number };
       layerLabels: string[];
+      scene: string;
+      sceneSwitches: number;
       rendered: boolean;
     };
     __pixiLayoutDebug?: {
@@ -68,6 +70,7 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
   expect(before?.markerBounds.width).toBeGreaterThan(0);
   expect(rectsOverlap(before?.titleBounds, before?.markerBounds)).toBe(false);
   expect(before?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
+  expect(before?.scene).toBe("boot");
 
   await page.keyboard.down("ArrowRight");
   await page.waitForTimeout(250);
@@ -75,6 +78,17 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
 
   const after = await page.evaluate(() => window.__pixiDemoState);
   expect(after?.playerX).toBeGreaterThan(before?.playerX ?? 0);
+
+  await page.keyboard.press("x");
+  await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("alternate");
+  const alternate = await page.evaluate(() => window.__pixiDemoState);
+  expect(alternate?.sceneSwitches).toBe(1);
+  expect(alternate?.titleBounds.width).toBeGreaterThan(0);
+  expect(alternate?.markerBounds.width).toBeGreaterThan(0);
+
+  await page.keyboard.press("x");
+  await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("boot");
+  expect(await page.evaluate(() => window.__pixiDemoState?.sceneSwitches)).toBe(2);
 
   const layoutDebugPanel = page.getByTestId("layout-debug-panel");
   const layoutDebug = page.getByTestId("layout-debug-toggle");

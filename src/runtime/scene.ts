@@ -32,6 +32,7 @@ export type SceneContext = {
   layers: SurfaceLayers;
   keyboard: Keyboard;
   layout: SurfaceLayout;
+  switchScene: (scene: Scene) => void;
 };
 
 export type Scene = {

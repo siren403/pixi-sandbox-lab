@@ -3,28 +3,26 @@ import type { Scene, SceneContext } from "./scene";
 export class SceneManager {
   private current: Scene | null = null;
 
-  constructor(private readonly ctx: SceneContext) {}
-
-  start(scene: Scene): void {
-    this.switch(scene);
+  start(scene: Scene, ctx: SceneContext): void {
+    this.switch(scene, ctx);
   }
 
-  switch(scene: Scene): void {
-    this.current?.unload?.(this.ctx);
+  switch(scene: Scene, ctx: SceneContext): void {
+    this.current?.unload?.(ctx);
     this.current = scene;
-    this.current.load?.(this.ctx);
+    this.current.load?.(ctx);
   }
 
-  update(dt: number): void {
-    this.current?.update?.(dt, this.ctx);
+  update(dt: number, ctx: SceneContext): void {
+    this.current?.update?.(dt, ctx);
   }
 
-  resize(): void {
-    this.current?.resize?.(this.ctx);
+  resize(ctx: SceneContext): void {
+    this.current?.resize?.(ctx);
   }
 
-  destroy(): void {
-    this.current?.unload?.(this.ctx);
+  destroy(ctx: SceneContext): void {
+    this.current?.unload?.(ctx);
     this.current = null;
   }
 }

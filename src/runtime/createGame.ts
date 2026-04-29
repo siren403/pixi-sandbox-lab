@@ -36,26 +36,33 @@ export async function createGame(options: GameOptions): Promise<Application> {
 
   const keyboard = createKeyboard();
   const layout = createSurfaceLayout(options.width, options.height, app.screen.width, app.screen.height);
-  const ctx: SceneContext = { app, stage, layers, keyboard, layout };
+  const sceneManager = new SceneManager();
+  const ctx: SceneContext = {
+    app,
+    stage,
+    layers,
+    keyboard,
+    layout,
+    switchScene: (scene) => sceneManager.switch(scene, ctx),
+  };
   updateSurfaceLayout(ctx, options.width, options.height);
-  const sceneManager = new SceneManager(ctx);
-  sceneManager.start(options.boot);
+  sceneManager.start(options.boot, ctx);
   const destroyLayoutDebug = await maybeInstallLayoutDebug(app, layers.root);
 
   const onResize = () => {
     updateSurfaceLayout(ctx, options.width, options.height);
-    sceneManager.resize();
+    sceneManager.resize(ctx);
   };
   app.renderer.on("resize", onResize);
 
   app.ticker.add((ticker) => {
-    sceneManager.update(ticker.deltaMS / 1000);
+    sceneManager.update(ticker.deltaMS / 1000, ctx);
   });
 
   window.addEventListener("beforeunload", () => {
     app.renderer.off("resize", onResize);
     destroyLayoutDebug();
-    sceneManager.destroy();
+    sceneManager.destroy(ctx);
     keyboard.destroy();
     app.destroy();
   });
