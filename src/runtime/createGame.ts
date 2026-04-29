@@ -43,6 +43,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
     loadingPhase: "idle" as const,
     sceneSwitches: 0,
     loadingOverlayShows: 0,
+    loadingMinimumMs: 0,
     lastLoadingDurationMs: 0,
     loadingProgress: 0,
     loadingOverlayAlpha: 0,

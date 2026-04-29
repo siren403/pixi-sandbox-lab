@@ -33,6 +33,7 @@ export type RuntimeState = {
   loadingPhase: "idle" | "in" | "loading" | "out";
   sceneSwitches: number;
   loadingOverlayShows: number;
+  loadingMinimumMs: number;
   lastLoadingDurationMs: number;
   loadingProgress: number;
   loadingOverlayAlpha: number;

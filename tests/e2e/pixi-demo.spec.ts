@@ -44,6 +44,7 @@ declare global {
       loadingPhase: "idle" | "in" | "loading" | "out";
       sceneSwitches: number;
       loadingOverlayShows: number;
+      loadingMinimumMs: number;
       lastLoadingDurationMs: number;
       loadingProgress: number;
       loadingOverlayAlpha: number;
@@ -95,7 +96,11 @@ test("renders the PixiJS demo with assets and input", async ({
     .poll(() => page.evaluate(() => window.__pixiDemoState?.rendered))
     .toBe(true);
   await expect.poll(() => page.evaluate(() => window.__pixiIntroState)).toBeUndefined();
-  expect(await page.evaluate(() => window.__pixiRuntimeState?.lastLoadingDurationMs ?? 0)).toBeGreaterThanOrEqual(490);
+  const loadingDuration = await page.evaluate(() => window.__pixiRuntimeState?.lastLoadingDurationMs ?? 0);
+  const loadingMinimumMs = await page.evaluate(() => window.__pixiRuntimeState?.loadingMinimumMs ?? 0);
+  expect(loadingMinimumMs).toBeGreaterThanOrEqual(500);
+  expect(loadingMinimumMs).toBeLessThanOrEqual(1000);
+  expect(loadingDuration).toBeGreaterThanOrEqual(490);
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingProgress ?? 0)).toBe(1);
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayMaxAlpha ?? 0)).toBeGreaterThan(0.95);
   expect(await page.evaluate(() => window.__pixiRuntimeState?.transitionPanelMaxCount ?? 0)).toBeGreaterThanOrEqual(4);

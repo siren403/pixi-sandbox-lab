@@ -1,5 +1,5 @@
 import type { Scene, SceneContext } from "./scene";
-import { createTransition, defaultMinimumLoadingMs, syncTransitionState } from "./transition";
+import { createTransition, minimumLoadingMsRange, syncTransitionState } from "./transition";
 
 declare global {
   interface Window {
@@ -8,6 +8,7 @@ declare global {
       loadingPhase: "idle" | "in" | "loading" | "out";
       sceneSwitches: number;
       loadingOverlayShows: number;
+      loadingMinimumMs: number;
       lastLoadingDurationMs: number;
       loadingProgress: number;
       loadingOverlayAlpha: number;
@@ -34,7 +35,8 @@ export class SceneManager {
 
     const loadingOptions = scene.loading ?? {};
     const showOverlay = loadingOptions.overlay !== false;
-    const minimumLoadingMs = loadingOptions.minimumMs ?? defaultMinimumLoadingMs;
+    const minimumLoadingMs = loadingOptions.minimumMs ?? sampleMinimumLoadingMs();
+    ctx.runtime.loadingMinimumMs = showOverlay ? minimumLoadingMs : 0;
     const loadingStartedAt = performance.now();
     const transition = showOverlay ? createTransition(ctx) : null;
     const assets = typeof scene.assets === "function" ? scene.assets(ctx) : (scene.assets ?? []);
@@ -124,4 +126,9 @@ function waitForMinimumLoadingTime(startedAt: number, minimumMs: number): Promis
   return new Promise((resolve) => {
     window.setTimeout(resolve, remaining);
   });
+}
+
+function sampleMinimumLoadingMs(): number {
+  const { min, max } = minimumLoadingMsRange;
+  return min + Math.random() * (max - min);
 }
