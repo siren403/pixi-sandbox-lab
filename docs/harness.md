@@ -135,7 +135,35 @@ mise run opencode   # 또는 mise o
 - `mise run bash`로 bash 진입 후 `which bun`이 mise 관리 경로 반환
 - `tmux ls`에 `<tool>-<projectname>` 세션 보임
 
-## 9. 알려진 이슈
+## 9. Headless 브라우저 검증
+
+yolobox의 기본 Codex 세션은 interactive GUI 브라우저를 전제로 하지 않는다. 브라우저 앱이나 게임을 검증할 때는 개발 서버 URL을 최종 확인 수단처럼 남기기보다, headless E2E 결과를 신뢰 가능한 검증 산출물로 보고한다.
+
+권장 운영:
+
+- Vite 같은 개발 서버는 검증 중에만 띄우고, 최종 보고 전에 종료한다.
+- 로컬 서버는 컨테이너 내부에서 `0.0.0.0`에 bind하고, 자동 검증은 컨테이너 내부 `127.0.0.1:<port>`로 접속한다.
+- 사용자가 직접 플레이해야 하는 빌드는 sandbox URL이 아니라 GitHub Pages 같은 외부 정적 배포 URL을 기본 경로로 둔다.
+- Playwright 브라우저 바이너리는 `PLAYWRIGHT_BROWSERS_PATH=0`으로 project-local dependency tree 아래에 설치한다.
+- Chromium 실행에 필요한 Linux library는 project dependency가 아니라 sandbox setup으로 분리한다.
+
+예시:
+
+```bash
+bun run pw:install
+bun run build
+bun run test:e2e
+```
+
+Chromium launch가 system dependency 부족으로 실패하면 sandbox 환경 준비로 처리한다:
+
+```bash
+sudo ./node_modules/.bin/playwright install-deps chromium
+```
+
+이 패턴은 아직 별도 skill로 승격하지 않는다. 두 번째 브라우저 앱/게임 작업에서도 같은 절차가 반복되면 `headless-browser-validation` 같은 project-local skill 후보로 재검토한다.
+
+## 10. 알려진 이슈
 
 ### mise core:bun 버전 목록 버그
 
@@ -152,7 +180,7 @@ mise install  # bun@1.3.13 정상 설치됨
 
 Claude Code, Codex 등 TUI 에이전트에서 마우스 스크롤과 Shift+Enter가 tmux 내에서 정상 동작하지 않을 수 있음. yolobox 또는 해당 CLI 상류 이슈로, 기본 동작에는 영향 없음.
 
-## 10. 다음 단계 후보 (지금은 작업 안 함)
+## 11. 다음 단계 후보 (지금은 작업 안 함)
 
 - gh 토큰 / SSH agent forward (`.yolobox.toml`)
 - git config forward

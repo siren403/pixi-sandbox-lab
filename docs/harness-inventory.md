@@ -249,7 +249,7 @@ When MCP config is added, register:
 ### Harness Documentation
 
 - `docs/harness.md`  
-  Current PromptOps/yolobox harness notes.
+  Current PromptOps/yolobox harness notes, including headless browser validation guidance for sandbox browser apps and games.
 
 - `docs/harness-inventory.md`  
   This registry.
