@@ -1,0 +1,4 @@
+interface:
+  display_name: "Checkpoint"
+  short_description: "Create and resume task continuity checkpoints"
+  default_prompt: "Use $checkpoint to create or resume a clean continuation checkpoint before changing context."

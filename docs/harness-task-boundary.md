@@ -96,6 +96,34 @@ main task active
 
 Do not use a detour to silently expand scope. If the detour requires files outside the approved plan, stop and re-plan before editing those files.
 
+### Checkpoints
+
+A checkpoint records the current continuation point so a later context can resume consistently without relying on chat memory.
+
+Use `$checkpoint` or `mise run checkpoint -- ...` before clearing context, opening a new session, or handing work to another continuation context.
+
+Checkpoint policy:
+
+- `$checkpoint` runs auto mode.
+- `active` means the checkpoint has not yet been used to enter a continuation context.
+- `resume` verifies the checkpoint, marks it `consumed`, increments `resume_count`, and prints `next_action`.
+- `consumed` checkpoints remain on disk and may be overwritten by the next `create`.
+- There is no `clear` command in v1.
+- Creating a checkpoint requires a clean working tree.
+- Creating over an `active` checkpoint requires `--force`.
+- Resume does not automatically run the next action.
+
+Typical flow:
+
+```text
+work reaches a stable continuation point
+  -> checkpoint created
+  -> context clears or changes
+  -> checkpoint resume verifies state
+  -> checkpoint becomes consumed
+  -> user chooses whether to run next_action
+```
+
 ### 4. End
 
 Use `$task-end` before final response or commit closeout.

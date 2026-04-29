@@ -57,6 +57,15 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 - `.agents/skills/hook-creator/agents/openai.yaml`  
   UI metadata for the `hook-creator` skill.
 
+- `.agents/skills/checkpoint/SKILL.md`
+  Creates, verifies, and consumes project-local continuation checkpoints for context-boundary continuity and contamination prevention.
+  Discovery route: `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`; users can invoke `$checkpoint`.
+  Expected user/agent: parent Codex and harness agents checkpointing clean continuation points before context clearing, new sessions, or handoff.
+  Validation: `mise run validate-skills`; checkpoint behavior is validated through `mise run checkpoint -- ...` smoke tests.
+
+- `.agents/skills/checkpoint/agents/openai.yaml`
+  UI metadata for the `checkpoint` skill.
+
 - `.agents/skills/harness-audit/SKILL.md`  
   Provides the read-only harness audit procedure for inventory coverage, discovery paths, protocol coverage, validation, tracking policy, and clean-state readiness.
   Discovery route: `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`.
@@ -165,6 +174,12 @@ When MCP config is added, register:
 - `.mise/tasks/validate-skills`  
   Use the project-scoped mise Python runtime and `.venv` to run Codex skill validation. Reports each valid project skill by name and path.
 
+- `.mise/tasks/checkpoint`
+  Official mise execution surface for the checkpoint continuity guard. Agents should call `mise run checkpoint -- <command>` instead of invoking the Bun script directly.
+  Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
+  Expected user/agent: parent Codex and harness agents creating, verifying, and consuming continuation checkpoints.
+  Validation: smoke tests with `auto`, `create`, `status`, `verify`, `resume`, consumed overwrite, active overwrite refusal, forced overwrite, dirty-state refusal, and malformed state failure.
+
 - `.mise/tasks/task-plan-loop`  
   Official mise execution surface for the task-plan review-loop state manager. Agents should call `mise run task-plan-loop -- <command>` instead of invoking the Bun script directly.
   Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
@@ -193,6 +208,12 @@ When MCP config is added, register:
 
 ### Harness Scripts
 
+- `scripts/harness/checkpoint.ts`
+  Bun/TypeScript state manager for `.codex-harness/checkpoint.json`. It captures git state, task-flow summary, task-plan-loop summary, next action, and `active`/`consumed` checkpoint state.
+  Discovery route: `.mise/tasks/checkpoint` points to this script; `harness_architect` discovery includes `scripts/harness/*`.
+  Expected user/agent: parent Codex and harness agents guarding context boundaries and continuation points.
+  Validation: run through the mise wrapper so the same command surface is used by agents.
+
 - `scripts/harness/task-plan-loop.ts`  
   Bun/TypeScript state manager for persisted task-plan review loops. It is the only supported writer for `.codex-harness/task-plan-loop.json` and enforces loop bounds, terminal states, and invalid transition failures.
   Discovery route: `.mise/tasks/task-plan-loop` points to this script; `harness_architect` discovery includes `scripts/harness/*`.
@@ -214,10 +235,10 @@ When MCP config is added, register:
   Validation: `git check-ignore` for local state and tracked Codex config/hook exceptions, plus final `git status --short`.
 
 - `.codex-harness/`  
-  Ignored local runtime state directory for harness workflows. Registered state files include `.codex-harness/task-plan-loop.json`, managed only by `scripts/harness/task-plan-loop.ts`, and `.codex-harness/task-flow.json`, managed only by `scripts/harness/task-flow.ts`.
+  Ignored local runtime state directory for harness workflows. Registered state files include `.codex-harness/checkpoint.json`, managed only by `scripts/harness/checkpoint.ts`, `.codex-harness/task-plan-loop.json`, managed only by `scripts/harness/task-plan-loop.ts`, and `.codex-harness/task-flow.json`, managed only by `scripts/harness/task-flow.ts`.
   Discovery route: `.gitignore`, this inventory, and the relevant state manager documentation.
   Expected user/agent: parent Codex and harness agents recovering or inspecting active local harness workflow state.
-  Validation: `git check-ignore -v .codex-harness/task-plan-loop.json` and `git check-ignore -v .codex-harness/task-flow.json`.
+  Validation: `git check-ignore -v .codex-harness/checkpoint.json`, `git check-ignore -v .codex-harness/task-plan-loop.json`, and `git check-ignore -v .codex-harness/task-flow.json`.
 
 ### Harness Documentation
 
