@@ -25,7 +25,14 @@ found=0
 for skill in .agents/skills/*; do
   [[ -d "$skill" ]] || continue
   found=1
-  "$PYTHON" "$VALIDATOR" "$skill"
+  name="$(basename "$skill")"
+  if output="$("$PYTHON" "$VALIDATOR" "$skill" 2>&1)"; then
+    echo "Skill is valid: ${name} (${skill})"
+  else
+    echo "$output" >&2
+    echo "Skill validation failed: ${name} (${skill})" >&2
+    exit 1
+  fi
 done
 
 if [[ "$found" -eq 0 ]]; then

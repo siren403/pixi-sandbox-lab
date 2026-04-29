@@ -163,7 +163,7 @@ When MCP config is added, register:
   Run environment checks.
 
 - `.mise/tasks/validate-skills`  
-  Use the project-scoped mise Python runtime and `.venv` to run Codex skill validation.
+  Use the project-scoped mise Python runtime and `.venv` to run Codex skill validation. Reports each valid project skill by name and path.
 
 - `.mise/tasks/task-plan-loop`  
   Official mise execution surface for the task-plan review-loop state manager. Agents should call `mise run task-plan-loop -- <command>` instead of invoking the Bun script directly.
