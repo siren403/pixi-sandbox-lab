@@ -28,7 +28,7 @@
 
 브라우저 게임 표면은 **portrait-first adaptive-expand** 정책을 기본으로 한다.
 
-이 정책은 Unity의 `Canvas Scaler > Scale With Screen Size > Expand`와 anchor layout 조합, Phaser의 `Scale.EXPAND`에 가까운 방향이다. PixiJS에는 동일한 고수준 정책이 없으므로 런타임이 viewport resize, visible bounds, anchor layout, safe area를 직접 계산한다.
+이 정책은 Unity의 `Canvas Scaler > Scale With Screen Size > Expand`와 anchor layout 조합, Phaser의 `Scale.EXPAND`에 가까운 방향이다. PixiJS에는 동일한 고수준 정책이 없으므로 런타임이 viewport resize, visible bounds, safe area, surface layers를 직접 관리하고, UI 배치는 `@pixi/layout`을 우선 사용한다.
 
 #### 기준
 
@@ -70,18 +70,17 @@ visibleDesignHeight = viewportHeight / scale
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-#### Anchor layout
+#### Layout
 
-씬과 UI는 절대 viewport 픽셀에 직접 고정하지 않는다. 배치 기준은 design space anchor와 offset이다.
+씬과 UI는 절대 viewport 픽셀에 직접 고정하지 않는다. 배치 기준은 design space, visible bounds, safe area, 그리고 `@pixi/layout`이다.
 
-지원해야 할 anchor 예:
+현재 구현 기준:
 
-- `center`
-- `top-left`, `top-center`, `top-right`
-- `middle-left`, `middle-right`
-- `bottom-left`, `bottom-center`, `bottom-right`
-
-anchor 계산은 `visibleDesignWidth`, `visibleDesignHeight`, safe area inset을 반영해야 한다.
+- `createGame()`은 `1080 x 1920` reference resolution을 기준으로 `adaptive-expand` layout context를 만든다.
+- Pixi `stage` 아래에 framework-owned `surface-root`를 만들고, scale은 `surface-root`에 적용한다.
+- 씬 코드는 `stage.children[0]` 같은 Pixi tree 위치에 의존하지 않고 `ctx.layers`를 사용한다.
+- HUD, panel, row/column 같은 UI 배치는 `@pixi/layout`을 우선 사용한다.
+- 직접 anchor helper는 현재 vertical slice에서 제거했다. 다시 필요해지면 scene-local 계산이 아니라 surface runtime 또는 UI primitive 계층에 추가한다.
 
 #### Safe area
 
@@ -91,6 +90,58 @@ anchor 계산은 `visibleDesignWidth`, `visibleDesignHeight`, safe area inset을
 - CSS `env(safe-area-inset-*)` 값을 수집한다.
 - 런타임 layout context에 safe area를 design-space 단위로 제공한다.
 - bottom/top anchored UI는 safe area inset을 기본 offset에 포함한다.
+
+#### Surface layers
+
+runtime은 모든 scene에 표준 레이어를 제공한다.
+
+```text
+app.stage
+└─ stage
+   └─ surface-root        # adaptive-expand scale 적용 대상
+      ├─ world-layer      # gameplay objects
+      ├─ ui-layer         # HUD / safe-area-aware UI
+      └─ debug-layer      # future Pixi debug visuals
+```
+
+규칙:
+
+- `ctx.layers.root`는 surface 전체의 design-space root다.
+- `ctx.layers.world`에는 gameplay 오브젝트를 배치한다.
+- `ctx.layers.ui`에는 HUD, menu, overlay 같은 플레이어가 읽고 조작하는 UI를 배치한다.
+- `ctx.layers.debug`는 Pixi 내부 debug visual을 위한 자리로 예약한다.
+- DOM 기반 개발 도구는 Pixi tree에 넣지 않고 별도 DOM overlay로 격리한다.
+- scene은 layer label이나 child index에 의존하지 않는다. 테스트와 디버그 노출만 label을 검사한다.
+
+#### Build and debug policy
+
+현재 GitHub Pages는 서비스 릴리즈가 아니라 공유 가능한 개발 데모다.
+
+- `bun run build`는 `build:demo` alias다.
+- `bun run build:demo`는 `VITE_DEMO_DEBUG=true`로 빌드하며 layout debug panel을 포함한다.
+- `bun run build:release`는 `VITE_DEMO_DEBUG=false`로 빌드하며 debug overlay module을 번들에서 제외한다.
+- Pages workflow는 `bun run build:demo`를 사용한다.
+
+layout debug panel:
+
+- DOM overlay로 구현한다. Pixi scene/layer 구조에 섞지 않는다.
+- `@pixi/layout` 내장 debug renderer를 토글한다.
+- `All / World / UI` 필터로 layout debug 대상 노드를 제한한다.
+- `window.__pixiLayoutDebug`에는 E2E용 상태만 노출한다.
+
+#### Current validation
+
+Playwright는 desktop portrait와 mobile portrait를 모두 검증한다.
+
+검증 기준:
+
+- canvas가 viewport 원점 `(0, 0)`에서 viewport 전체를 채운다.
+- visible design bounds가 최소 `1080 x 1920` 이상이다.
+- player, marker, title의 screen-space size가 최소 가독성/터치 기준을 만족한다.
+- HUD title과 marker가 겹치지 않는다.
+- `surface-root` 아래 레이어 순서가 `world-layer`, `ui-layer`, `debug-layer`다.
+- layout debug panel이 표시되고, `All / UI / World` 필터와 토글이 작동한다.
+- release build 산출물에는 debug overlay 식별 문자열이 포함되지 않는다.
 
 #### 입력과 모바일 기본 동작
 
@@ -108,17 +159,14 @@ anchor 계산은 `visibleDesignWidth`, `visibleDesignHeight`, safe area inset을
 - `stretch`: 비율 왜곡이 발생하므로 쓰지 않는다.
 - `contain/fit` 단독: 중요한 콘텐츠는 보존하지만 레터박스가 생기므로 기본 정책으로 쓰지 않는다.
 
-#### 다음 구현 요구사항
+#### Next surface work
 
-현재 vertical slice의 `960 x 540` 데모 설정은 임시 검증값이다. 런타임 확장 전 아래를 구현해야 한다.
+현재 vertical slice는 surface policy와 debug workflow를 검증한다. 다음 surface 작업은 실제 UI primitive가 늘어날 때 진행한다.
 
-- `1080 x 1920` reference resolution 적용
-- renderer/canvas viewport resize
-- `adaptive-expand` visible bounds 계산
-- anchor-based layout helper
-- safe area 수집과 layout context 주입
-- desktop portrait, mobile portrait viewport E2E
-- canvas가 viewport 전체를 채우고, 중요 콘텐츠가 crop되지 않음을 검증하는 Playwright checks
+- `@pixi/ui` 도입 여부 판단: button, slider, checkbox 같은 조작 UI가 필요해질 때 검토한다.
+- scene-independent UI primitive 계층: HUD title, button, panel 등 반복 패턴이 생길 때 추가한다.
+- pointer/touch input runtime: 모바일 직접 조작이 필요해질 때 keyboard runtime과 분리해 추가한다.
+- visual regression: 레이아웃 회귀가 잦아지면 Playwright screenshot/pixel 기준을 강화한다.
 
 ---
 
