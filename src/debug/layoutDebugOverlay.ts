@@ -1,5 +1,7 @@
 import type { Application, Container } from "pixi.js";
 
+type LayoutDebugFilter = "all" | "world" | "ui";
+
 type DebuggableContainer = Container & {
   _layout?: {
     style?: Record<string, unknown>;
@@ -11,60 +13,132 @@ declare global {
   interface Window {
     __pixiLayoutDebug?: {
       enabled: boolean;
+      filter: LayoutDebugFilter;
       layoutNodes: number;
+      debuggedNodes: number;
+      layerLabels: string[];
     };
   }
 }
 
 export function installLayoutDebug(app: Application, root: Container): () => void {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.dataset.testid = "layout-debug-toggle";
-  button.textContent = "Layout";
-  Object.assign(button.style, {
+  const panel = document.createElement("section");
+  panel.dataset.testid = "layout-debug-panel";
+  Object.assign(panel.style, {
     position: "fixed",
     right: "max(16px, env(safe-area-inset-right))",
     bottom: "max(16px, env(safe-area-inset-bottom))",
     zIndex: "20",
-    minWidth: "88px",
-    minHeight: "44px",
+    minWidth: "188px",
     border: "1px solid rgba(238, 242, 246, 0.38)",
     borderRadius: "8px",
     background: "rgba(11, 18, 26, 0.84)",
     color: "#eef2f6",
-    font: "600 14px Inter, system-ui, sans-serif",
-    cursor: "pointer",
+    font: "600 12px Inter, system-ui, sans-serif",
+    padding: "10px",
     touchAction: "manipulation",
+    userSelect: "none",
   });
 
+  const header = document.createElement("div");
+  Object.assign(header.style, {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "8px",
+    marginBottom: "8px",
+  });
+
+  const title = document.createElement("span");
+  title.textContent = "Layout Debug";
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.dataset.testid = "layout-debug-toggle";
+  toggle.textContent = "Off";
+  Object.assign(toggle.style, buttonStyle());
+
+  header.append(title, toggle);
+
+  const filterRow = document.createElement("div");
+  filterRow.dataset.testid = "layout-debug-filters";
+  Object.assign(filterRow.style, {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "6px",
+    marginBottom: "8px",
+  });
+
+  const filterButtons = new Map<LayoutDebugFilter, HTMLButtonElement>();
+  for (const value of ["all", "world", "ui"] as const) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.testid = `layout-debug-filter-${value}`;
+    button.textContent = value === "all" ? "All" : value[0].toUpperCase() + value.slice(1);
+    Object.assign(button.style, buttonStyle());
+    filterButtons.set(value, button);
+    filterRow.appendChild(button);
+  }
+
+  const stats = document.createElement("div");
+  stats.dataset.testid = "layout-debug-stats";
+  Object.assign(stats.style, {
+    color: "rgba(238, 242, 246, 0.82)",
+    fontWeight: "500",
+    lineHeight: "1.45",
+  });
+
+  panel.append(header, filterRow, stats);
+
   let enabled = false;
+  let filter: LayoutDebugFilter = "all";
   let destroyed = false;
 
   const syncState = () => {
-    window.__pixiLayoutDebug = { enabled, layoutNodes: countLayoutNodes(root) };
-    button.setAttribute("aria-pressed", String(enabled));
-    button.style.background = enabled ? "rgba(76, 201, 240, 0.88)" : "rgba(11, 18, 26, 0.84)";
-    button.style.color = enabled ? "#071018" : "#eef2f6";
+    const layoutNodes = countLayoutNodes(root);
+    const debuggedNodes = countDebuggedNodes(root);
+    const layerLabels = root.children.map((child) => child.label ?? "");
+    window.__pixiLayoutDebug = { enabled, filter, layoutNodes, debuggedNodes, layerLabels };
+
+    toggle.textContent = enabled ? "On" : "Off";
+    toggle.setAttribute("aria-pressed", String(enabled));
+    setButtonActive(toggle, enabled);
+
+    for (const [value, button] of filterButtons) {
+      button.setAttribute("aria-pressed", String(value === filter));
+      setButtonActive(button, value === filter);
+    }
+
+    stats.textContent = `nodes ${debuggedNodes}/${layoutNodes} | ${layerLabels.join(", ")}`;
   };
 
   const syncLayoutFlags = () => {
-    applyDebugFlag(root, enabled);
+    applyDebugFlag(root, enabled, filter);
+    syncState();
   };
 
   const setEnabled = async (next: boolean) => {
     enabled = next;
-    syncState();
     syncLayoutFlags();
     await app.renderer.layout.enableDebug(enabled);
     app.renderer.layout.update(app.stage);
   };
 
-  const onClick = () => {
+  const onToggleClick = () => {
     void setEnabled(!enabled);
   };
 
-  button.addEventListener("click", onClick);
-  document.body.appendChild(button);
+  const onFilterClick = (next: LayoutDebugFilter) => {
+    filter = next;
+    syncLayoutFlags();
+    app.renderer.layout.update(app.stage);
+  };
+
+  toggle.addEventListener("click", onToggleClick);
+  for (const [value, button] of filterButtons) {
+    button.addEventListener("click", () => onFilterClick(value));
+  }
+  document.body.appendChild(panel);
   syncState();
 
   app.ticker.add(syncLayoutFlags);
@@ -73,30 +147,44 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     if (destroyed) return;
     destroyed = true;
     app.ticker.remove(syncLayoutFlags);
-    button.removeEventListener("click", onClick);
-    button.remove();
+    toggle.removeEventListener("click", onToggleClick);
+    panel.remove();
     void app.renderer.layout.enableDebug(false);
-    applyDebugFlag(root, false);
-    window.__pixiLayoutDebug = { enabled: false, layoutNodes: 0 };
+    applyDebugFlag(root, false, "all");
+    window.__pixiLayoutDebug = { enabled: false, filter, layoutNodes: 0, debuggedNodes: 0, layerLabels: [] };
   };
 }
 
-function applyDebugFlag(container: Container, enabled: boolean): void {
+function applyDebugFlag(container: Container, enabled: boolean, filter: LayoutDebugFilter): void {
   for (const child of container.children) {
     const target = child as DebuggableContainer;
     const style = target._layout?.style;
-    if (style && style.debug !== enabled) {
+    const debug = enabled && matchesFilter(target, filter);
+    if (style && style.debug !== debug) {
       target.layout = {
         ...style,
-        debug: enabled,
+        debug,
         debugHeat: false,
       };
     }
 
     if ("children" in target) {
-      applyDebugFlag(target, enabled);
+      applyDebugFlag(target, enabled, filter);
     }
   }
+}
+
+function matchesFilter(container: Container, filter: LayoutDebugFilter): boolean {
+  if (filter === "all") return true;
+  const layerLabel = `${filter}-layer`;
+  let current: Container | null = container;
+
+  while (current) {
+    if (current.label === layerLabel) return true;
+    current = current.parent;
+  }
+
+  return false;
 }
 
 function countLayoutNodes(container: Container): number {
@@ -112,4 +200,36 @@ function countLayoutNodes(container: Container): number {
   }
 
   return count;
+}
+
+function countDebuggedNodes(container: Container): number {
+  let count = 0;
+
+  for (const child of container.children) {
+    const target = child as DebuggableContainer;
+    if (target._layout?.style?.debug === true) count += 1;
+
+    if ("children" in target) {
+      count += countDebuggedNodes(target);
+    }
+  }
+
+  return count;
+}
+
+function buttonStyle(): Partial<CSSStyleDeclaration> {
+  return {
+    minHeight: "36px",
+    border: "1px solid rgba(238, 242, 246, 0.32)",
+    borderRadius: "6px",
+    background: "rgba(238, 242, 246, 0.08)",
+    color: "#eef2f6",
+    font: "600 12px Inter, system-ui, sans-serif",
+    cursor: "pointer",
+  };
+}
+
+function setButtonActive(button: HTMLButtonElement, active: boolean): void {
+  button.style.background = active ? "rgba(76, 201, 240, 0.88)" : "rgba(238, 242, 246, 0.08)";
+  button.style.color = active ? "#071018" : "#eef2f6";
 }

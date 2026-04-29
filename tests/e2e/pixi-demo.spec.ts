@@ -21,7 +21,10 @@ declare global {
     };
     __pixiLayoutDebug?: {
       enabled: boolean;
+      filter: "all" | "world" | "ui";
       layoutNodes: number;
+      debuggedNodes: number;
+      layerLabels: string[];
     };
   }
 }
@@ -73,14 +76,30 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
   const after = await page.evaluate(() => window.__pixiDemoState);
   expect(after?.playerX).toBeGreaterThan(before?.playerX ?? 0);
 
+  const layoutDebugPanel = page.getByTestId("layout-debug-panel");
   const layoutDebug = page.getByTestId("layout-debug-toggle");
-  await expect(layoutDebug).toBeVisible();
+  await expect(layoutDebugPanel).toBeVisible();
   await expect(layoutDebug).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByTestId("layout-debug-stats")).toContainText("world-layer");
   expect(await page.evaluate(() => window.__pixiLayoutDebug?.layoutNodes)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.__pixiLayoutDebug?.filter)).toBe("all");
 
   await layoutDebug.click();
   await expect(layoutDebug).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.enabled)).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.debuggedNodes)).toBeGreaterThan(0);
+
+  await page.getByTestId("layout-debug-filter-ui").click();
+  await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.filter)).toBe("ui");
+  const uiDebuggedNodes = await page.evaluate(() => window.__pixiLayoutDebug?.debuggedNodes ?? 0);
+  expect(uiDebuggedNodes).toBeGreaterThan(0);
+
+  await page.getByTestId("layout-debug-filter-world").click();
+  await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.filter)).toBe("world");
+  expect(await page.evaluate(() => window.__pixiLayoutDebug?.debuggedNodes ?? 0)).toBeLessThan(uiDebuggedNodes);
+
+  await page.getByTestId("layout-debug-filter-all").click();
+  await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.filter)).toBe("all");
 
   await layoutDebug.click();
   await expect(layoutDebug).toHaveAttribute("aria-pressed", "false");
