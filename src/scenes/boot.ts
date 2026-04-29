@@ -5,6 +5,8 @@ import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
 
 const speed = 520;
+const pointerFollowRate = 10;
+const pointerSnapDistance = 3;
 
 type DemoState = {
   playerX: number;
@@ -40,6 +42,12 @@ declare global {
 let sceneSwitches = 0;
 let removeSceneSwitchListener: (() => void) | null = null;
 
+type MotionPlayer = Graphics & {
+  targetX?: number;
+  targetY?: number;
+  targetActive?: boolean;
+};
+
 export const bootScene = scene({
   assets: [demoOrbUrl],
 
@@ -61,8 +69,13 @@ export const bootScene = scene({
 
     player.label = "player";
     player.position.set(layout.visibleWidth / 2, layout.visibleHeight / 2);
+    const motionPlayer = player as MotionPlayer;
+    motionPlayer.targetX = player.x;
+    motionPlayer.targetY = player.y;
+    motionPlayer.targetActive = false;
 
     const assetOrb = createAssetOrb(assets.get<Texture>(demoOrbUrl), layout, 0.74, 0.58);
+    const inputTarget = createInputTarget(layout);
 
     const marker = new Graphics()
       .circle(markerRadius, markerRadius, markerRadius)
@@ -91,7 +104,7 @@ export const bootScene = scene({
 
     hud.addChild(title, spacer, marker);
     layers.ui.addChild(hud);
-    layers.world.addChild(assetOrb, player);
+    layers.world.addChild(assetOrb, inputTarget, player);
     app.renderer.layout.update(layers.root);
     removeSceneSwitchListener = installSceneSwitchListener(() => {
       if (switchScene(alternateScene, "debug")) sceneSwitches += 1;
@@ -116,7 +129,8 @@ export const bootScene = scene({
   },
 
   update(dt, { layers, keyboard, pointer, layout, switchScene }) {
-    const player = layers.world.getChildByLabel("player") as Graphics | null;
+    const player = layers.world.getChildByLabel("player") as MotionPlayer | null;
+    const inputTarget = layers.world.getChildByLabel("input-target") as Graphics | null;
     if (!player) return;
 
     if (keyboard.wasPressed("x")) {
@@ -136,20 +150,48 @@ export const bootScene = scene({
       const length = Math.hypot(dx, dy);
       player.x += (dx / length) * speed * dt;
       player.y += (dy / length) * speed * dt;
+      player.targetX = player.x;
+      player.targetY = player.y;
+      player.targetActive = false;
+      if (inputTarget) inputTarget.alpha = Math.max(0, inputTarget.alpha - dt * 4);
     }
 
+    const playerPadding = tokenValue(layout, surfaceTheme.size.player) / 2;
     const pointerActive = pointer.isDown();
     const pointerPressed = pointer.wasPressed();
     const pointerReleased = pointer.wasReleased();
     if (pointerActive || pointerPressed || pointerReleased) {
       const position = pointer.position();
-      player.x = position.x;
-      player.y = position.y;
+      player.targetX = clamp(position.x, playerPadding, layout.visibleWidth - playerPadding);
+      player.targetY = clamp(position.y, playerPadding, layout.visibleHeight - playerPadding);
+      player.targetActive = true;
+      if (inputTarget) {
+        inputTarget.position.set(player.targetX, player.targetY);
+        inputTarget.alpha = 0.9;
+        inputTarget.scale.set(pointerPressed ? 1.28 : 1);
+      }
     }
 
-    const playerPadding = tokenValue(layout, surfaceTheme.size.player) / 2;
+    if (player.targetActive && player.targetX !== undefined && player.targetY !== undefined) {
+      const follow = 1 - Math.exp(-pointerFollowRate * dt);
+      player.x = lerp(player.x, player.targetX, follow);
+      player.y = lerp(player.y, player.targetY, follow);
+      player.rotation = lerp(player.rotation, clamp((player.targetX - player.x) * 0.0012, -0.12, 0.12), follow);
+
+      const distance = Math.hypot(player.targetX - player.x, player.targetY - player.y);
+      if (distance <= pointerSnapDistance) {
+        player.position.set(player.targetX, player.targetY);
+        player.rotation = 0;
+        player.targetActive = false;
+      }
+    }
+
     player.x = clamp(player.x, playerPadding, layout.visibleWidth - playerPadding);
     player.y = clamp(player.y, playerPadding, layout.visibleHeight - playerPadding);
+    if (!player.targetActive) {
+      player.rotation = lerp(player.rotation, 0, 1 - Math.exp(-12 * dt));
+    }
+    updateInputTarget(inputTarget, dt);
 
     syncDemoState("boot", player.x, player.y, layout, layers.root, pointer, true);
   },
@@ -255,6 +297,10 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+function lerp(start: number, end: number, progress: number): number {
+  return start + (end - start) * progress;
+}
+
 function configureHudLayout(hud: Container, layout: SurfaceLayout): void {
   const margin = tokenValue(layout, surfaceTheme.spacing.screen);
   const hudHeight = tokenValue(layout, surfaceTheme.font.title) * 1.25;
@@ -278,6 +324,33 @@ function createAssetOrb(texture: Texture, layout: SurfaceLayout, xRatio: number,
   orb.width = size;
   orb.height = size;
   return orb;
+}
+
+function createInputTarget(layout: SurfaceLayout): Graphics {
+  const radius = tokenValue(layout, surfaceTheme.size.player) * 0.58;
+  const stroke = Math.max(3, tokenValue(layout, surfaceTheme.size.playerStroke) * 0.75);
+  const target = new Graphics()
+    .circle(0, 0, radius)
+    .stroke({ color: "#38bdf8", width: stroke, alpha: 0.84 })
+    .moveTo(-radius * 1.35, 0)
+    .lineTo(-radius * 0.72, 0)
+    .moveTo(radius * 0.72, 0)
+    .lineTo(radius * 1.35, 0)
+    .moveTo(0, -radius * 1.35)
+    .lineTo(0, -radius * 0.72)
+    .moveTo(0, radius * 0.72)
+    .lineTo(0, radius * 1.35)
+    .stroke({ color: "#facc15", width: stroke * 0.55, alpha: 0.78 });
+  target.label = "input-target";
+  target.alpha = 0;
+  return target;
+}
+
+function updateInputTarget(target: Graphics | null, dt: number): void {
+  if (!target || target.alpha <= 0) return;
+  target.rotation += dt * 2.2;
+  target.scale.set(lerp(target.scale.x, 1, 1 - Math.exp(-12 * dt)));
+  target.alpha = Math.max(0, target.alpha - dt * 1.5);
 }
 
 function syncDemoState(
