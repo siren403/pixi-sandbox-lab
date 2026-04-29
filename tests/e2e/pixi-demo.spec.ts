@@ -18,6 +18,10 @@ declare global {
       markerBounds: { x: number; y: number; width: number; height: number };
       rendered: boolean;
     };
+    __pixiLayoutDebug?: {
+      enabled: boolean;
+      layoutNodes: number;
+    };
   }
 }
 
@@ -64,6 +68,20 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
 
   const after = await page.evaluate(() => window.__pixiDemoState);
   expect(after?.playerX).toBeGreaterThan(before?.playerX ?? 0);
+
+  const layoutDebug = page.getByTestId("layout-debug-toggle");
+  await expect(layoutDebug).toBeVisible();
+  await expect(layoutDebug).toHaveAttribute("aria-pressed", "false");
+  expect(await page.evaluate(() => window.__pixiLayoutDebug?.layoutNodes)).toBeGreaterThan(0);
+
+  await layoutDebug.click();
+  await expect(layoutDebug).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.enabled)).toBe(true);
+
+  await layoutDebug.click();
+  await expect(layoutDebug).toHaveAttribute("aria-pressed", "false");
+  await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.enabled)).toBe(false);
+
   expect(consoleErrors).toEqual([]);
 });
 

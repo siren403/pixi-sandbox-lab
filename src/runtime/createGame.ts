@@ -36,6 +36,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
   const ctx: SceneContext = { app, stage, keyboard, layout };
   updateSurfaceLayout(ctx, options.width, options.height);
   options.boot.load?.(ctx);
+  const destroyLayoutDebug = await maybeInstallLayoutDebug(app, stage);
 
   const onResize = () => {
     updateSurfaceLayout(ctx, options.width, options.height);
@@ -49,12 +50,22 @@ export async function createGame(options: GameOptions): Promise<Application> {
 
   window.addEventListener("beforeunload", () => {
     app.renderer.off("resize", onResize);
+    destroyLayoutDebug();
     options.boot.unload?.(ctx);
     keyboard.destroy();
     app.destroy();
   });
 
   return app;
+}
+
+async function maybeInstallLayoutDebug(app: Application, stage: Container): Promise<() => void> {
+  if (import.meta.env.VITE_DEMO_DEBUG === "false") {
+    return () => {};
+  }
+
+  const { installLayoutDebug } = await import("../debug/layoutDebugOverlay");
+  return installLayoutDebug(app, stage);
 }
 
 function createSurfaceLayout(
