@@ -1,5 +1,6 @@
-import * as PIXI from "pixi.js";
 import type {} from "gsap";
+import { BlurFilter, type Container } from "pixi.js";
+import * as PIXI from "pixi.js";
 import { gsap } from "gsap/gsap-core";
 import { PixiPlugin } from "gsap/PixiPlugin";
 
@@ -7,9 +8,16 @@ gsap.registerPlugin(PixiPlugin);
 PixiPlugin.registerPIXI(PIXI);
 
 export type MotionAnimation = ReturnType<typeof gsap.to>;
+export type MotionSet = {
+  animations: MotionAnimation[];
+  cleanup: () => void;
+};
 type MotionTarget = object | null;
 type MotionVars = Omit<gsap.TweenVars, "pixi"> & {
   pixi?: PixiPlugin.Vars;
+};
+type FilterTarget = Container & {
+  filters?: Container["filters"];
 };
 
 type ProgressAnimationOptions = {
@@ -67,6 +75,31 @@ export function pulseScaleLoop(target: { scale?: { x: number; y: number } } | nu
 export function pixiTo(target: MotionTarget, vars: MotionVars): MotionAnimation | null {
   if (!target) return null;
   return gsap.to(target, vars);
+}
+
+export function createBlurPulse(target: FilterTarget | null, blurStrength: number): MotionSet | null {
+  if (!target) return null;
+
+  const previousFilters = target.filters;
+  const blur = new BlurFilter({ strength: 0, quality: 2, kernelSize: 5 });
+  target.filters = previousFilters ? [...previousFilters, blur] : [blur];
+
+  const animation = gsap.to(blur, {
+    strength: blurStrength,
+    duration: 0.58,
+    ease: "sine.inOut",
+    repeat: -1,
+    yoyo: true,
+  });
+
+  return {
+    animations: [animation],
+    cleanup: () => {
+      animation.kill();
+      target.filters = previousFilters ? [...previousFilters] : undefined;
+      blur.destroy?.();
+    },
+  };
 }
 
 export function stopMotion(animations: MotionAnimation[]): void {

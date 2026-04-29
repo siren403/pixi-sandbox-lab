@@ -1,6 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import {
   animateProgress,
+  createBlurPulse,
   createLoopingMotion,
   pixiTo,
   pulseScaleLoop,
@@ -36,6 +37,7 @@ export function createTransition(ctx: SceneContext): TransitionController {
   syncTransitionState(ctx);
 
   const loopMotion = createLoadingLoopMotion(root);
+  const loopBlurMotion = createLoadingLoopBlur(root);
 
   return {
     animateIn: () => animateTransition(ctx, root, "in", transitionInMs),
@@ -50,6 +52,7 @@ export function createTransition(ctx: SceneContext): TransitionController {
     },
     destroy() {
       stopMotion(loopMotion);
+      loopBlurMotion?.cleanup();
       root.destroy({ children: true });
       ctx.runtime.transitionPanels = 0;
       syncTransitionState(ctx);
@@ -204,6 +207,12 @@ function createLoadingLoopMotion(root: Container): MotionAnimation[] {
       yoyo: true,
     }),
   ]);
+}
+
+function createLoadingLoopBlur(root: Container): { cleanup: () => void } | null {
+  const loopInner = root.getChildByLabel("loading-loop-inner", true);
+  if (!(loopInner instanceof Container)) return null;
+  return createBlurPulse(loopInner, 4);
 }
 
 function animateTransition(
