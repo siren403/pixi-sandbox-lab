@@ -105,6 +105,7 @@ Use `$checkpoint` or `mise run checkpoint -- ...` before clearing context, openi
 Checkpoint policy:
 
 - `$checkpoint` runs auto mode.
+- A `SessionStart` hook may remind the session when an active checkpoint exists.
 - `active` means the checkpoint has not yet been used to enter a continuation context.
 - `resume` verifies the checkpoint, marks it `consumed`, increments `resume_count`, and prints `next_action`.
 - `consumed` checkpoints remain on disk and may be overwritten by the next `create`.

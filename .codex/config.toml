@@ -1,6 +1,14 @@
 [features]
 codex_hooks = true
 
+[[hooks.SessionStart]]
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "mise exec bun -- bun .codex/hooks/checkpoint-session-start.ts"
+timeout = 10
+statusMessage = "Checking active checkpoint"
+
 [[hooks.Stop]]
 
 [[hooks.Stop.hooks]]

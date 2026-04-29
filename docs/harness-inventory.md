@@ -116,8 +116,14 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 ### Codex Hooks
 
 - `.codex/config.toml`  
-  Project-scoped Codex config. Enables `codex_hooks` and registers the `Stop` dirty-state warning hook.
+  Project-scoped Codex config. Enables `codex_hooks` and registers the `SessionStart` checkpoint reminder hook and `Stop` dirty-state warning hook.
   Discovery route: `harness_architect` boot discovery reads `.codex/config.toml`.
+
+- `.codex/hooks/checkpoint-session-start.ts`
+  Bun/TypeScript command hook for the Codex `SessionStart` event. Resolves the git root from the hook `cwd`, reads `.codex-harness/checkpoint.json`, and emits a non-blocking `systemMessage` when an active checkpoint should be resumed.
+  Event: `SessionStart`. Matcher: none. Behavior: warn-only, non-blocking, read-only.
+  Expected user/agent: all Codex sessions in this project once project hooks are active.
+  Validation: smoke-tested with active, consumed, missing, malformed, and subdirectory `cwd` checkpoint cases.
 
 - `.codex/hooks/dirty-state-stop.ts`  
   Bun/TypeScript command hook for the Codex `Stop` event. Runs `git status --short` in the hook `cwd`, emits a non-blocking `systemMessage` when the working tree is dirty, and exits cleanly on git inspection errors with a warning.
