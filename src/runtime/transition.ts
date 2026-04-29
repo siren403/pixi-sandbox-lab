@@ -1,4 +1,12 @@
 import { Container, Graphics } from "pixi.js";
+import {
+  animateProgress,
+  createLoopingMotion,
+  pulseScaleLoop,
+  rotateLoop,
+  stopMotion,
+  type MotionAnimation,
+} from "./motion";
 import type { SceneContext } from "./scene";
 
 export const minimumLoadingMsRange = { min: 500, max: 1000 } as const;
@@ -26,24 +34,7 @@ export function createTransition(ctx: SceneContext): TransitionController {
   ctx.layers.debug.addChild(root);
   syncTransitionState(ctx);
 
-  let loopFrame = 0;
-  const updateLoop = () => {
-    const loop = root.getChildByLabel("loading-loop", true);
-    const loopInner = root.getChildByLabel("loading-loop-inner", true);
-    const loopDot = root.getChildByLabel("loading-loop-dot", true);
-    const slashA = root.getChildByLabel("transition-slash-a", true);
-    const slashB = root.getChildByLabel("transition-slash-b", true);
-    if (loop) {
-      loop.rotation += 0.078;
-      loop.scale.set(1 + Math.sin(performance.now() / 180) * 0.06);
-    }
-    if (loopInner) loopInner.rotation -= 0.044;
-    if (loopDot) loopDot.rotation += 0.13;
-    if (slashA) slashA.x += Math.sin(performance.now() / 140) * 2.2;
-    if (slashB) slashB.x -= Math.cos(performance.now() / 160) * 1.8;
-    loopFrame = requestAnimationFrame(updateLoop);
-  };
-  loopFrame = requestAnimationFrame(updateLoop);
+  const loopMotion = createLoadingLoopMotion(root);
 
   return {
     animateIn: () => animateTransition(ctx, root, "in", transitionInMs),
@@ -57,7 +48,7 @@ export function createTransition(ctx: SceneContext): TransitionController {
       return getTransitionPanels(root).length;
     },
     destroy() {
-      cancelAnimationFrame(loopFrame);
+      stopMotion(loopMotion);
       root.destroy({ children: true });
       ctx.runtime.transitionPanels = 0;
       syncTransitionState(ctx);
@@ -166,6 +157,19 @@ function createSlash(width: number, height: number, color: string): Graphics {
     .fill(color);
 }
 
+function createLoadingLoopMotion(root: Container): MotionAnimation[] {
+  const loop = root.getChildByLabel("loading-loop", true);
+  const loopInner = root.getChildByLabel("loading-loop-inner", true);
+  const loopDot = root.getChildByLabel("loading-loop-dot", true);
+
+  return createLoopingMotion([
+    rotateLoop(loop, Math.PI * 2, 1.12),
+    rotateLoop(loopInner, -Math.PI * 2, 1.72),
+    rotateLoop(loopDot, Math.PI * 2, 0.82),
+    pulseScaleLoop(loop),
+  ]);
+}
+
 function animateTransition(
   ctx: SceneContext,
   root: Container,
@@ -177,11 +181,10 @@ function animateTransition(
   const backdrop = root.getChildByLabel("loading-backdrop", true);
   const slashA = root.getChildByLabel("transition-slash-a", true);
   const slashB = root.getChildByLabel("transition-slash-b", true);
-  const start = performance.now();
 
-  return new Promise((resolve) => {
-    const step = () => {
-      const raw = durationMs <= 0 ? 1 : Math.min(1, (performance.now() - start) / durationMs);
+  return animateProgress({
+    durationMs,
+    onUpdate(raw) {
       const travel = direction === "in" ? easeOutCubic(raw) : easeInCubic(raw);
       const panelProgress = direction === "in"
         ? easeOutCubic(raw)
@@ -201,24 +204,21 @@ function animateTransition(
       });
 
       if (backdrop) backdrop.alpha = direction === "in" ? 0.54 * smoothstep(raw) : 0.54 * (1 - smoothstep(raw));
-      if (slashA) slashA.x = direction === "in" ? lerp(-width * 0.62, width * 0.58, easeOutCubic(raw)) : lerp(width * 0.58, width * 1.34, easeInCubic(raw));
-      if (slashB) slashB.x = direction === "in" ? lerp(-width * 0.78, width * 0.42, easeOutCubic(raw)) : lerp(width * 0.42, width * 1.22, easeInCubic(raw));
+      const slashOffsetA = Math.sin(raw * Math.PI * 2.4) * width * 0.018;
+      const slashOffsetB = Math.cos(raw * Math.PI * 2.1) * width * 0.014;
+      if (slashA) slashA.x = direction === "in"
+        ? lerp(-width * 0.62, width * 0.58, easeOutCubic(raw)) + slashOffsetA * (1 - raw)
+        : lerp(width * 0.58, width * 1.34, easeInCubic(raw)) + slashOffsetA * raw;
+      if (slashB) slashB.x = direction === "in"
+        ? lerp(-width * 0.78, width * 0.42, easeOutCubic(raw)) + slashOffsetB * (1 - raw)
+        : lerp(width * 0.42, width * 1.22, easeInCubic(raw)) + slashOffsetB * raw;
 
       setUiAlpha(root, uiAlpha);
       ctx.runtime.loadingOverlayAlpha = panelProgress;
       ctx.runtime.loadingOverlayMaxAlpha = Math.max(ctx.runtime.loadingOverlayMaxAlpha, panelProgress);
       syncTransitionState(ctx);
-
-      if (raw >= 1) {
-        resolve();
-        return;
-      }
-
-      requestAnimationFrame(step);
-    };
-
-    requestAnimationFrame(step);
-  });
+    },
+  }).then(() => undefined);
 }
 
 function updateLoadingProgress(ctx: SceneContext, root: Container, progress: number): void {
