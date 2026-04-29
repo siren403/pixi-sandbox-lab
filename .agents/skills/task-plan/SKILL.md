@@ -11,6 +11,16 @@ Use this skill before non-trivial work. The output must be a plan the user can a
 
 For harness changes, follow `docs/harness-change-protocol.md` and use `harness_architect` plus `plan_reviewer`.
 
+## Missing Target Behavior
+
+If this skill is invoked without a clear planning target:
+
+1. Do not invent a full implementation plan immediately.
+2. Infer likely targets from recent conversation, current git state, and `docs/harness-inventory.md`.
+3. Offer 2-3 candidate targets.
+4. Mark one as **Recommended** with a short reason.
+5. Ask the user to choose one or provide a different target.
+
 ## Plan Format
 
 1. **Feature Summary**
