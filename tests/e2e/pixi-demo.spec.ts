@@ -16,9 +16,11 @@ declare global {
       titleScreenFontSize: number;
       titleBounds: { x: number; y: number; width: number; height: number };
       markerBounds: { x: number; y: number; width: number; height: number };
+      assetBounds: { x: number; y: number; width: number; height: number };
       layerLabels: string[];
       scene: string;
       sceneSwitches: number;
+      assetReady: boolean;
       pointerDown: boolean;
       pointerX: number;
       pointerY: number;
@@ -34,7 +36,7 @@ declare global {
   }
 }
 
-test("renders a PixiJS canvas and moves the player with keyboard input", async ({
+test("renders the PixiJS demo with assets and input", async ({
   page,
 }) => {
   const consoleErrors: string[] = [];
@@ -71,6 +73,9 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
   expect(before?.titleScreenFontSize).toBeGreaterThanOrEqual(22);
   expect(before?.titleBounds.width).toBeGreaterThan(0);
   expect(before?.markerBounds.width).toBeGreaterThan(0);
+  expect(before?.assetReady).toBe(true);
+  expect(before?.assetBounds.width).toBeGreaterThan(0);
+  expect(before?.assetBounds.height).toBeGreaterThan(0);
   expect(rectsOverlap(before?.titleBounds, before?.markerBounds)).toBe(false);
   expect(before?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
   expect(before?.scene).toBe("boot");
@@ -110,6 +115,8 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
   expect(alternate?.sceneSwitches).toBe(1);
   expect(alternate?.titleBounds.width).toBeGreaterThan(0);
   expect(alternate?.markerBounds.width).toBeGreaterThan(0);
+  expect(alternate?.assetReady).toBe(true);
+  expect(alternate?.assetBounds.width).toBeGreaterThan(0);
 
   await sceneSwitch.click();
   await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("boot");

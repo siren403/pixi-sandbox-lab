@@ -1,4 +1,5 @@
 import type { Application, Container } from "pixi.js";
+import type { AssetList, AssetRuntime } from "./assets";
 import type { Keyboard } from "./keyboard";
 import type { Pointer } from "./pointer";
 
@@ -31,6 +32,7 @@ export type SceneContext = {
   app: Application;
   stage: Container;
   layers: SurfaceLayers;
+  assets: AssetRuntime;
   keyboard: Keyboard;
   pointer: Pointer;
   layout: SurfaceLayout;
@@ -38,6 +40,7 @@ export type SceneContext = {
 };
 
 export type Scene = {
+  assets?: AssetList | ((ctx: SceneContext) => AssetList);
   load?: (ctx: SceneContext) => void;
   update?: (dt: number, ctx: SceneContext) => void;
   resize?: (ctx: SceneContext) => void;

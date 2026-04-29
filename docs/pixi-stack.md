@@ -225,6 +225,14 @@ LÖVE는 비동기 문제가 없는 게 아니라 발생할 수 없는 구조다
 
 **PixiJS 대응 전략**: 프레임워크가 `await PIXI.Assets.loadBundle()`을 내부에서 소비한 뒤 `load(ctx)`를 호출한다. 게임 코드의 `load()`는 `async`가 아니며, 이 시점에 `assets.get()`은 항상 동기로 접근 가능하다.
 
+현재 vertical slice 구현:
+
+- `Scene.assets`는 정적 배열 또는 `(ctx) => 배열`을 받는다.
+- `SceneManager.switch()`는 기존 씬을 정리한 뒤 scene asset 목록을 평가하고 `ctx.assets.load()`를 await한다.
+- scene `load(ctx)`는 async가 아니며, 이 시점부터 `ctx.assets.get(source)`로 동기 접근한다.
+- `AssetRuntime`은 Pixi `Assets`를 감싸며, 준비되지 않은 asset을 `get()`하면 명시적으로 에러를 낸다.
+- 첫 검증 asset은 Vite import URL을 사용한다. Pages의 하위 경로 배포를 피하려고 `public` 절대 경로 대신 번들러가 관리하는 `src/assets/*` import를 쓴다.
+
 ### LÖVE의 레벨 로드 패턴
 
 LÖVE에서 레벨 전환은 씬 전환 타이밍에 블로킹으로 처리한다.
@@ -513,10 +521,10 @@ async _switchScene(name: string, ctx: Record<string, any> = {}) {
     : (scene.assets ?? [])
 
   // 4. 비동기 로드 (이 구간만 async)
-  await PIXI.Assets.loadBundle(name, assetList)
+  await ctx.assets.load(assetList)
 
   // 5. 이후는 전부 동기
-  this._assetCache._markReady(assetList)  // get() 동기 접근 허용
+  ctx.assets.get("player.png")            // get() 동기 접근 가능
   scene.load?.(ctx)                        // 게임 코드 load() 호출
   this._buildObjects(scene, ctx)           // ECS world 초기화
   this._hideLoader()

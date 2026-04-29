@@ -1,4 +1,5 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text, type Texture } from "pixi.js";
+import demoOrbUrl from "../assets/demo-orb.svg";
 import { screenValue, surfaceTheme, tokenValue } from "../runtime/surface";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
@@ -19,9 +20,11 @@ type DemoState = {
   titleScreenFontSize: number;
   titleBounds: { x: number; y: number; width: number; height: number };
   markerBounds: { x: number; y: number; width: number; height: number };
+  assetBounds: { x: number; y: number; width: number; height: number };
   layerLabels: string[];
   scene: string;
   sceneSwitches: number;
+  assetReady: boolean;
   pointerDown: boolean;
   pointerX: number;
   pointerY: number;
@@ -38,7 +41,9 @@ let sceneSwitches = 0;
 let removeSceneSwitchListener: (() => void) | null = null;
 
 export const bootScene = scene({
-  load({ app, layers, layout, switchScene }) {
+  assets: [demoOrbUrl],
+
+  load({ app, assets, layers, layout, switchScene }) {
     const playerSize = tokenValue(layout, surfaceTheme.size.player);
     const playerRadius = tokenValue(layout, surfaceTheme.radius.player);
     const playerStroke = tokenValue(layout, surfaceTheme.size.playerStroke);
@@ -56,6 +61,8 @@ export const bootScene = scene({
 
     player.label = "player";
     player.position.set(layout.visibleWidth / 2, layout.visibleHeight / 2);
+
+    const assetOrb = createAssetOrb(assets.get<Texture>(demoOrbUrl), layout, 0.74, 0.58);
 
     const marker = new Graphics()
       .circle(markerRadius, markerRadius, markerRadius)
@@ -84,14 +91,14 @@ export const bootScene = scene({
 
     hud.addChild(title, spacer, marker);
     layers.ui.addChild(hud);
-    layers.world.addChild(player);
+    layers.world.addChild(assetOrb, player);
     app.renderer.layout.update(layers.root);
     removeSceneSwitchListener = installSceneSwitchListener(() => {
       sceneSwitches += 1;
       switchScene(alternateScene);
     });
 
-    syncDemoState("boot", player.x, player.y, layout, layers.root);
+    syncDemoState("boot", player.x, player.y, layout, layers.root, undefined, assets.isReady(demoOrbUrl));
   },
 
   resize({ app, layers, layout }) {
@@ -106,7 +113,7 @@ export const bootScene = scene({
     if (hud) configureHudLayout(hud, layout);
     app.renderer.layout.update(layers.root);
 
-    syncDemoState("boot", player.x, player.y, layout, layers.root);
+    syncDemoState("boot", player.x, player.y, layout, layers.root, undefined, true);
   },
 
   update(dt, { layers, keyboard, pointer, layout, switchScene }) {
@@ -146,7 +153,7 @@ export const bootScene = scene({
     player.x = clamp(player.x, playerPadding, layout.visibleWidth - playerPadding);
     player.y = clamp(player.y, playerPadding, layout.visibleHeight - playerPadding);
 
-    syncDemoState("boot", player.x, player.y, layout, layers.root, pointer);
+    syncDemoState("boot", player.x, player.y, layout, layers.root, pointer, true);
   },
 
   unload({ layers }) {
@@ -158,7 +165,9 @@ export const bootScene = scene({
 });
 
 export const alternateScene = scene({
-  load({ app, layers, layout, switchScene }) {
+  assets: () => [demoOrbUrl],
+
+  load({ app, assets, layers, layout, switchScene }) {
     const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius) * 1.35;
     const titleFontSize = tokenValue(layout, surfaceTheme.font.title);
 
@@ -199,16 +208,18 @@ export const alternateScene = scene({
     player.label = "player";
     player.position.set(layout.visibleWidth / 2, layout.visibleHeight / 2);
 
+    const assetOrb = createAssetOrb(assets.get<Texture>(demoOrbUrl), layout, 0.28, 0.58);
+
     hud.addChild(title, spacer, marker);
     layers.ui.addChild(hud);
-    layers.world.addChild(player);
+    layers.world.addChild(assetOrb, player);
     app.renderer.layout.update(layers.root);
     removeSceneSwitchListener = installSceneSwitchListener(() => {
       sceneSwitches += 1;
       switchScene(bootScene);
     });
 
-    syncDemoState("alternate", player.x, player.y, layout, layers.root);
+    syncDemoState("alternate", player.x, player.y, layout, layers.root, undefined, assets.isReady(demoOrbUrl));
   },
 
   resize({ app, layers, layout }) {
@@ -220,7 +231,7 @@ export const alternateScene = scene({
     if (hud) configureHudLayout(hud, layout);
     app.renderer.layout.update(layers.root);
 
-    syncDemoState("alternate", player.x, player.y, layout, layers.root);
+    syncDemoState("alternate", player.x, player.y, layout, layers.root, undefined, true);
   },
 
   update(_dt, { layers, keyboard, pointer, layout, switchScene }) {
@@ -233,7 +244,7 @@ export const alternateScene = scene({
       return;
     }
 
-    syncDemoState("alternate", player.x, player.y, layout, layers.root, pointer);
+    syncDemoState("alternate", player.x, player.y, layout, layers.root, pointer, true);
   },
 
   unload({ layers }) {
@@ -262,6 +273,17 @@ function configureHudLayout(hud: Container, layout: SurfaceLayout): void {
   };
 }
 
+function createAssetOrb(texture: Texture, layout: SurfaceLayout, xRatio: number, yRatio: number): Sprite {
+  const orb = new Sprite(texture);
+  const size = tokenValue(layout, surfaceTheme.size.player) * 0.9;
+  orb.label = "asset-orb";
+  orb.anchor.set(0.5);
+  orb.position.set(layout.visibleWidth * xRatio, layout.visibleHeight * yRatio);
+  orb.width = size;
+  orb.height = size;
+  return orb;
+}
+
 function syncDemoState(
   sceneName: string,
   playerX: number,
@@ -269,9 +291,11 @@ function syncDemoState(
   layout: SurfaceLayout,
   stage: Container,
   pointer?: { isDown: () => boolean; position: () => { x: number; y: number } },
+  assetReady = false,
 ): void {
   const title = getPixiBounds(stage, "title");
   const marker = getPixiBounds(stage, "marker");
+  const asset = getPixiBounds(stage, "asset-orb");
   const pointerPosition = pointer?.position() ?? { x: 0, y: 0 };
   window.__pixiDemoState = {
     playerX,
@@ -287,9 +311,11 @@ function syncDemoState(
     titleScreenFontSize: screenValue(layout, surfaceTheme.font.title),
     titleBounds: title,
     markerBounds: marker,
+    assetBounds: asset,
     layerLabels: stage.children.map((child) => child.label ?? ""),
     scene: sceneName,
     sceneSwitches,
+    assetReady,
     pointerDown: pointer?.isDown() ?? false,
     pointerX: pointerPosition.x,
     pointerY: pointerPosition.y,
