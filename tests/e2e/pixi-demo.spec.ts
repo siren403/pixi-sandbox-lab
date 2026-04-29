@@ -37,6 +37,7 @@ declare global {
       swatches: number;
       typeSamples: number;
       componentSamples: number;
+      buttonCenterDeltaY: number;
       layerLabels: string[];
       rendered: boolean;
     };
@@ -223,6 +224,7 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(designSystemState?.swatches).toBeGreaterThanOrEqual(6);
   expect(designSystemState?.typeSamples).toBeGreaterThanOrEqual(3);
   expect(designSystemState?.componentSamples).toBeGreaterThanOrEqual(2);
+  expect(designSystemState?.buttonCenterDeltaY).toBeLessThanOrEqual(1.5);
   expect(designSystemState?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
 
   await sceneSwitch.click();

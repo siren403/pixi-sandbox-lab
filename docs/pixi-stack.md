@@ -235,6 +235,7 @@ LÖVE는 비동기 문제가 없는 게 아니라 발생할 수 없는 구조다
 - scene 전환 시 기존 화면 위로 runtime-owned transition overlay가 화면 밖에서 들어오는 사선 패널과 슬래시 패턴으로 덮이고, 새 scene load 완료 후 패널이 빠져나가며 로드된 화면을 드러낸다.
 - scene 전환 요청은 `src/runtime/commandRuntime.ts`의 app command gate를 통과한다. 현재 정책은 scene switch 실행 중 추가 요청을 drop하고 accepted/ignored/request count를 runtime state에 기록한다.
 - debug panel의 `DS` 버튼은 Storybook 대신 Pixi runtime 안에서 토큰, 타입, 컴포넌트, 모션 샘플을 확인하는 design system scene으로 전환한다. 이 씬은 실제 adaptive-expand surface, safe area, Pixi layout, E2E 환경에서 검증한다.
+- button 같은 semantic UI는 scene-local `Graphics + Text` 조합보다 `src/ui` primitive를 우선한다. 버튼 primitive의 기본 계약은 text horizontal/vertical center 정렬이며, design system E2E가 center delta를 검증한다.
 - loading overlay는 progress bar와 GSAP/PixiPlugin 기반 원형 loop animation을 포함하고, 연출 확인을 위해 500-1000ms 사이의 랜덤 최소 유지 시간을 갖는다.
 - motion library는 `src/runtime/motion.ts` 어댑터에 격리한다. 현재 transition은 PixiPlugin으로 degree rotation, scale, skew, tint를 실험 적용한다. filter 연출은 PixiJS filter 인스턴스를 직접 만든 뒤 GSAP core로 tween한다. PixiPlugin의 filter 편의 경로는 Pixi v8 조합에서 안정성이 확인되지 않았으므로 사용하지 않는다.
 - 데모 빌드는 코드 스플리팅 골격을 사용한다. 현재 chunk 경계는 entry `index`, `pixi-vendor`, `motion-vendor`, `vendor`, debug-only dynamic chunk다.

@@ -3,6 +3,7 @@ import demoOrbUrl from "../assets/demo-orb.svg";
 import { screenValue, surfaceTheme, tokenValue } from "../runtime/surface";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
+import { createButton } from "../ui/button";
 
 const speed = 520;
 const pointerFollowRate = 10;
@@ -38,6 +39,7 @@ type DesignSystemState = {
   swatches: number;
   typeSamples: number;
   componentSamples: number;
+  buttonCenterDeltaY: number;
   layerLabels: string[];
   rendered: boolean;
 };
@@ -465,15 +467,16 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   const componentY = y + margin * 0.4;
   const buttonWidth = panelWidth * 0.38;
   const buttonHeight = tokenValue(layout, { design: 92, minScreenPx: 48, maxScreenPx: 64 });
-  const button = new Graphics()
-    .roundRect(0, 0, buttonWidth, buttonHeight, 8 / layout.scale)
-    .fill({ color: 0x0f766e, alpha: 0.94 })
-    .stroke({ color: "#67e8f9", width: Math.max(2, 3 / layout.scale) });
+  const button = createButton({
+    text: "Button",
+    width: buttonWidth,
+    height: buttonHeight,
+    layout,
+    fontSize: { design: 34, minScreenPx: 18, maxScreenPx: 26 },
+    textColor: surfaceTheme.color.text,
+  });
   button.label = "ds-component-sample";
   button.position.set(startX, componentY);
-  const buttonLabel = createLabel("Button", layout, { design: 34, minScreenPx: 18, maxScreenPx: 26 }, surfaceTheme.color.text);
-  buttonLabel.anchor.set(0.5);
-  buttonLabel.position.set(button.x + buttonWidth / 2, button.y + buttonHeight / 2);
 
   const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
   const marker = new Graphics().circle(0, 0, markerRadius).fill(surfaceTheme.color.marker);
@@ -485,7 +488,7 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   motion.alpha = 0.78;
   motion.position.set(startX + panelWidth * 0.76, componentY + buttonHeight / 2);
 
-  root.addChild(button, buttonLabel, marker, motion);
+  root.addChild(button, marker, motion);
   layer.addChild(root);
 }
 
@@ -558,9 +561,19 @@ function syncDesignSystemState(layout: SurfaceLayout, stage: Container): void {
     swatches: countChildrenByLabel(stage, "ds-swatch"),
     typeSamples: countChildrenByLabel(stage, "ds-type-sample"),
     componentSamples: countChildrenByLabel(stage, "ds-component-sample"),
+    buttonCenterDeltaY: measureButtonCenterDeltaY(stage),
     layerLabels: stage.children.map((child) => child.label ?? ""),
     rendered: layout.visibleWidth > 0,
   };
+}
+
+function measureButtonCenterDeltaY(stage: Container): number {
+  const button = stage.getChildByLabel("ds-component-sample", true);
+  const label = button?.getChildByLabel("button-label", true);
+  const buttonBounds = button?.getBounds();
+  const labelBounds = label?.getBounds();
+  if (!buttonBounds || !labelBounds) return Number.POSITIVE_INFINITY;
+  return Math.abs((buttonBounds.y + buttonBounds.height / 2) - (labelBounds.y + labelBounds.height / 2));
 }
 
 function countChildrenByLabel(container: Container, label: string): number {
