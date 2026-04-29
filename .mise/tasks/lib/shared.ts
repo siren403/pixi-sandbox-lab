@@ -81,8 +81,11 @@ export async function launchAgent(
   }
 
   // yolobox tool shortcuts don't accept extra args — must use `yolobox run <tool>` for passthrough.
-  const subCmd = extraArgs.length > 0 ? ["run", tool, ...extraArgs] : [tool];
-  const args = ["tmux", "new-session", "-A", "-s", session, "yolobox", ...allYoloboxFlags, ...subCmd];
+  // Flags go after the subcommand but before the tool/cmd: `yolobox run --flag cmd` or `yolobox tool --flag`
+  const subCmd = extraArgs.length > 0
+    ? ["run", ...allYoloboxFlags, tool, ...extraArgs]
+    : [tool, ...allYoloboxFlags];
+  const args = ["tmux", "new-session", "-A", "-s", session, "yolobox", ...subCmd];
 
   const proc = Bun.spawn(args, { stdin: "inherit", stdout: "inherit", stderr: "inherit" });
   const code = await proc.exited;
