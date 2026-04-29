@@ -10,6 +10,7 @@
     "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=0 bunx playwright test"
   },
   "dependencies": {
+    "@pixi/layout": "^3.2.0",
     "pixi.js": "^8.18.1"
   },
   "devDependencies": {

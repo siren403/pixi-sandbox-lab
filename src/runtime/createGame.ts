@@ -1,3 +1,4 @@
+import "@pixi/layout";
 import { Application, Container } from "pixi.js";
 import { createKeyboard } from "./keyboard";
 import type { Scene, SceneContext, SurfaceLayout } from "./scene";

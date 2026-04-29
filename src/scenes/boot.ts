@@ -1,5 +1,6 @@
+import { LayoutContainer } from "@pixi/layout/components";
 import { Container, Graphics, Text } from "pixi.js";
-import { anchorPoint, screenValue, surfaceTheme, tokenValue } from "../runtime/surface";
+import { screenValue, surfaceTheme, tokenValue } from "../runtime/surface";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
 
@@ -17,6 +18,8 @@ type DemoState = {
   playerScreenSize: number;
   markerScreenRadius: number;
   titleScreenFontSize: number;
+  titleBounds: { x: number; y: number; width: number; height: number };
+  markerBounds: { x: number; y: number; width: number; height: number };
   rendered: boolean;
 };
 
@@ -27,15 +30,17 @@ declare global {
 }
 
 export const bootScene = scene({
-  load({ stage, layout }) {
+  load({ app, stage, layout }) {
     const world = new Container();
     const playerSize = tokenValue(layout, surfaceTheme.size.player);
     const playerRadius = tokenValue(layout, surfaceTheme.radius.player);
     const playerStroke = tokenValue(layout, surfaceTheme.size.playerStroke);
     const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
-    const markerPosition = anchorPoint(layout, "top-left", surfaceTheme.spacing.markerInset);
-    const titlePosition = anchorPoint(layout, "top-left");
     const titleFontSize = tokenValue(layout, surfaceTheme.font.title);
+
+    const hud = new LayoutContainer();
+    hud.label = "hud";
+    configureHudLayout(hud, layout);
 
     const player = new Graphics()
       .roundRect(-playerSize / 2, -playerSize / 2, playerSize, playerSize, playerRadius)
@@ -43,13 +48,16 @@ export const bootScene = scene({
       .stroke({ color: surfaceTheme.color.playerStroke, width: playerStroke });
 
     player.label = "player";
-    player.position.copyFrom(anchorPoint(layout, "center"));
+    player.position.set(layout.visibleWidth / 2, layout.visibleHeight / 2);
 
     const marker = new Graphics()
-      .circle(0, 0, markerRadius)
+      .circle(markerRadius, markerRadius, markerRadius)
       .fill(surfaceTheme.color.marker);
     marker.label = "marker";
-    marker.position.set(markerPosition.x, markerPosition.y);
+    marker.layout = {
+      width: markerRadius * 2,
+      height: markerRadius * 2,
+    };
 
     const title = new Text({
       text: "PixiJS vertical slice",
@@ -61,32 +69,34 @@ export const bootScene = scene({
       },
     });
     title.label = "title";
-    title.position.set(titlePosition.x, titlePosition.y);
+    title.layout = true;
 
-    world.addChild(marker, player, title);
+    const spacer = new Container();
+    spacer.label = "hud-spacer";
+    spacer.layout = { flexGrow: 1 };
+
+    hud.addChild(title, spacer, marker);
+    world.addChild(hud, player);
     stage.addChild(world);
+    app.renderer.layout.update(stage);
 
-    syncDemoState(player.x, player.y, layout);
+    syncDemoState(player.x, player.y, layout, stage);
   },
 
-  resize({ stage, layout }) {
+  resize({ app, stage, layout }) {
     const world = stage.children[0] as Container | undefined;
     const player = world?.getChildByLabel("player") as Graphics | null;
-    const marker = world?.getChildByLabel("marker") as Graphics | null;
-    const title = world?.getChildByLabel("title") as Text | null;
+    const hud = world?.getChildByLabel("hud") as LayoutContainer | null;
     if (!player) return;
 
     const playerPadding = tokenValue(layout, surfaceTheme.size.player) / 2;
     player.x = clamp(player.x, playerPadding, layout.visibleWidth - playerPadding);
     player.y = clamp(player.y, playerPadding, layout.visibleHeight - playerPadding);
 
-    const markerPosition = anchorPoint(layout, "top-left", surfaceTheme.spacing.markerInset);
-    marker?.position.set(markerPosition.x, markerPosition.y);
+    if (hud) configureHudLayout(hud, layout);
+    app.renderer.layout.update(stage);
 
-    const titlePosition = anchorPoint(layout, "top-left");
-    title?.position.set(titlePosition.x, titlePosition.y);
-
-    syncDemoState(player.x, player.y, layout);
+    syncDemoState(player.x, player.y, layout, stage);
   },
 
   update(dt, { stage, keyboard, layout }) {
@@ -112,7 +122,7 @@ export const bootScene = scene({
     player.x = clamp(player.x, playerPadding, layout.visibleWidth - playerPadding);
     player.y = clamp(player.y, playerPadding, layout.visibleHeight - playerPadding);
 
-    syncDemoState(player.x, player.y, layout);
+    syncDemoState(player.x, player.y, layout, stage);
   },
 });
 
@@ -120,7 +130,23 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function syncDemoState(playerX: number, playerY: number, layout: SurfaceLayout): void {
+function configureHudLayout(hud: LayoutContainer, layout: SurfaceLayout): void {
+  const margin = tokenValue(layout, surfaceTheme.spacing.screen);
+  const hudHeight = tokenValue(layout, surfaceTheme.font.title) * 1.25;
+  hud.position.set(layout.referenceX + layout.safeArea.left + margin, layout.referenceY + layout.safeArea.top + margin);
+  hud.layout = {
+    width: layout.referenceWidth - layout.safeArea.left - layout.safeArea.right - margin * 2,
+    height: hudHeight,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: margin,
+  };
+}
+
+function syncDemoState(playerX: number, playerY: number, layout: SurfaceLayout, stage: Container): void {
+  const title = getPixiBounds(stage, "title");
+  const marker = getPixiBounds(stage, "marker");
   window.__pixiDemoState = {
     playerX,
     playerY,
@@ -133,6 +159,16 @@ function syncDemoState(playerX: number, playerY: number, layout: SurfaceLayout):
     playerScreenSize: screenValue(layout, surfaceTheme.size.player),
     markerScreenRadius: screenValue(layout, surfaceTheme.size.markerRadius),
     titleScreenFontSize: screenValue(layout, surfaceTheme.font.title),
+    titleBounds: title,
+    markerBounds: marker,
     rendered: true,
   };
+}
+
+function getPixiBounds(stage: Container, label: string): { x: number; y: number; width: number; height: number } {
+  const child = stage.getChildByLabel(label, true);
+  const bounds = child?.getBounds();
+  return bounds
+    ? { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }
+    : { x: 0, y: 0, width: 0, height: 0 };
 }

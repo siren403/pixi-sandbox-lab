@@ -14,6 +14,8 @@ declare global {
       playerScreenSize: number;
       markerScreenRadius: number;
       titleScreenFontSize: number;
+      titleBounds: { x: number; y: number; width: number; height: number };
+      markerBounds: { x: number; y: number; width: number; height: number };
       rendered: boolean;
     };
   }
@@ -54,6 +56,7 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
   expect(before?.playerScreenSize).toBeGreaterThanOrEqual(52);
   expect(before?.markerScreenRadius).toBeGreaterThanOrEqual(10);
   expect(before?.titleScreenFontSize).toBeGreaterThanOrEqual(22);
+  expect(rectsOverlap(before?.titleBounds, before?.markerBounds)).toBe(false);
 
   await page.keyboard.down("ArrowRight");
   await page.waitForTimeout(250);
@@ -87,4 +90,12 @@ async function hasVisibleCanvasPixels(page: Page): Promise<boolean> {
       return pixels[0] > 0 || pixels[1] > 0 || pixels[2] > 0;
     });
   });
+}
+
+function rectsOverlap(
+  a: { x: number; y: number; width: number; height: number } | undefined,
+  b: { x: number; y: number; width: number; height: number } | undefined,
+): boolean {
+  if (!a || !b) return true;
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
