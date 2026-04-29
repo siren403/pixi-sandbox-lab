@@ -16,6 +16,7 @@ declare global {
       titleScreenFontSize: number;
       titleBounds: { x: number; y: number; width: number; height: number };
       markerBounds: { x: number; y: number; width: number; height: number };
+      layerLabels: string[];
       rendered: boolean;
     };
     __pixiLayoutDebug?: {
@@ -60,7 +61,10 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
   expect(before?.playerScreenSize).toBeGreaterThanOrEqual(52);
   expect(before?.markerScreenRadius).toBeGreaterThanOrEqual(10);
   expect(before?.titleScreenFontSize).toBeGreaterThanOrEqual(22);
+  expect(before?.titleBounds.width).toBeGreaterThan(0);
+  expect(before?.markerBounds.width).toBeGreaterThan(0);
   expect(rectsOverlap(before?.titleBounds, before?.markerBounds)).toBe(false);
+  expect(before?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
 
   await page.keyboard.down("ArrowRight");
   await page.waitForTimeout(250);

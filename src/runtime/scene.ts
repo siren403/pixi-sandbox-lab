@@ -19,9 +19,17 @@ export type SurfaceLayout = {
   };
 };
 
+export type SurfaceLayers = {
+  root: Container;
+  world: Container;
+  ui: Container;
+  debug: Container;
+};
+
 export type SceneContext = {
   app: Application;
   stage: Container;
+  layers: SurfaceLayers;
   keyboard: Keyboard;
   layout: SurfaceLayout;
 };

@@ -1,7 +1,7 @@
 import "@pixi/layout";
 import { Application, Container } from "pixi.js";
 import { createKeyboard } from "./keyboard";
-import type { Scene, SceneContext, SurfaceLayout } from "./scene";
+import type { Scene, SceneContext, SurfaceLayers, SurfaceLayout } from "./scene";
 
 export type GameOptions = {
   parent: string | HTMLElement;
@@ -28,15 +28,17 @@ export async function createGame(options: GameOptions): Promise<Application> {
 
   parent.replaceChildren(app.canvas);
 
-  const stage = new Container();
+  const stage = new Container({ label: "stage" });
+  const layers = createSurfaceLayers();
+  stage.addChild(layers.root);
   app.stage.addChild(stage);
 
   const keyboard = createKeyboard();
   const layout = createSurfaceLayout(options.width, options.height, app.screen.width, app.screen.height);
-  const ctx: SceneContext = { app, stage, keyboard, layout };
+  const ctx: SceneContext = { app, stage, layers, keyboard, layout };
   updateSurfaceLayout(ctx, options.width, options.height);
   options.boot.load?.(ctx);
-  const destroyLayoutDebug = await maybeInstallLayoutDebug(app, stage);
+  const destroyLayoutDebug = await maybeInstallLayoutDebug(app, layers.root);
 
   const onResize = () => {
     updateSurfaceLayout(ctx, options.width, options.height);
@@ -57,6 +59,16 @@ export async function createGame(options: GameOptions): Promise<Application> {
   });
 
   return app;
+}
+
+function createSurfaceLayers(): SurfaceLayers {
+  const root = new Container({ label: "surface-root" });
+  const world = new Container({ label: "world-layer" });
+  const ui = new Container({ label: "ui-layer" });
+  const debug = new Container({ label: "debug-layer" });
+
+  root.addChild(world, ui, debug);
+  return { root, world, ui, debug };
 }
 
 async function maybeInstallLayoutDebug(app: Application, stage: Container): Promise<() => void> {
@@ -110,7 +122,7 @@ function updateSurfaceLayout(
   ctx.layout.referenceY = (visibleHeight - referenceHeight) / 2;
   ctx.layout.safeArea = readSafeArea(scale);
 
-  ctx.stage.scale.set(scale);
+  ctx.layers.root.scale.set(scale);
 }
 
 function readSafeArea(scale: number): SurfaceLayout["safeArea"] {

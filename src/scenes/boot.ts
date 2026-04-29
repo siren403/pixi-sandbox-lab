@@ -19,6 +19,7 @@ type DemoState = {
   titleScreenFontSize: number;
   titleBounds: { x: number; y: number; width: number; height: number };
   markerBounds: { x: number; y: number; width: number; height: number };
+  layerLabels: string[];
   rendered: boolean;
 };
 
@@ -29,8 +30,7 @@ declare global {
 }
 
 export const bootScene = scene({
-  load({ app, stage, layout }) {
-    const world = new Container();
+  load({ app, layers, layout }) {
     const playerSize = tokenValue(layout, surfaceTheme.size.player);
     const playerRadius = tokenValue(layout, surfaceTheme.radius.player);
     const playerStroke = tokenValue(layout, surfaceTheme.size.playerStroke);
@@ -75,17 +75,16 @@ export const bootScene = scene({
     spacer.layout = { flexGrow: 1 };
 
     hud.addChild(title, spacer, marker);
-    world.addChild(hud, player);
-    stage.addChild(world);
-    app.renderer.layout.update(stage);
+    layers.ui.addChild(hud);
+    layers.world.addChild(player);
+    app.renderer.layout.update(layers.root);
 
-    syncDemoState(player.x, player.y, layout, stage);
+    syncDemoState(player.x, player.y, layout, layers.root);
   },
 
-  resize({ app, stage, layout }) {
-    const world = stage.children[0] as Container | undefined;
-    const player = world?.getChildByLabel("player") as Graphics | null;
-    const hud = world?.getChildByLabel("hud") as Container | null;
+  resize({ app, layers, layout }) {
+    const player = layers.world.getChildByLabel("player") as Graphics | null;
+    const hud = layers.ui.getChildByLabel("hud") as Container | null;
     if (!player) return;
 
     const playerPadding = tokenValue(layout, surfaceTheme.size.player) / 2;
@@ -93,14 +92,13 @@ export const bootScene = scene({
     player.y = clamp(player.y, playerPadding, layout.visibleHeight - playerPadding);
 
     if (hud) configureHudLayout(hud, layout);
-    app.renderer.layout.update(stage);
+    app.renderer.layout.update(layers.root);
 
-    syncDemoState(player.x, player.y, layout, stage);
+    syncDemoState(player.x, player.y, layout, layers.root);
   },
 
-  update(dt, { stage, keyboard, layout }) {
-    const world = stage.children[0] as Container | undefined;
-    const player = world?.getChildByLabel("player") as Graphics | null;
+  update(dt, { layers, keyboard, layout }) {
+    const player = layers.world.getChildByLabel("player") as Graphics | null;
     if (!player) return;
 
     let dx = 0;
@@ -121,7 +119,7 @@ export const bootScene = scene({
     player.x = clamp(player.x, playerPadding, layout.visibleWidth - playerPadding);
     player.y = clamp(player.y, playerPadding, layout.visibleHeight - playerPadding);
 
-    syncDemoState(player.x, player.y, layout, stage);
+    syncDemoState(player.x, player.y, layout, layers.root);
   },
 });
 
@@ -160,6 +158,7 @@ function syncDemoState(playerX: number, playerY: number, layout: SurfaceLayout, 
     titleScreenFontSize: screenValue(layout, surfaceTheme.font.title),
     titleBounds: title,
     markerBounds: marker,
+    layerLabels: stage.children.map((child) => child.label ?? ""),
     rendered: true,
   };
 }
