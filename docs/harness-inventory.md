@@ -12,6 +12,7 @@ Harness architects should inspect these paths at the start of harness work:
 AGENTS.md
 README.md
 .agents/skills/*/SKILL.md
+.agents/skills/*/agents/openai.yaml
 .agents/skills/*/references/*
 .codex/agents/*.toml
 .codex/config.toml
@@ -54,6 +55,15 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 
 - `.agents/skills/hook-creator/agents/openai.yaml`  
   UI metadata for the `hook-creator` skill.
+
+- `.agents/skills/harness-audit/SKILL.md`  
+  Provides the read-only harness audit procedure for inventory coverage, discovery paths, protocol coverage, validation, tracking policy, and clean-state readiness.
+  Discovery route: `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`.
+  Expected user/agent: parent Codex and harness agents auditing harness consistency before or after harness spec changes.
+  Validation: `mise run validate-skills`.
+
+- `.agents/skills/harness-audit/agents/openai.yaml`  
+  UI metadata for the `harness-audit` skill.
 
 - `.agents/skills/task-end/SKILL.md`  
   Provides the generic task closeout procedure for dirty-state hook follow-up, dirty file classification, safe temporary artifact cleanup, validation, optional commit, and final clean-state reporting.

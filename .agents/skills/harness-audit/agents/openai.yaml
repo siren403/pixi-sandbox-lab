@@ -1,0 +1,4 @@
+interface:
+  display_name: "Harness Audit"
+  short_description: "Audit harness inventory and discovery"
+  default_prompt: "Use $harness-audit to check harness inventory, discovery paths, validation, and clean state."
