@@ -40,6 +40,20 @@ Do not automatically fix findings. Report findings and recommended next fixes un
    - Check runtime/local state remains ignored.
    - Run `git status --short`.
 
+## Follow-Up Flow
+
+After reporting audit findings:
+
+1. If there are no findings, stop after reporting residual risks.
+2. If there are findings, convert them into candidate follow-up tasks.
+3. If a fix changes harness specs, recommend `$task-plan <follow-up task>` before implementation.
+4. Do not edit files directly from audit mode unless the user explicitly asks to apply a specific fix.
+5. For each recommended fix, include:
+   - Finding
+   - Proposed task
+   - Suggested skill, usually `$task-plan`
+   - Why planning is or is not needed
+
 ## Output Format
 
 Report:
@@ -49,5 +63,6 @@ Report:
 - **Missing registrations**: files present but absent from inventory.
 - **Validation run**: commands and results.
 - **Recommended next fixes**: concrete follow-up actions.
+- **Follow-up planning**: suggested `$task-plan ...` prompt when changes should go through the task planning flow.
 
 If no issues are found, say so clearly and include residual risks.
