@@ -96,6 +96,9 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 
 - `.codex/agents/harness-architect.toml`  
   Project-local custom agent responsible for cloud sandbox harness architecture, agent strategy, skills, hooks, MCP integration, and documentation boundaries.
+  Discovery route: `harness_architect` core context includes `docs/harness-inventory.md` and `docs/harness-change-protocol.md`; task-specific context is loaded conditionally.
+  Expected user/agent: parent Codex and harness agents planning or changing harness specs.
+  Validation: TOML syntax smoke check and reference check for core/conditional context entries.
 
 - `.codex/agents/plan-reviewer.toml`  
   Project-local custom agent responsible for reviewing implementation plans before execution.
