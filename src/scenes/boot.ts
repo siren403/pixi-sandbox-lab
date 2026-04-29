@@ -417,19 +417,27 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   const margin = tokenValue(layout, surfaceTheme.spacing.screen);
   const panelWidth = Math.min(layout.visibleWidth - margin * 2, 900 / layout.scale);
   const startX = layout.referenceX + layout.safeArea.left + margin;
-  let y = layout.referenceY + layout.safeArea.top + margin;
+  root.position.set(startX, layout.referenceY + layout.safeArea.top + margin);
+  root.layout = {
+    width: panelWidth,
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: margin * 0.55,
+  };
 
   const title = createLabel("Design System", layout, { design: 68, minScreenPx: 28, maxScreenPx: 48 }, surfaceTheme.color.text);
   title.label = "ds-title";
-  title.position.set(startX, y);
+  title.layout = {
+    height: tokenValue(layout, { design: 84, minScreenPx: 42, maxScreenPx: 62 }),
+  };
   root.addChild(title);
-  y += tokenValue(layout, { design: 96, minScreenPx: 46, maxScreenPx: 72 });
 
   const tokenLabel = createLabel("Color tokens", layout, { design: 34, minScreenPx: 18, maxScreenPx: 26 }, "#bfdbfe");
   tokenLabel.label = "ds-token-label";
-  tokenLabel.position.set(startX, y);
+  tokenLabel.layout = {
+    height: tokenValue(layout, { design: 42, minScreenPx: 24, maxScreenPx: 34 }),
+  };
   root.addChild(tokenLabel);
-  y += tokenValue(layout, { design: 56, minScreenPx: 30, maxScreenPx: 42 });
 
   const swatches = [
     surfaceTheme.color.player,
@@ -440,31 +448,57 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
     "#facc15",
   ];
   const swatchSize = tokenValue(layout, { design: 104, minScreenPx: 44, maxScreenPx: 70 });
+  const swatchRow = new Container({ label: "ds-swatch-row" });
+  swatchRow.layout = {
+    width: panelWidth,
+    height: swatchSize,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: margin * 0.42,
+  };
   swatches.forEach((color, index) => {
     const swatch = new Graphics()
       .roundRect(0, 0, swatchSize, swatchSize, 8 / layout.scale)
       .fill(color)
       .stroke({ color: "#e5e7eb", width: Math.max(1, 2 / layout.scale), alpha: 0.6 });
     swatch.label = "ds-swatch";
-    swatch.position.set(startX + index * (swatchSize + margin * 0.42), y);
-    root.addChild(swatch);
+    swatch.layout = {
+      width: swatchSize,
+      height: swatchSize,
+    };
+    swatchRow.addChild(swatch);
   });
-  y += swatchSize + margin;
+  root.addChild(swatchRow);
 
   const typeSamples = [
     ["Title", surfaceTheme.font.title],
     ["Body", { design: 34, minScreenPx: 18, maxScreenPx: 26 }],
     ["Caption", { design: 24, minScreenPx: 14, maxScreenPx: 18 }],
   ] as const;
+  const typeColumn = new Container({ label: "ds-type-column" });
+  typeColumn.layout = {
+    width: panelWidth,
+    flexDirection: "column",
+    gap: margin * 0.28,
+  };
   typeSamples.forEach(([text, size], index) => {
     const sample = createLabel(text, layout, size, index === 0 ? surfaceTheme.color.text : "#cbd5e1");
     sample.label = "ds-type-sample";
-    sample.position.set(startX, y);
-    root.addChild(sample);
-    y += tokenValue(layout, { design: 60, minScreenPx: 30, maxScreenPx: 44 });
+    sample.layout = {
+      height: tokenValue(layout, { design: 48, minScreenPx: 26, maxScreenPx: 38 }),
+    };
+    typeColumn.addChild(sample);
   });
+  root.addChild(typeColumn);
 
-  const componentY = y + margin * 0.4;
+  const componentRow = new Container({ label: "ds-component-row" });
+  componentRow.layout = {
+    width: panelWidth,
+    height: tokenValue(layout, { design: 112, minScreenPx: 58, maxScreenPx: 78 }),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: margin,
+  };
   const buttonWidth = panelWidth * 0.38;
   const buttonHeight = tokenValue(layout, { design: 92, minScreenPx: 48, maxScreenPx: 64 });
   const button = createButton({
@@ -476,19 +510,30 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
     textColor: surfaceTheme.color.text,
   });
   button.label = "ds-component-sample";
-  button.position.set(startX, componentY);
+  button.layout = {
+    width: buttonWidth,
+    height: buttonHeight,
+  };
 
   const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
   const marker = new Graphics().circle(0, 0, markerRadius).fill(surfaceTheme.color.marker);
   marker.label = "ds-component-sample";
-  marker.position.set(startX + panelWidth * 0.55, componentY + buttonHeight / 2);
+  marker.layout = {
+    width: markerRadius * 2,
+    height: markerRadius * 2,
+  };
 
   const motion = createInputTarget(layout);
   motion.label = "ds-motion-ring";
   motion.alpha = 0.78;
-  motion.position.set(startX + panelWidth * 0.76, componentY + buttonHeight / 2);
+  const motionSize = tokenValue(layout, surfaceTheme.size.player) * 1.6;
+  motion.layout = {
+    width: motionSize,
+    height: motionSize,
+  };
 
-  root.addChild(button, marker, motion);
+  componentRow.addChild(button, marker, motion);
+  root.addChild(componentRow);
   layer.addChild(root);
 }
 

@@ -232,6 +232,9 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(designSystemState?.componentSamples).toBeGreaterThanOrEqual(2);
   expect(designSystemState?.buttonCenterDeltaY).toBeLessThanOrEqual(1.5);
   expect(designSystemState?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiLayoutDebug?.layoutNodes ?? 0))
+    .toBeGreaterThanOrEqual(12);
 
   await sceneSwitch.click();
   await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("boot");
