@@ -215,10 +215,10 @@ When MCP config is added, register:
 ### Harness Scripts
 
 - `scripts/harness/checkpoint.ts`
-  Bun/TypeScript state manager for `.codex-harness/checkpoint.json`. It captures git state, task-flow summary, task-plan-loop summary, next action, and `active`/`consumed` checkpoint state.
+  Bun/TypeScript state manager for `.codex-harness/checkpoint.json`. It captures git state, task-flow summary, task-plan-loop summary, next action, and `active`/`consumed` checkpoint state, and emits continuation guidance that agents should translate into the next work proposal or plan.
   Discovery route: `.mise/tasks/checkpoint` points to this script; `harness_architect` discovery includes `scripts/harness/*`.
   Expected user/agent: parent Codex and harness agents guarding context boundaries and continuation points.
-  Validation: run through the mise wrapper so the same command surface is used by agents.
+  Validation: run through the mise wrapper so the same command surface is used by agents; resume smoke tests should verify the structured `continuation` output.
 
 - `scripts/harness/task-plan-loop.ts`  
   Bun/TypeScript state manager for persisted task-plan review loops. It is the only supported writer for `.codex-harness/task-plan-loop.json` and enforces loop bounds, terminal states, and invalid transition failures.

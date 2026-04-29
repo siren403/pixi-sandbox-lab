@@ -32,13 +32,15 @@ Default behavior:
   - Stop if branch, HEAD, or dirty state differs from the checkpoint.
 - `$checkpoint resume`
   - Run `mise run checkpoint -- resume`.
-  - If verification passes, mark the checkpoint `consumed`, increment `resume_count`, and present `next_action`.
+  - If verification passes, mark the checkpoint `consumed`, increment `resume_count`, and read the returned `continuation.target`.
+  - Treat `continuation.target` as the agent's continuation target, not as a command for the user to run.
+  - Translate it into the next work proposal or plan. Wait for explicit user approval before implementation when planning policy requires it.
 
 ## Policy
 
 - Do not add or expect a `clear` command in v1.
 - Treat `resume` as a consumption event, not deletion: `active -> consumed`.
-- Do not auto-run the `next_action` after resume. Present it and wait for the user to proceed.
+- Do not auto-run the `continuation.target` after resume. Use it to propose or plan the next work, then follow the relevant task policy.
 - Refuse checkpoint creation when the working tree is dirty. Use `task-end` first.
 - Allow `create` to overwrite a `consumed` checkpoint.
 - Refuse `create` over an `active` checkpoint unless `--force` is provided.

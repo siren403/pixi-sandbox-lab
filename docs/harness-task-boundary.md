@@ -107,12 +107,13 @@ Checkpoint policy:
 - `$checkpoint` runs auto mode.
 - A `SessionStart` hook may remind the session when an active checkpoint exists.
 - `active` means the checkpoint has not yet been used to enter a continuation context.
-- `resume` verifies the checkpoint, marks it `consumed`, increments `resume_count`, and prints `next_action`.
+- `resume` verifies the checkpoint, marks it `consumed`, increments `resume_count`, and prints continuation guidance.
+- The continuation target is for the agent to translate into the next work proposal or plan, not a command the user is expected to run.
 - `consumed` checkpoints remain on disk and may be overwritten by the next `create`.
 - There is no `clear` command in v1.
 - Creating a checkpoint requires a clean working tree.
 - Creating over an `active` checkpoint requires `--force`.
-- Resume does not automatically run the next action.
+- Resume does not automatically run or implement the next action.
 
 Typical flow:
 
@@ -122,7 +123,8 @@ work reaches a stable continuation point
   -> context clears or changes
   -> checkpoint resume verifies state
   -> checkpoint becomes consumed
-  -> user chooses whether to run next_action
+  -> agent proposes or plans from the continuation target
+  -> user approves, edits, or redirects that next work
 ```
 
 ### 4. End

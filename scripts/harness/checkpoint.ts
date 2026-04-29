@@ -39,6 +39,11 @@ type CheckpointState = {
   notes?: string;
 };
 
+type ContinuationGuidance = {
+  target: string;
+  agent_instruction: string;
+};
+
 const checkpointPath = resolve(process.cwd(), ".codex-harness/checkpoint.json");
 const taskFlowPath = resolve(process.cwd(), ".codex-harness/task-flow.json");
 const taskPlanLoopPath = resolve(process.cwd(), ".codex-harness/task-plan-loop.json");
@@ -194,6 +199,14 @@ function print(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
+function continuationGuidance(nextAction: string): ContinuationGuidance {
+  return {
+    target: nextAction,
+    agent_instruction:
+      "Use target as the agent continuation target. Do not present it as a command for the user to run; translate it into the next work proposal or plan and wait for explicit approval before implementation when planning policy requires it.",
+  };
+}
+
 function inferNextAction(explicit?: string): string | undefined {
   if (explicit) return explicit;
   return taskFlowSummary().resume_hint;
@@ -310,7 +323,13 @@ function commandVerify(): void {
 function commandResume(): void {
   const state = readCheckpoint();
   if (state.status === "consumed") {
-    fail(`checkpoint already consumed at ${state.consumed_at ?? "unknown time"}; next action was: ${state.next_action}`);
+    print({
+      action: "already_consumed",
+      message: `checkpoint already consumed at ${state.consumed_at ?? "unknown time"}`,
+      continuation: continuationGuidance(state.next_action),
+      checkpoint: state,
+    });
+    process.exit(1);
   }
 
   const verification = verifyCheckpoint(state);
@@ -330,6 +349,7 @@ function commandResume(): void {
   print({
     action: "resume",
     next_action: state.next_action,
+    continuation: continuationGuidance(state.next_action),
     checkpoint: state,
   });
 }
