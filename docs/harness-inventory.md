@@ -194,6 +194,9 @@ When MCP config is added, register:
 - `docs/harness-change-protocol.md`  
   Required process for adding or changing harness specs.
 
+- `docs/harness-task-boundary.md`  
+  Defines the task boundary workflow: `task-plan`, `task-start`, implementation, `task-end`, Stop dirty-state hook, and harness-audit follow-up.
+
 ### Demo-Project Documentation
 
 - `docs/pixi-stack.md`  
