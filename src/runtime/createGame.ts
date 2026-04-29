@@ -2,6 +2,7 @@ import "@pixi/layout";
 import { Application, Container } from "pixi.js";
 import { createKeyboard } from "./keyboard";
 import type { Scene, SceneContext, SurfaceLayers, SurfaceLayout } from "./scene";
+import { SceneManager } from "./sceneManager";
 
 export type GameOptions = {
   parent: string | HTMLElement;
@@ -37,23 +38,24 @@ export async function createGame(options: GameOptions): Promise<Application> {
   const layout = createSurfaceLayout(options.width, options.height, app.screen.width, app.screen.height);
   const ctx: SceneContext = { app, stage, layers, keyboard, layout };
   updateSurfaceLayout(ctx, options.width, options.height);
-  options.boot.load?.(ctx);
+  const sceneManager = new SceneManager(ctx);
+  sceneManager.start(options.boot);
   const destroyLayoutDebug = await maybeInstallLayoutDebug(app, layers.root);
 
   const onResize = () => {
     updateSurfaceLayout(ctx, options.width, options.height);
-    options.boot.resize?.(ctx);
+    sceneManager.resize();
   };
   app.renderer.on("resize", onResize);
 
   app.ticker.add((ticker) => {
-    options.boot.update?.(ticker.deltaMS / 1000, ctx);
+    sceneManager.update(ticker.deltaMS / 1000);
   });
 
   window.addEventListener("beforeunload", () => {
     app.renderer.off("resize", onResize);
     destroyLayoutDebug();
-    options.boot.unload?.(ctx);
+    sceneManager.destroy();
     keyboard.destroy();
     app.destroy();
   });
