@@ -1,6 +1,7 @@
 import "@pixi/layout";
 import { Application, Container } from "pixi.js";
 import { createKeyboard } from "./keyboard";
+import { createPointer } from "./pointer";
 import type { Scene, SceneContext, SurfaceLayers, SurfaceLayout } from "./scene";
 import { SceneManager } from "./sceneManager";
 
@@ -36,12 +37,14 @@ export async function createGame(options: GameOptions): Promise<Application> {
 
   const keyboard = createKeyboard();
   const layout = createSurfaceLayout(options.width, options.height, app.screen.width, app.screen.height);
+  const pointer = createPointer(app.canvas, () => layout);
   const sceneManager = new SceneManager();
   const ctx: SceneContext = {
     app,
     stage,
     layers,
     keyboard,
+    pointer,
     layout,
     switchScene: (scene) => sceneManager.switch(scene, ctx),
   };
@@ -64,6 +67,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
     destroyLayoutDebug();
     sceneManager.destroy(ctx);
     keyboard.destroy();
+    pointer.destroy();
     app.destroy();
   });
 

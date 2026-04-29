@@ -22,6 +22,9 @@ type DemoState = {
   layerLabels: string[];
   scene: string;
   sceneSwitches: number;
+  pointerDown: boolean;
+  pointerX: number;
+  pointerY: number;
   rendered: boolean;
 };
 
@@ -106,7 +109,7 @@ export const bootScene = scene({
     syncDemoState("boot", player.x, player.y, layout, layers.root);
   },
 
-  update(dt, { layers, keyboard, layout, switchScene }) {
+  update(dt, { layers, keyboard, pointer, layout, switchScene }) {
     const player = layers.world.getChildByLabel("player") as Graphics | null;
     if (!player) return;
 
@@ -130,11 +133,20 @@ export const bootScene = scene({
       player.y += (dy / length) * speed * dt;
     }
 
+    const pointerActive = pointer.isDown();
+    const pointerPressed = pointer.wasPressed();
+    const pointerReleased = pointer.wasReleased();
+    if (pointerActive || pointerPressed || pointerReleased) {
+      const position = pointer.position();
+      player.x = position.x;
+      player.y = position.y;
+    }
+
     const playerPadding = tokenValue(layout, surfaceTheme.size.player) / 2;
     player.x = clamp(player.x, playerPadding, layout.visibleWidth - playerPadding);
     player.y = clamp(player.y, playerPadding, layout.visibleHeight - playerPadding);
 
-    syncDemoState("boot", player.x, player.y, layout, layers.root);
+    syncDemoState("boot", player.x, player.y, layout, layers.root, pointer);
   },
 
   unload({ layers }) {
@@ -211,7 +223,7 @@ export const alternateScene = scene({
     syncDemoState("alternate", player.x, player.y, layout, layers.root);
   },
 
-  update(_dt, { layers, keyboard, layout, switchScene }) {
+  update(_dt, { layers, keyboard, pointer, layout, switchScene }) {
     const player = layers.world.getChildByLabel("player") as Graphics | null;
     if (!player) return;
 
@@ -221,7 +233,7 @@ export const alternateScene = scene({
       return;
     }
 
-    syncDemoState("alternate", player.x, player.y, layout, layers.root);
+    syncDemoState("alternate", player.x, player.y, layout, layers.root, pointer);
   },
 
   unload({ layers }) {
@@ -250,9 +262,17 @@ function configureHudLayout(hud: Container, layout: SurfaceLayout): void {
   };
 }
 
-function syncDemoState(sceneName: string, playerX: number, playerY: number, layout: SurfaceLayout, stage: Container): void {
+function syncDemoState(
+  sceneName: string,
+  playerX: number,
+  playerY: number,
+  layout: SurfaceLayout,
+  stage: Container,
+  pointer?: { isDown: () => boolean; position: () => { x: number; y: number } },
+): void {
   const title = getPixiBounds(stage, "title");
   const marker = getPixiBounds(stage, "marker");
+  const pointerPosition = pointer?.position() ?? { x: 0, y: 0 };
   window.__pixiDemoState = {
     playerX,
     playerY,
@@ -270,6 +290,9 @@ function syncDemoState(sceneName: string, playerX: number, playerY: number, layo
     layerLabels: stage.children.map((child) => child.label ?? ""),
     scene: sceneName,
     sceneSwitches,
+    pointerDown: pointer?.isDown() ?? false,
+    pointerX: pointerPosition.x,
+    pointerY: pointerPosition.y,
     rendered: true,
   };
 }

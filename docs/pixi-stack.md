@@ -151,7 +151,10 @@ Playwright는 desktop portrait와 mobile portrait를 모두 검증한다.
 - `user-select: none`
 - 필요 시 `contextmenu` 차단
 - long press text selection 방지
-- pointer/touch 입력은 keyboard 입력과 별도 런타임 모듈로 추가한다.
+- pointer/touch 입력은 keyboard 입력과 별도 런타임 모듈로 제공한다.
+- 현재 pointer runtime은 primary pointer 1개를 추적하고, canvas CSS 픽셀 좌표를 `adaptive-expand` design-space 좌표로 변환한다.
+- scene은 viewport 픽셀을 직접 읽지 않고 `ctx.pointer`의 `isDown()`, `wasPressed()`, `wasReleased()`, `position()`을 사용한다.
+- 첫 모바일 조작 vertical slice는 boot scene에서 tap/click/drag 위치로 player를 이동시키는 방식으로 검증한다.
 
 #### 명시적으로 기본값에서 제외
 
@@ -165,7 +168,7 @@ Playwright는 desktop portrait와 mobile portrait를 모두 검증한다.
 
 - `@pixi/ui` 도입 여부 판단: button, slider, checkbox 같은 조작 UI가 필요해질 때 검토한다.
 - scene-independent UI primitive 계층: HUD title, button, panel 등 반복 패턴이 생길 때 추가한다.
-- pointer/touch input runtime: 모바일 직접 조작이 필요해질 때 keyboard runtime과 분리해 추가한다.
+- pointer/touch input runtime 확장: 멀티터치, gesture, virtual stick 같은 실제 게임 입력 패턴이 필요해질 때 현재 primary pointer API 위에 추가한다.
 - visual regression: 레이아웃 회귀가 잦아지면 Playwright screenshot/pixel 기준을 강화한다.
 
 ---

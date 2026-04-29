@@ -1,5 +1,6 @@
 import type { Application, Container } from "pixi.js";
 import type { Keyboard } from "./keyboard";
+import type { Pointer } from "./pointer";
 
 export type SurfaceLayout = {
   referenceWidth: number;
@@ -31,6 +32,7 @@ export type SceneContext = {
   stage: Container;
   layers: SurfaceLayers;
   keyboard: Keyboard;
+  pointer: Pointer;
   layout: SurfaceLayout;
   switchScene: (scene: Scene) => void;
 };

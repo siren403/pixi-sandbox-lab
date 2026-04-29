@@ -19,6 +19,9 @@ declare global {
       layerLabels: string[];
       scene: string;
       sceneSwitches: number;
+      pointerDown: boolean;
+      pointerX: number;
+      pointerY: number;
       rendered: boolean;
     };
     __pixiLayoutDebug?: {
@@ -78,6 +81,22 @@ test("renders a PixiJS canvas and moves the player with keyboard input", async (
 
   const after = await page.evaluate(() => window.__pixiDemoState);
   expect(after?.playerX).toBeGreaterThan(before?.playerX ?? 0);
+
+  const pointerTarget = {
+    x: Math.floor((box?.width ?? 0) * 0.8),
+    y: Math.floor((box?.height ?? 0) * 0.7),
+  };
+  await canvas.click({ position: pointerTarget });
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiDemoState?.playerX ?? 0))
+    .toBeGreaterThan(after?.playerX ?? 0);
+
+  const afterPointer = await page.evaluate(() => window.__pixiDemoState);
+  expect(afterPointer?.playerY).toBeGreaterThan(after?.playerY ?? 0);
+  expect(afterPointer?.pointerX).toBeGreaterThan((afterPointer?.visibleWidth ?? 0) * 0.78);
+  expect(afterPointer?.pointerX).toBeLessThan((afterPointer?.visibleWidth ?? 0) * 0.82);
+  expect(afterPointer?.pointerY).toBeGreaterThan((afterPointer?.visibleHeight ?? 0) * 0.68);
+  expect(afterPointer?.pointerY).toBeLessThan((afterPointer?.visibleHeight ?? 0) * 0.72);
 
   const layoutDebugPanel = page.getByTestId("layout-debug-panel");
   const layoutDebug = page.getByTestId("layout-debug-toggle");
