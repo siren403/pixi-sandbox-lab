@@ -2,11 +2,17 @@
 bun = "latest"
 python = "3.12"
 
-[env]
-# 모든 에이전트 태스크에 공통 적용할 yolobox 플래그 (공백 구분)
-# 가능한 값: --gh-auth --host-auth --claude-auth --gemini-auth
-YOLOBOX_FLAGS = "--gh-auth"
-
 [tasks.codex]
-# --host-auth: 호스트 ~/.codex 인증을 샌드박스에 주입 (codex 전용)
 env = { YOLOBOX_FLAGS = "--gh-auth --host-auth" }
+
+[tasks.claude]
+env = { YOLOBOX_FLAGS = "--gh-auth" }
+
+[tasks.gemini]
+env = { YOLOBOX_FLAGS = "--gh-auth" }
+
+[tasks.copilot]
+env = { YOLOBOX_FLAGS = "--gh-auth" }
+
+[tasks.opencode]
+env = { YOLOBOX_FLAGS = "--gh-auth" }
