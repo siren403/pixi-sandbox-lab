@@ -7,10 +7,13 @@ declare global {
       loading: boolean;
       sceneSwitches: number;
       loadingOverlayShows: number;
+      lastLoadingDurationMs: number;
       loadingOverlayVisible: boolean;
     };
   }
 }
+
+const minimumLoadingMs = 500;
 
 export class SceneManager {
   private current: Scene | null = null;
@@ -29,16 +32,19 @@ export class SceneManager {
     ctx.runtime.loadingOverlayShows += 1;
     showLoadingOverlay(ctx);
 
+    const loadingStartedAt = performance.now();
     const assets = typeof scene.assets === "function" ? scene.assets(ctx) : (scene.assets ?? []);
     try {
       await waitForLoadingFrame();
       await ctx.assets.load(assets);
+      await waitForMinimumLoadingTime(loadingStartedAt, minimumLoadingMs);
       if (switchId !== this.switchId) return;
 
       this.current = scene;
       this.current.load?.(ctx);
     } finally {
       if (switchId === this.switchId) {
+        ctx.runtime.lastLoadingDurationMs = performance.now() - loadingStartedAt;
         ctx.runtime.loading = false;
         hideLoadingOverlay(ctx);
       }
@@ -71,6 +77,15 @@ function waitForLoadingFrame(): Promise<void> {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => resolve());
     });
+  });
+}
+
+function waitForMinimumLoadingTime(startedAt: number, minimumMs: number): Promise<void> {
+  const remaining = minimumMs - (performance.now() - startedAt);
+  if (remaining <= 0) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, remaining);
   });
 }
 
@@ -116,6 +131,7 @@ function syncLoadingDebugState(ctx: SceneContext): void {
     loading: ctx.runtime.loading,
     sceneSwitches: ctx.runtime.sceneSwitches,
     loadingOverlayShows: ctx.runtime.loadingOverlayShows,
+    lastLoadingDurationMs: ctx.runtime.lastLoadingDurationMs,
     loadingOverlayVisible: ctx.layers.debug.getChildByLabel("loading-overlay")?.visible === true,
   };
 }

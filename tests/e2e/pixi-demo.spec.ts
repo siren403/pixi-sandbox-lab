@@ -26,6 +26,11 @@ declare global {
       pointerY: number;
       rendered: boolean;
     };
+    __pixiIntroState?: {
+      scene: "intro";
+      promptBounds: { x: number; y: number; width: number; height: number };
+      rendered: boolean;
+    };
     __pixiLayoutDebug?: {
       enabled: boolean;
       filter: "all" | "world" | "ui";
@@ -37,6 +42,7 @@ declare global {
       loading: boolean;
       sceneSwitches: number;
       loadingOverlayShows: number;
+      lastLoadingDurationMs: number;
       loadingOverlayVisible: boolean;
     };
   }
@@ -55,7 +61,7 @@ test("renders the PixiJS demo with assets and input", async ({
   const canvas = page.locator("canvas");
   await expect(canvas).toBeVisible();
   await expect
-    .poll(() => page.evaluate(() => window.__pixiDemoState?.rendered))
+    .poll(() => page.evaluate(() => window.__pixiIntroState?.rendered))
     .toBe(true);
 
   const box = await canvas.boundingBox();
@@ -67,6 +73,20 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(Math.round(box?.height ?? 0)).toBe(viewport?.height);
 
   await expect.poll(() => hasVisibleCanvasPixels(page)).toBe(true);
+  const intro = await page.evaluate(() => window.__pixiIntroState);
+  expect(intro?.scene).toBe("intro");
+  expect(intro?.promptBounds.width).toBeGreaterThan(0);
+
+  const bootLoadingShows = await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0);
+  await canvas.click({ position: { x: Math.floor((box?.width ?? 0) / 2), y: Math.floor((box?.height ?? 0) * 0.56) } });
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0))
+    .toBeGreaterThan(bootLoadingShows);
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiDemoState?.rendered))
+    .toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__pixiIntroState)).toBeUndefined();
+  expect(await page.evaluate(() => window.__pixiRuntimeState?.lastLoadingDurationMs ?? 0)).toBeGreaterThanOrEqual(490);
 
   const before = await page.evaluate(() => window.__pixiDemoState);
   expect(before?.playerX).toBeGreaterThan(0);

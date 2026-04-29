@@ -32,6 +32,7 @@ export type RuntimeState = {
   loading: boolean;
   sceneSwitches: number;
   loadingOverlayShows: number;
+  lastLoadingDurationMs: number;
 };
 
 export type SceneContext = {
