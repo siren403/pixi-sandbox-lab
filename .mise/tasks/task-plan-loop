@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="task-plan 리뷰 루프 상태 파일 관리"
+set -euo pipefail
+
+ROOT="${MISE_PROJECT_ROOT:-$(pwd)}"
+cd "$ROOT"
+
+exec bun scripts/harness/task-plan-loop.ts "$@"

@@ -20,6 +20,7 @@ README.md
 .mise.toml
 .mise/tasks/*
 .mise/tasks/lib/*
+scripts/harness/*
 docs/harness*.md
 docs/sandbox*.md
 ```
@@ -75,10 +76,10 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   UI metadata for the `task-end` skill.
 
 - `.agents/skills/task-plan/SKILL.md`  
-  Provides the pre-implementation planning procedure with feature summary, concrete assigned agents, scope, validation, closeout, and plan review.
+  Provides the pre-implementation planning procedure with feature summary, concrete assigned agents, scope, validation, closeout, plan review, and optional persisted review-loop state.
   Discovery route: `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`.
   Expected user/agent: parent Codex and harness agents planning non-trivial work.
-  Validation: `mise run validate-skills`.
+  Validation: `mise run validate-skills`; review-loop behavior is validated through `mise run task-plan-loop -- ...` smoke tests.
 
 - `.agents/skills/task-plan/agents/openai.yaml`  
   UI metadata for the `task-plan` skill.
@@ -164,6 +165,12 @@ When MCP config is added, register:
 - `.mise/tasks/validate-skills`  
   Use the project-scoped mise Python runtime and `.venv` to run Codex skill validation.
 
+- `.mise/tasks/task-plan-loop`  
+  Official mise execution surface for the task-plan review-loop state manager. Agents should call `mise run task-plan-loop -- <command>` instead of invoking the Bun script directly.
+  Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
+  Expected user/agent: parent Codex and harness agents running persisted plan/review loops.
+  Validation: state transition smoke tests with `start`, `status`, `review`, `revise`, `approve`, and `stop`.
+
 - `.mise/tasks/lib/shared.ts`  
   Shared launcher utilities.
 
@@ -178,6 +185,14 @@ When MCP config is added, register:
 - `requirements-harness.txt`  
   Python dependencies for harness validation tasks.
 
+### Harness Scripts
+
+- `scripts/harness/task-plan-loop.ts`  
+  Bun/TypeScript state manager for persisted task-plan review loops. It is the only supported writer for `.codex-harness/task-plan-loop.json` and enforces loop bounds, terminal states, and invalid transition failures.
+  Discovery route: `.mise/tasks/task-plan-loop` points to this script; `harness_architect` discovery includes `scripts/harness/*`.
+  Expected user/agent: parent Codex and harness agents using review-loop planning.
+  Validation: run through the mise wrapper so the same command surface is used by agents.
+
 ### Tracking Policy
 
 - `.gitignore`  
@@ -185,6 +200,12 @@ When MCP config is added, register:
   Discovery route: `harness_architect` boot discovery reads repository policy and inventory files before harness changes.
   Expected user/agent: parent Codex and harness agents checking tracking/ignore policy during audits and closeout.
   Validation: `git check-ignore` for local state and tracked Codex config/hook exceptions, plus final `git status --short`.
+
+- `.codex-harness/`  
+  Ignored local runtime state directory for harness workflows. The first registered state file is `.codex-harness/task-plan-loop.json`, managed only by `scripts/harness/task-plan-loop.ts`.
+  Discovery route: `.gitignore`, this inventory, and the relevant state manager documentation.
+  Expected user/agent: parent Codex and harness agents recovering or inspecting active local harness workflow state.
+  Validation: `git check-ignore -v .codex-harness/task-plan-loop.json`.
 
 ### Harness Documentation
 

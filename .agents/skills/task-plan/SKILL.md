@@ -23,6 +23,34 @@ If this skill is invoked without a clear planning target:
 4. Mark one as **Recommended** with a short reason.
 5. Ask the user to choose one or provide a different target.
 
+## Review Loop Mode
+
+Use review loop mode when the user asks for `ralplan`, `--review-loop`, `--loop {n}`, repeated plan/review cycles, or automatic plan review iteration.
+
+Invocation forms:
+
+- `$task-plan ralplan <target>`
+- `$task-plan --review-loop <target>`
+- `$task-plan --loop {n} <target>`
+
+Rules:
+
+- Default loop count is `1` when no explicit `--loop {n}` is provided.
+- Review loop mode is still planning-only. Do not implement until the user explicitly approves implementation after the loop result.
+- Persist loop state through `mise run task-plan-loop -- ...`; do not rely only on chat memory for loop entry, count, verdicts, or terminal state.
+- Use `.codex-harness/task-plan-loop.json` only through the task-plan loop state manager. Do not hand-edit this file.
+- If an active non-terminal loop already exists, inspect it with `mise run task-plan-loop -- status` before starting another one.
+
+State flow:
+
+1. Start the loop with `mise run task-plan-loop -- start --target "<target>" --max-loops <n>`.
+2. Produce the initial plan using the normal plan format.
+3. Ask `plan_reviewer` to review the plan.
+4. Record the review with `mise run task-plan-loop -- review --verdict <verdict> --notes "<summary>"`.
+5. If the reviewer requests changes and loops remain, run `mise run task-plan-loop -- revise`, update the plan, and repeat review.
+6. If approved, run `mise run task-plan-loop -- approve` and present the approved plan to the user.
+7. If blocked, out of loop budget, or redirected by the user, run `mise run task-plan-loop -- stop --reason "<reason>"` unless the state manager already moved the loop to `blocked`.
+
 ## Plan Format
 
 1. **Feature Summary**
