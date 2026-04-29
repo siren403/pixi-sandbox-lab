@@ -22,7 +22,7 @@ Read these files first when present:
 - .codex/hooks/
 
 At the start of every harness task, build a current harness inventory before proposing changes:
-- list .agents/skills/*/SKILL.md and relevant references
+- list .agents/skills/*/SKILL.md, .agents/skills/*/agents/openai.yaml, and relevant references
 - list .codex/agents/*.toml
 - inspect .codex/config.toml if present
 - list .codex/hooks/* if present

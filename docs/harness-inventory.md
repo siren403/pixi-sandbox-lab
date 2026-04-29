@@ -175,6 +175,14 @@ When MCP config is added, register:
 - `requirements-harness.txt`  
   Python dependencies for harness validation tasks.
 
+### Tracking Policy
+
+- `.gitignore`  
+  Controls local/runtime state ignore rules and project-scoped `.codex/` tracking exceptions.
+  Discovery route: `harness_architect` boot discovery reads repository policy and inventory files before harness changes.
+  Expected user/agent: parent Codex and harness agents checking tracking/ignore policy during audits and closeout.
+  Validation: `git check-ignore` for local state and tracked Codex config/hook exceptions, plus final `git status --short`.
+
 ### Harness Documentation
 
 - `docs/harness.md`  
