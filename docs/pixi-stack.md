@@ -74,6 +74,15 @@ visibleDesignHeight = viewportHeight / scale
 
 씬과 UI는 절대 viewport 픽셀에 직접 고정하지 않는다. 배치 기준은 design space, visible bounds, safe area, 그리고 `@pixi/layout`이다.
 
+기본 정책:
+
+- UI는 `@pixi/layout`과 semantic primitive를 우선한다.
+- gameplay/world/effect 오브젝트는 명시 좌표 배치를 허용한다.
+- 버튼, 라벨, 패널, 뱃지, 메뉴, 모달, HUD 그룹처럼 의미가 있는 UI는 scene-local `Graphics + Text` 조합보다 primitive로 승격한다.
+- 좌표 기반 UI가 필요한 경우 이유를 남기고, viewport/safe-area/overlap/alignment E2E를 추가한다.
+- 컴포넌트별 정렬 계약을 둔다. 예를 들어 button text는 기본적으로 수평/수직 중앙이고, HUD title이나 caption은 컴포넌트 의도에 따라 좌정렬을 허용한다.
+- design system scene의 주요 영역은 layout node로 구성해 layout debug overlay에서 경계를 확인할 수 있어야 한다.
+
 현재 구현 기준:
 
 - `createGame()`은 `1080 x 1920` reference resolution을 기준으로 `adaptive-expand` layout context를 만든다.

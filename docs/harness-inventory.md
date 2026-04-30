@@ -58,7 +58,7 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   UI metadata for the `hook-creator` skill.
 
 - `.agents/skills/pixi-surface/SKILL.md`
-  Provides PixiJS app surface architecture guidance for adaptive-expand, safe area, design tokens, Pixi UI primitives, `@pixi/layout`, `@pixi/ui`, and viewport E2E checks.
+  Provides PixiJS app surface architecture guidance for adaptive-expand, safe area, design tokens, layout-first UI policy, semantic Pixi UI primitives, `@pixi/layout`, `@pixi/ui`, and viewport/component-contract E2E checks.
   Discovery route: `pixi_surface_architect` reads this skill first; `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`.
   Expected user/agent: parent Codex and Pixi surface specialists planning or reviewing browser game surface work.
   Validation: `mise run validate-skills`.

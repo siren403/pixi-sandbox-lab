@@ -53,9 +53,18 @@ Do not assume `@pixi/layout` replaces the surface policy. It should operate insi
 Avoid raw one-off design px in scene code. Prefer:
 
 - design tokens for font, spacing, radius, color, touch target, z-layer, and component size
-- semantic layout helpers such as `anchor("top-left", "screen")`
+- `@pixi/layout` containers for UI structure such as HUDs, panels, rows, columns, menus, modals, debug views, and design-system samples
 - Pixi UI primitives and composed components
 - screen constraints for readable/touchable UI, for example `minScreenPx`
+
+Default placement policy:
+
+- UI is layout-and-primitive first.
+- Gameplay/world/effect objects may use explicit coordinates.
+- Scene-local `Graphics + Text` UI is acceptable only for quick throwaway probes. Promote repeated or semantic UI, such as buttons, labels, panels, badges, lists, HUD groups, and modals, into primitives.
+- If UI must use explicit coordinates, document why and add viewport/layout E2E coverage for overlap, crop, safe-area, and expected alignment.
+- Component semantics define alignment contracts. For example, button text defaults to horizontal and vertical center, while HUD titles may be top-left and captions may be left-aligned.
+- Design-system scenes should use layout nodes so `@pixi/layout` debug overlay can inspect boundaries.
 
 Example component intent:
 
@@ -82,9 +91,13 @@ Before implementation:
 - Confirm whether the work is surface policy, UI primitives, composed UI, or game logic.
 - Keep game logic, ECS, asset loading, physics, and deployment out of scope unless explicitly requested.
 - Check whether `@pixi/layout` or `@pixi/ui` can reduce custom code.
+- For UI work, default to layout containers and semantic primitives before scene-local coordinates.
+- For component-like UI, define the semantic alignment contract before implementation.
 - Define viewport behavior for desktop portrait and mobile portrait.
 - Define how safe area affects anchors.
 - Define E2E checks that prove canvas fill, no offset, no crop of critical UI, and interaction.
+- For layout/debuggable UI, include a check that layout nodes exist and relevant component bounds are inspectable.
+- For semantic components, include contract checks such as button label center delta, touch target minimum size, or no-overlap assertions.
 
 After implementation:
 
