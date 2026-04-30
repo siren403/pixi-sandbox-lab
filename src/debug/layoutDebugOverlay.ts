@@ -1,4 +1,4 @@
-import { Graphics, type Application, type Container } from "pixi.js";
+import { Container, Graphics, Text, type Application } from "pixi.js";
 import { readCurrentDebugScene, setLayoutDebugState, type PixiLayoutDebugState } from "./stateBridge";
 
 type LayoutDebugFilter = "all" | "world" | "ui";
@@ -23,10 +23,13 @@ const storageKey = "prompt-ops:pixi-layout-debug";
 
 export function installLayoutDebug(app: Application, root: Container): () => void {
   const stored = readStoredState();
+  const semanticOverlay = new Container({ label: "semantic-bounds-debug" });
   const semanticBounds = new Graphics();
-  semanticBounds.label = "semantic-bounds-debug";
+  semanticBounds.label = "semantic-bounds-lines";
+  const semanticLabels = new Container({ label: "semantic-bounds-labels" });
+  semanticOverlay.addChild(semanticBounds, semanticLabels);
   const debugLayer = root.getChildByLabel("debug-layer") as Container | null;
-  debugLayer?.addChild(semanticBounds);
+  debugLayer?.addChild(semanticOverlay);
 
   const panel = document.createElement("section");
   panel.dataset.testid = "layout-debug-panel";
@@ -189,6 +192,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   let destroyed = false;
   let restoreCount = 0;
   let mountedOnce = false;
+  let lastLayoutSyncAt = 0;
   let drag:
     | {
       pointerId: number;
@@ -223,7 +227,9 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     ensurePanelConnected();
     const layoutNodes = countLayoutNodes(root);
     const debuggedNodes = countDebuggedNodes(root);
-    const semanticBoxes = countSemanticBoxes(root, filter);
+    const semanticTargets = collectSemanticTargets(root, filter);
+    const semanticBoxes = semanticTargets.length;
+    const semanticLabelNames = semanticTargets.map((target) => target.label ?? "unlabeled");
     const layerLabels = root.children.map((child) => child.label ?? "");
     const currentScene = readCurrentDebugScene();
     const rect = panel.getBoundingClientRect();
@@ -234,6 +240,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
       layoutNodes,
       debuggedNodes,
       semanticBoxes,
+      semanticLabels: semanticLabelNames.slice(0, 24),
       layerLabels,
       installedAt,
       panelConnected: panel.isConnected,
@@ -268,19 +275,24 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     designSystemButton.style.display = folded ? "none" : "inline-flex";
     reloadButton.style.display = folded ? "none" : "inline-flex";
     stats.style.display = folded ? "none" : "block";
-    stats.textContent = `mode ${mode} | nodes ${debuggedNodes}/${layoutNodes} | boxes ${semanticBoxes} | ${layerLabels.join(", ")}`;
+    const semanticSummary = semanticLabelNames.slice(0, 4).join(", ");
+    stats.textContent = `mode ${mode} | nodes ${debuggedNodes}/${layoutNodes} | boxes ${semanticBoxes} | ${semanticSummary} | ${layerLabels.join(", ")}`;
   };
 
-  const syncLayoutFlags = () => {
+  const syncLayoutFlags = (force = false) => {
+    const now = performance.now();
+    if (!force && now - lastLayoutSyncAt < 120) return;
+    lastLayoutSyncAt = now;
+
     const layoutDebugEnabled = enabled && mode === "layout";
     applyDebugFlag(root, layoutDebugEnabled, filter);
-    drawSemanticBounds(semanticBounds, root, enabled && mode === "bounds", filter);
+    drawSemanticBounds(semanticBounds, semanticLabels, root, enabled && mode === "bounds", filter);
     syncState();
   };
 
   const setEnabled = async (next: boolean) => {
     enabled = next;
-    syncLayoutFlags();
+    syncLayoutFlags(true);
     await app.renderer.layout.enableDebug(enabled && mode === "layout");
     app.renderer.layout.update(app.stage);
   };
@@ -297,14 +309,14 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
 
   const onFilterClick = (next: LayoutDebugFilter) => {
     filter = next;
-    syncLayoutFlags();
+    syncLayoutFlags(true);
     app.renderer.layout.update(app.stage);
     saveState();
   };
 
   const onModeClick = async (next: LayoutDebugMode) => {
     mode = next;
-    syncLayoutFlags();
+    syncLayoutFlags(true);
     await app.renderer.layout.enableDebug(enabled && mode === "layout");
     app.renderer.layout.update(app.stage);
     saveState();
@@ -386,15 +398,16 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
 
   const onPageShow = () => syncState();
   const onVisibilityChange = () => syncState();
+  const onTick = () => syncLayoutFlags();
   window.addEventListener("pageshow", onPageShow);
   window.addEventListener("resize", onResize);
   document.addEventListener("visibilitychange", onVisibilityChange);
-  app.ticker.add(syncLayoutFlags);
+  app.ticker.add(onTick);
 
   return () => {
     if (destroyed) return;
     destroyed = true;
-    app.ticker.remove(syncLayoutFlags);
+    app.ticker.remove(onTick);
     foldButton.removeEventListener("click", onFoldClick);
     toggle.removeEventListener("click", onToggleClick);
     sceneButton.removeEventListener("click", onSceneClick);
@@ -410,7 +423,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     panel.remove();
     void app.renderer.layout.enableDebug(false);
     applyDebugFlag(root, false, "all");
-    semanticBounds.destroy();
+    semanticOverlay.destroy({ children: true });
     setLayoutDebugState({
       enabled: false,
       mode,
@@ -418,6 +431,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
       layoutNodes: 0,
       debuggedNodes: 0,
       semanticBoxes: 0,
+      semanticLabels: [],
       layerLabels: [],
       installedAt,
       panelConnected: false,
@@ -475,15 +489,17 @@ function writeStoredState(state: LayoutDebugStorage): void {
 
 function drawSemanticBounds(
   graphics: Graphics,
+  labels: Container,
   root: Container,
   enabled: boolean,
   filter: LayoutDebugFilter,
 ): void {
   graphics.clear();
+  clearContainer(labels);
   if (!enabled) return;
 
   let index = 0;
-  visitSemanticTargets(root, filter, (container) => {
+  for (const container of collectSemanticTargets(root, filter)) {
     const bounds = container.getBounds();
     if (bounds.width <= 0 || bounds.height <= 0) return;
 
@@ -496,17 +512,18 @@ function drawSemanticBounds(
     graphics
       .rect(topLeft.x, topLeft.y, width, height)
       .stroke({ color: semanticColor(index), width: 2, alpha: 0.94 });
+    labels.addChild(createBoundsLabel(container, topLeft.x, topLeft.y, width, height, semanticColor(index)));
     index += 1;
-  });
+  }
 }
 
-function countSemanticBoxes(root: Container, filter: LayoutDebugFilter): number {
-  let count = 0;
+function collectSemanticTargets(root: Container, filter: LayoutDebugFilter): Container[] {
+  const targets: Container[] = [];
   visitSemanticTargets(root, filter, (container) => {
     const bounds = container.getBounds();
-    if (bounds.width > 0 && bounds.height > 0) count += 1;
+    if (bounds.width > 0 && bounds.height > 0) targets.push(container);
   });
-  return count;
+  return targets;
 }
 
 function visitSemanticTargets(
@@ -515,13 +532,50 @@ function visitSemanticTargets(
   visitor: (container: Container) => void,
 ): void {
   for (const child of container.children) {
-    if (child.label !== "semantic-bounds-debug" && matchesFilter(child, filter) && shouldDrawSemanticBounds(child)) {
+    if (child.label === "semantic-bounds-debug") continue;
+    if (matchesFilter(child, filter) && shouldDrawSemanticBounds(child)) {
       visitor(child);
     }
 
     if ("children" in child) {
       visitSemanticTargets(child, filter, visitor);
     }
+  }
+}
+
+function createBoundsLabel(container: Container, x: number, y: number, width: number, height: number, color: number): Text {
+  const layer = readLayerLabel(container);
+  const label = container.label ?? "unlabeled";
+  const text = new Text({
+    text: `${label} ${Math.round(width)}x${Math.round(height)} ${layer}`,
+    style: {
+      fill: "#f8fafc",
+      fontFamily: "Inter, system-ui, sans-serif",
+      fontSize: 14,
+      fontWeight: "700",
+      stroke: { color: "#020617", width: 3 },
+    },
+  });
+  text.label = "semantic-bounds-label";
+  text.position.set(x + 4, Math.max(0, y - 20));
+  text.tint = color;
+  return text;
+}
+
+function readLayerLabel(container: Container): string {
+  let current: Container | null = container;
+  while (current) {
+    if (current.label === "world-layer" || current.label === "ui-layer" || current.label === "debug-layer") {
+      return current.label.replace("-layer", "");
+    }
+    current = current.parent;
+  }
+  return "root";
+}
+
+function clearContainer(container: Container): void {
+  for (const child of container.removeChildren()) {
+    child.destroy({ children: true });
   }
 }
 

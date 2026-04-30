@@ -247,7 +247,27 @@ test("renders the PixiJS demo with assets and input", async ({
   await page.getByTestId("layout-debug-mode-bounds").click();
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.mode)).toBe("bounds");
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.semanticBoxes ?? 0)).toBeGreaterThan(0);
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiDebug?.layout?.semanticLabels ?? []))
+    .toEqual(expect.arrayContaining(["title", "player", "marker"]));
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.debuggedNodes ?? -1)).toBe(0);
+
+  await page.getByTestId("layout-debug-filter-ui").click();
+  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.filter)).toBe("ui");
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiDebug?.layout?.semanticLabels ?? []))
+    .toEqual(expect.arrayContaining(["hud", "title", "marker"]));
+  expect(await page.evaluate(() => window.__pixiDebug?.layout?.semanticLabels ?? [])).not.toContain("player");
+
+  await page.getByTestId("layout-debug-filter-world").click();
+  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.filter)).toBe("world");
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiDebug?.layout?.semanticLabels ?? []))
+    .toEqual(expect.arrayContaining(["player"]));
+  expect(await page.evaluate(() => window.__pixiDebug?.layout?.semanticLabels ?? [])).not.toContain("title");
+
+  await page.getByTestId("layout-debug-filter-all").click();
+  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.filter)).toBe("all");
 
   await page.getByTestId("layout-debug-mode-layout").click();
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.mode)).toBe("layout");

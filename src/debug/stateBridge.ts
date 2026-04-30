@@ -71,6 +71,7 @@ export type PixiLayoutDebugState = {
   layoutNodes: number;
   debuggedNodes: number;
   semanticBoxes: number;
+  semanticLabels: string[];
   layerLabels: string[];
   installedAt: number;
   panelConnected: boolean;
