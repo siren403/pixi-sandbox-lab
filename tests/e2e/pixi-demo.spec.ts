@@ -34,6 +34,8 @@ declare global {
     };
     __pixiDesignSystemState?: {
       scene: "design-system";
+      sections: number;
+      labels: number;
       swatches: number;
       typeSamples: number;
       componentSamples: number;
@@ -52,6 +54,9 @@ declare global {
       restoreCount: number;
       visibilityState: DocumentVisibilityState;
       folded: boolean;
+      x: number;
+      y: number;
+      currentScene: string;
     };
     __pixiRuntimeState?: {
       appMode: "interactive" | "transitioning" | "loading" | "destroyed";
@@ -78,12 +83,11 @@ declare global {
 test("renders the PixiJS demo with assets and input", async ({
   page,
 }) => {
-  test.setTimeout(45000);
+  test.setTimeout(70000);
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
-
   await page.goto("/");
 
   const canvas = page.locator("canvas");
@@ -180,22 +184,40 @@ test("renders the PixiJS demo with assets and input", async ({
   const layoutDebugPanel = page.getByTestId("layout-debug-panel");
   const layoutDebug = page.getByTestId("layout-debug-toggle");
   const layoutDebugFold = page.getByTestId("layout-debug-fold");
+  const layoutDebugHeader = page.getByTestId("layout-debug-header");
+  const layoutDebugCurrentScene = page.getByTestId("layout-debug-current-scene");
   const sceneSwitch = page.getByTestId("layout-debug-scene");
   const designSystem = page.getByTestId("layout-debug-design-system");
   await expect(layoutDebugPanel).toBeVisible();
-  await expect(sceneSwitch).toBeVisible();
-  await expect(designSystem).toBeVisible();
-  await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "true");
-  await layoutDebugFold.click();
   await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "false");
   await expect(sceneSwitch).not.toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.folded)).toBe(true);
+  await expect(layoutDebugCurrentScene).toContainText("boot");
   await layoutDebugFold.click();
   await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "true");
   await expect(sceneSwitch).toBeVisible();
+  await expect(designSystem).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.folded)).toBe(false);
   expect(await page.evaluate(() => window.__pixiLayoutDebug?.panelConnected)).toBe(true);
   expect(await page.evaluate(() => window.__pixiLayoutDebug?.installedAt ?? 0)).toBeGreaterThan(0);
+  const panelBeforeDrag = await layoutDebugPanel.boundingBox();
+  expect(panelBeforeDrag).not.toBeNull();
+  await layoutDebugHeader.dragTo(canvas, {
+    sourcePosition: { x: 24, y: 16 },
+    targetPosition: { x: 120, y: 120 },
+  });
+  const panelAfterDrag = await layoutDebugPanel.boundingBox();
+  expect(panelAfterDrag).not.toBeNull();
+  expect(Math.abs((panelAfterDrag?.x ?? 0) - (panelBeforeDrag?.x ?? 0))).toBeGreaterThan(20);
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => window.__pixiIntroState?.rendered)).toBe(true);
+  await page.keyboard.press("Enter");
+  await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.rendered)).toBe(true);
+  await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "true");
+  const panelAfterReload = await layoutDebugPanel.boundingBox();
+  expect(Math.abs((panelAfterReload?.x ?? 0) - (panelAfterDrag?.x ?? 0))).toBeLessThanOrEqual(2);
+  expect(Math.abs((panelAfterReload?.y ?? 0) - (panelAfterDrag?.y ?? 0))).toBeLessThanOrEqual(2);
+  await expect(layoutDebugCurrentScene).toContainText("boot");
   const runtimeSwitches = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitches ?? 0);
   const loadingOverlayShows = await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0);
   const sceneSwitchRequests = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitchRequests ?? 0);
@@ -214,6 +236,7 @@ test("renders the PixiJS demo with assets and input", async ({
     .poll(() => page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0))
     .toBeGreaterThan(loadingOverlayShows);
   await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("alternate");
+  await expect(layoutDebugCurrentScene).toContainText("alternate");
   await expect.poll(() => page.evaluate(() => window.__pixiRuntimeState?.loading)).toBe(false);
   await expect.poll(() => page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayVisible)).toBe(false);
   await expect.poll(() => page.evaluate(() => window.__pixiRuntimeState?.appMode)).toBe("interactive");
@@ -238,6 +261,8 @@ test("renders the PixiJS demo with assets and input", async ({
   await expect.poll(() => page.evaluate(() => window.__pixiDesignSystemState?.rendered)).toBe(true);
   const designSystemState = await page.evaluate(() => window.__pixiDesignSystemState);
   expect(designSystemState?.scene).toBe("design-system");
+  expect(designSystemState?.sections).toBeGreaterThanOrEqual(3);
+  expect(designSystemState?.labels).toBeGreaterThanOrEqual(3);
   expect(designSystemState?.swatches).toBeGreaterThanOrEqual(6);
   expect(designSystemState?.typeSamples).toBeGreaterThanOrEqual(3);
   expect(designSystemState?.componentSamples).toBeGreaterThanOrEqual(2);
@@ -245,7 +270,8 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(designSystemState?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
   await expect
     .poll(() => page.evaluate(() => window.__pixiLayoutDebug?.layoutNodes ?? 0))
-    .toBeGreaterThanOrEqual(12);
+    .toBeGreaterThanOrEqual(16);
+  await expect(layoutDebugCurrentScene).toContainText("design-system");
 
   await sceneSwitch.click();
   await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("boot");
@@ -283,6 +309,7 @@ test("reload button reloads the page", async ({ page }) => {
   await page.goto("/");
 
   await expect.poll(() => page.evaluate(() => window.__pixiIntroState?.rendered)).toBe(true);
+  await page.getByTestId("layout-debug-fold").click();
   const reloadButton = page.getByTestId("layout-debug-reload");
 
   await Promise.all([

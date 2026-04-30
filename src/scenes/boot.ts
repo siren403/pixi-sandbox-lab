@@ -4,6 +4,8 @@ import { screenValue, surfaceTheme, tokenValue } from "../runtime/surface";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
 import { createButton } from "../ui/button";
+import { createLabel } from "../ui/label";
+import { createPanel } from "../ui/panel";
 
 const speed = 520;
 const pointerFollowRate = 10;
@@ -36,6 +38,8 @@ type DemoState = {
 
 type DesignSystemState = {
   scene: "design-system";
+  sections: number;
+  labels: number;
   swatches: number;
   typeSamples: number;
   componentSamples: number;
@@ -413,31 +417,54 @@ function createInputTarget(layout: SurfaceLayout): Graphics {
 }
 
 function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
-  const root = new Container({ label: "design-system-root" });
   const margin = tokenValue(layout, surfaceTheme.spacing.screen);
   const panelWidth = Math.min(layout.visibleWidth - margin * 2, 900 / layout.scale);
   const startX = layout.referenceX + layout.safeArea.left + margin;
-  root.position.set(startX, layout.referenceY + layout.safeArea.top + margin);
-  root.layout = {
+  const sectionGap = margin * 0.42;
+  const sectionWidth = panelWidth;
+  const sectionLabelHeight = tokenValue(layout, { design: 42, minScreenPx: 24, maxScreenPx: 34 });
+  const root = createPanel({
+    layout,
+    label: "design-system-root",
     width: panelWidth,
-    flexDirection: "column",
+    direction: "column",
     alignItems: "flex-start",
     gap: margin * 0.55,
-  };
+  });
+  root.position.set(startX, layout.referenceY + layout.safeArea.top + margin);
 
-  const title = createLabel("Design System", layout, { design: 68, minScreenPx: 28, maxScreenPx: 48 }, surfaceTheme.color.text);
+  const title = createLabel({
+    text: "Design System",
+    layout,
+    fontSize: { design: 68, minScreenPx: 28, maxScreenPx: 48 },
+    color: surfaceTheme.color.text,
+    label: "ds-title",
+  });
   title.label = "ds-title";
   title.layout = {
     height: tokenValue(layout, { design: 84, minScreenPx: 42, maxScreenPx: 62 }),
   };
   root.addChild(title);
 
-  const tokenLabel = createLabel("Color tokens", layout, { design: 34, minScreenPx: 18, maxScreenPx: 26 }, "#bfdbfe");
-  tokenLabel.label = "ds-token-label";
+  const colorSection = createPanel({
+    layout,
+    label: "ds-section",
+    width: sectionWidth,
+    direction: "column",
+    alignItems: "flex-start",
+    gap: sectionGap,
+  });
+  const tokenLabel = createLabel({
+    text: "Color tokens",
+    layout,
+    fontSize: { design: 34, minScreenPx: 18, maxScreenPx: 26 },
+    color: "#bfdbfe",
+    label: "ds-section-label",
+  });
   tokenLabel.layout = {
-    height: tokenValue(layout, { design: 42, minScreenPx: 24, maxScreenPx: 34 }),
+    height: sectionLabelHeight,
   };
-  root.addChild(tokenLabel);
+  colorSection.addChild(tokenLabel);
 
   const swatches = [
     surfaceTheme.color.player,
@@ -450,15 +477,16 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   const swatchSize = tokenValue(layout, { design: 104, minScreenPx: 44, maxScreenPx: 70 });
   const swatchGap = margin * 0.42;
   const swatchRowWidth = swatches.length * swatchSize + (swatches.length - 1) * swatchGap;
-  const swatchRow = new Container({ label: "ds-swatch-row" });
-  swatchRow.layout = {
+  const swatchRow = createPanel({
+    layout,
+    label: "ds-swatch-row",
     width: swatchRowWidth,
     height: swatchSize,
-    flexDirection: "row",
+    direction: "row",
     alignItems: "center",
     gap: swatchGap,
-  };
-  swatches.forEach((color, index) => {
+  });
+  swatches.forEach((color) => {
     const swatch = new Graphics()
       .roundRect(0, 0, swatchSize, swatchSize, 8 / layout.scale)
       .fill(color)
@@ -470,42 +498,85 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
     };
     swatchRow.addChild(swatch);
   });
-  root.addChild(swatchRow);
+  colorSection.addChild(swatchRow);
+  root.addChild(colorSection);
 
+  const typeSection = createPanel({
+    layout,
+    label: "ds-section",
+    width: sectionWidth,
+    direction: "column",
+    alignItems: "flex-start",
+    gap: sectionGap,
+  });
+  const typeLabel = createLabel({
+    text: "Typography",
+    layout,
+    fontSize: { design: 34, minScreenPx: 18, maxScreenPx: 26 },
+    color: "#bfdbfe",
+    label: "ds-section-label",
+  });
+  typeLabel.layout = { height: sectionLabelHeight };
+  typeSection.addChild(typeLabel);
   const typeSamples = [
     ["Title", surfaceTheme.font.title],
     ["Body", { design: 34, minScreenPx: 18, maxScreenPx: 26 }],
     ["Caption", { design: 24, minScreenPx: 14, maxScreenPx: 18 }],
   ] as const;
-  const typeColumn = new Container({ label: "ds-type-column" });
-  typeColumn.layout = {
+  const typeColumn = createPanel({
+    layout,
+    label: "ds-type-column",
     width: Math.min(panelWidth, 420 / layout.scale),
-    flexDirection: "column",
+    direction: "column",
     gap: margin * 0.28,
-  };
+  });
   typeSamples.forEach(([text, size], index) => {
-    const sample = createLabel(text, layout, size, index === 0 ? surfaceTheme.color.text : "#cbd5e1");
-    sample.label = "ds-type-sample";
+    const sample = createLabel({
+      text,
+      layout,
+      fontSize: size,
+      color: index === 0 ? surfaceTheme.color.text : "#cbd5e1",
+      label: "ds-type-sample",
+    });
     sample.layout = {
       height: tokenValue(layout, { design: 48, minScreenPx: 26, maxScreenPx: 38 }),
     };
     typeColumn.addChild(sample);
   });
-  root.addChild(typeColumn);
+  typeSection.addChild(typeColumn);
+  root.addChild(typeSection);
 
   const buttonWidth = panelWidth * 0.38;
   const buttonHeight = tokenValue(layout, { design: 92, minScreenPx: 48, maxScreenPx: 64 });
   const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
   const motionSize = tokenValue(layout, surfaceTheme.size.player) * 1.6;
   const componentGap = margin;
-  const componentRow = new Container({ label: "ds-component-row" });
-  componentRow.layout = {
+  const componentSection = createPanel({
+    layout,
+    label: "ds-section",
+    width: sectionWidth,
+    direction: "column",
+    alignItems: "flex-start",
+    gap: sectionGap,
+  });
+  const componentLabel = createLabel({
+    text: "Components",
+    layout,
+    fontSize: { design: 34, minScreenPx: 18, maxScreenPx: 26 },
+    color: "#bfdbfe",
+    label: "ds-section-label",
+  });
+  componentLabel.layout = { height: sectionLabelHeight };
+  componentSection.addChild(componentLabel);
+  const componentRow = createPanel({
+    layout,
+    label: "ds-component-row",
     width: buttonWidth + markerRadius * 2 + motionSize + componentGap * 2,
     height: tokenValue(layout, { design: 112, minScreenPx: 58, maxScreenPx: 78 }),
-    flexDirection: "row",
+    direction: "row",
     alignItems: "center",
     gap: componentGap,
-  };
+  });
   const button = createButton({
     text: "Button",
     width: buttonWidth,
@@ -536,25 +607,9 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   };
 
   componentRow.addChild(button, marker, motion);
-  root.addChild(componentRow);
+  componentSection.addChild(componentRow);
+  root.addChild(componentSection);
   layer.addChild(root);
-}
-
-function createLabel(
-  text: string,
-  layout: SurfaceLayout,
-  size: { design: number; minScreenPx?: number; maxScreenPx?: number },
-  color: string,
-): Text {
-  return new Text({
-    text,
-    style: {
-      fill: color,
-      fontFamily: "Inter, system-ui, sans-serif",
-      fontSize: tokenValue(layout, size),
-      fontWeight: "600",
-    },
-  });
 }
 
 function updateInputTarget(target: Graphics | null, dt: number): void {
@@ -606,6 +661,8 @@ function syncDemoState(
 function syncDesignSystemState(layout: SurfaceLayout, stage: Container): void {
   window.__pixiDesignSystemState = {
     scene: "design-system",
+    sections: countChildrenByLabel(stage, "ds-section"),
+    labels: countChildrenByLabel(stage, "ds-section-label"),
     swatches: countChildrenByLabel(stage, "ds-swatch"),
     typeSamples: countChildrenByLabel(stage, "ds-type-sample"),
     componentSamples: countChildrenByLabel(stage, "ds-component-sample"),

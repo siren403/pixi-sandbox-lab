@@ -9,6 +9,15 @@ type DebuggableContainer = Container & {
   layout?: Record<string, unknown> | null;
 };
 
+type LayoutDebugStorage = {
+  folded?: boolean;
+  filter?: LayoutDebugFilter;
+  x?: number;
+  y?: number;
+};
+
+const storageKey = "prompt-ops:pixi-layout-debug";
+
 declare global {
   interface Window {
     __pixiLayoutDebug?: {
@@ -22,17 +31,19 @@ declare global {
       restoreCount: number;
       visibilityState: DocumentVisibilityState;
       folded: boolean;
+      x: number;
+      y: number;
+      currentScene: string;
     };
   }
 }
 
 export function installLayoutDebug(app: Application, root: Container): () => void {
+  const stored = readStoredState();
   const panel = document.createElement("section");
   panel.dataset.testid = "layout-debug-panel";
   Object.assign(panel.style, {
     position: "fixed",
-    right: "max(16px, env(safe-area-inset-right))",
-    bottom: "max(16px, env(safe-area-inset-bottom))",
     zIndex: "20",
     minWidth: "188px",
     border: "1px solid rgba(238, 242, 246, 0.38)",
@@ -44,18 +55,43 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     touchAction: "manipulation",
     userSelect: "none",
   });
+  if (stored.x !== undefined && stored.y !== undefined) {
+    panel.style.left = `${stored.x}px`;
+    panel.style.top = `${stored.y}px`;
+  } else {
+    panel.style.right = "max(16px, env(safe-area-inset-right))";
+    panel.style.bottom = "max(16px, env(safe-area-inset-bottom))";
+  }
 
   const header = document.createElement("div");
+  header.dataset.testid = "layout-debug-header";
   Object.assign(header.style, {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: "8px",
     marginBottom: "8px",
+    cursor: "move",
+    touchAction: "none",
+  });
+
+  const titleWrap = document.createElement("div");
+  Object.assign(titleWrap.style, {
+    display: "grid",
+    gap: "2px",
   });
 
   const title = document.createElement("span");
   title.textContent = "Layout Debug";
+
+  const sceneName = document.createElement("span");
+  sceneName.dataset.testid = "layout-debug-current-scene";
+  Object.assign(sceneName.style, {
+    color: "rgba(238, 242, 246, 0.68)",
+    font: "500 11px Inter, system-ui, sans-serif",
+  });
+
+  titleWrap.append(title, sceneName);
 
   const headerControls = document.createElement("div");
   Object.assign(headerControls.style, {
@@ -76,7 +112,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   Object.assign(toggle.style, buttonStyle());
 
   headerControls.append(foldButton, toggle);
-  header.append(title, headerControls);
+  header.append(titleWrap, headerControls);
 
   const filterRow = document.createElement("div");
   filterRow.dataset.testid = "layout-debug-filters";
@@ -139,11 +175,20 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   panel.append(header, filterRow, sceneButton, designSystemButton, reloadButton, stats);
 
   let enabled = false;
-  let filter: LayoutDebugFilter = "all";
-  let folded = false;
+  let filter: LayoutDebugFilter = stored.filter ?? "all";
+  let folded = stored.folded ?? true;
   let destroyed = false;
   let restoreCount = 0;
   let mountedOnce = false;
+  let drag:
+    | {
+      pointerId: number;
+      startPointerX: number;
+      startPointerY: number;
+      startPanelX: number;
+      startPanelY: number;
+    }
+    | null = null;
   const installedAt = performance.now();
 
   const ensurePanelConnected = () => {
@@ -151,6 +196,17 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     document.body.appendChild(panel);
     if (mountedOnce) restoreCount += 1;
     mountedOnce = true;
+    clampPanelToViewport();
+  };
+
+  const saveState = () => {
+    const rect = panel.getBoundingClientRect();
+    writeStoredState({
+      folded,
+      filter,
+      x: Math.round(rect.left),
+      y: Math.round(rect.top),
+    });
   };
 
   const syncState = () => {
@@ -158,6 +214,8 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     const layoutNodes = countLayoutNodes(root);
     const debuggedNodes = countDebuggedNodes(root);
     const layerLabels = root.children.map((child) => child.label ?? "");
+    const currentScene = readCurrentScene();
+    const rect = panel.getBoundingClientRect();
     window.__pixiLayoutDebug = {
       enabled,
       filter,
@@ -169,7 +227,11 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
       restoreCount,
       visibilityState: document.visibilityState,
       folded,
+      x: Math.round(rect.left),
+      y: Math.round(rect.top),
+      currentScene,
     };
+    sceneName.textContent = `Scene: ${currentScene}`;
 
     toggle.textContent = enabled ? "On" : "Off";
     toggle.setAttribute("aria-pressed", String(enabled));
@@ -210,12 +272,14 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   const onFoldClick = () => {
     folded = !folded;
     syncState();
+    saveState();
   };
 
   const onFilterClick = (next: LayoutDebugFilter) => {
     filter = next;
     syncLayoutFlags();
     app.renderer.layout.update(app.stage);
+    saveState();
   };
 
   const onSceneClick = () => {
@@ -230,11 +294,57 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     window.location.reload();
   };
 
+  const onHeaderPointerDown = (event: PointerEvent) => {
+    if ((event.target as HTMLElement).closest("button")) return;
+    const rect = panel.getBoundingClientRect();
+    drag = {
+      pointerId: event.pointerId,
+      startPointerX: event.clientX,
+      startPointerY: event.clientY,
+      startPanelX: rect.left,
+      startPanelY: rect.top,
+    };
+    panel.style.left = `${rect.left}px`;
+    panel.style.top = `${rect.top}px`;
+    panel.style.right = "";
+    panel.style.bottom = "";
+    header.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
+
+  const onHeaderPointerMove = (event: PointerEvent) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    setPanelPosition(
+      drag.startPanelX + event.clientX - drag.startPointerX,
+      drag.startPanelY + event.clientY - drag.startPointerY,
+    );
+    syncState();
+  };
+
+  const onHeaderPointerUp = (event: PointerEvent) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    drag = null;
+    if (header.hasPointerCapture(event.pointerId)) header.releasePointerCapture(event.pointerId);
+    clampPanelToViewport();
+    syncState();
+    saveState();
+  };
+
+  const onResize = () => {
+    clampPanelToViewport();
+    syncState();
+    saveState();
+  };
+
   foldButton.addEventListener("click", onFoldClick);
   toggle.addEventListener("click", onToggleClick);
   sceneButton.addEventListener("click", onSceneClick);
   designSystemButton.addEventListener("click", onDesignSystemClick);
   reloadButton.addEventListener("click", onReloadClick);
+  header.addEventListener("pointerdown", onHeaderPointerDown);
+  header.addEventListener("pointermove", onHeaderPointerMove);
+  header.addEventListener("pointerup", onHeaderPointerUp);
+  header.addEventListener("pointercancel", onHeaderPointerUp);
   for (const [value, button] of filterButtons) {
     button.addEventListener("click", () => onFilterClick(value));
   }
@@ -244,6 +354,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   const onPageShow = () => syncState();
   const onVisibilityChange = () => syncState();
   window.addEventListener("pageshow", onPageShow);
+  window.addEventListener("resize", onResize);
   document.addEventListener("visibilitychange", onVisibilityChange);
   app.ticker.add(syncLayoutFlags);
 
@@ -256,7 +367,12 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     sceneButton.removeEventListener("click", onSceneClick);
     designSystemButton.removeEventListener("click", onDesignSystemClick);
     reloadButton.removeEventListener("click", onReloadClick);
+    header.removeEventListener("pointerdown", onHeaderPointerDown);
+    header.removeEventListener("pointermove", onHeaderPointerMove);
+    header.removeEventListener("pointerup", onHeaderPointerUp);
+    header.removeEventListener("pointercancel", onHeaderPointerUp);
     window.removeEventListener("pageshow", onPageShow);
+    window.removeEventListener("resize", onResize);
     document.removeEventListener("visibilitychange", onVisibilityChange);
     panel.remove();
     void app.renderer.layout.enableDebug(false);
@@ -272,8 +388,66 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
       restoreCount,
       visibilityState: document.visibilityState,
       folded,
+      x: Math.round(panel.getBoundingClientRect().left),
+      y: Math.round(panel.getBoundingClientRect().top),
+      currentScene: readCurrentScene(),
     };
   };
+
+  function setPanelPosition(x: number, y: number): void {
+    const rect = panel.getBoundingClientRect();
+    const padding = 8;
+    const maxX = Math.max(padding, window.innerWidth - rect.width - padding);
+    const maxY = Math.max(padding, window.innerHeight - rect.height - padding);
+    panel.style.left = `${Math.round(Math.max(padding, Math.min(maxX, x)))}px`;
+    panel.style.top = `${Math.round(Math.max(padding, Math.min(maxY, y)))}px`;
+    panel.style.right = "";
+    panel.style.bottom = "";
+  }
+
+  function clampPanelToViewport(): void {
+    const rect = panel.getBoundingClientRect();
+    if (!Number.isFinite(rect.left) || !Number.isFinite(rect.top)) return;
+    setPanelPosition(rect.left, rect.top);
+  }
+}
+
+function readStoredState(): LayoutDebugStorage {
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as LayoutDebugStorage;
+    return {
+      folded: typeof parsed.folded === "boolean" ? parsed.folded : undefined,
+      filter: parsed.filter === "all" || parsed.filter === "world" || parsed.filter === "ui" ? parsed.filter : undefined,
+      x: typeof parsed.x === "number" ? parsed.x : undefined,
+      y: typeof parsed.y === "number" ? parsed.y : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredState(state: LayoutDebugStorage): void {
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(state));
+  } catch {
+    // Storage can be unavailable in private or restricted contexts.
+  }
+}
+
+function readCurrentScene(): string {
+  const runtimeWindow = window as Window & {
+    __pixiDemoState?: { scene?: string };
+    __pixiIntroState?: { scene?: string };
+    __pixiDesignSystemState?: { scene?: string };
+  };
+  return (
+    runtimeWindow.__pixiDesignSystemState?.scene ??
+    runtimeWindow.__pixiDemoState?.scene ??
+    runtimeWindow.__pixiIntroState?.scene ??
+    "unknown"
+  );
 }
 
 function applyDebugFlag(container: Container, enabled: boolean, filter: LayoutDebugFilter): void {
