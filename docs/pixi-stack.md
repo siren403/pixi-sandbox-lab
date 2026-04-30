@@ -135,6 +135,7 @@ layout debug panel:
 
 - DOM overlay로 구현한다. Pixi scene/layer 구조에 섞지 않는다.
 - app surface 생성 직후 scene start보다 먼저 설치한다. `pageshow`/`visibilitychange`/ticker sync에서 DOM 연결 상태를 확인하고, 패널이 분리되면 다시 붙인다.
+- `Fold/Open`으로 조작 버튼과 stats를 접을 수 있다. 접힘 상태는 layout debug 자체를 끄지 않고 DOM 패널 표시만 줄인다.
 - `@pixi/layout` 내장 debug renderer를 토글한다.
 - `All / World / UI` 필터로 layout debug 대상 노드를 제한한다.
 - `DS` 버튼은 Storybook 대체용 runtime design system scene으로 이동한다.

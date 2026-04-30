@@ -51,6 +51,7 @@ declare global {
       panelConnected: boolean;
       restoreCount: number;
       visibilityState: DocumentVisibilityState;
+      folded: boolean;
     };
     __pixiRuntimeState?: {
       appMode: "interactive" | "transitioning" | "loading" | "destroyed";
@@ -178,11 +179,21 @@ test("renders the PixiJS demo with assets and input", async ({
 
   const layoutDebugPanel = page.getByTestId("layout-debug-panel");
   const layoutDebug = page.getByTestId("layout-debug-toggle");
+  const layoutDebugFold = page.getByTestId("layout-debug-fold");
   const sceneSwitch = page.getByTestId("layout-debug-scene");
   const designSystem = page.getByTestId("layout-debug-design-system");
   await expect(layoutDebugPanel).toBeVisible();
   await expect(sceneSwitch).toBeVisible();
   await expect(designSystem).toBeVisible();
+  await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "true");
+  await layoutDebugFold.click();
+  await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "false");
+  await expect(sceneSwitch).not.toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.folded)).toBe(true);
+  await layoutDebugFold.click();
+  await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "true");
+  await expect(sceneSwitch).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.folded)).toBe(false);
   expect(await page.evaluate(() => window.__pixiLayoutDebug?.panelConnected)).toBe(true);
   expect(await page.evaluate(() => window.__pixiLayoutDebug?.installedAt ?? 0)).toBeGreaterThan(0);
   const runtimeSwitches = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitches ?? 0);

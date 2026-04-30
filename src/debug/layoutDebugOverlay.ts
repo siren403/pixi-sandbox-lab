@@ -21,6 +21,7 @@ declare global {
       panelConnected: boolean;
       restoreCount: number;
       visibilityState: DocumentVisibilityState;
+      folded: boolean;
     };
   }
 }
@@ -56,13 +57,26 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   const title = document.createElement("span");
   title.textContent = "Layout Debug";
 
+  const headerControls = document.createElement("div");
+  Object.assign(headerControls.style, {
+    display: "flex",
+    gap: "6px",
+  });
+
+  const foldButton = document.createElement("button");
+  foldButton.type = "button";
+  foldButton.dataset.testid = "layout-debug-fold";
+  foldButton.textContent = "Fold";
+  Object.assign(foldButton.style, buttonStyle());
+
   const toggle = document.createElement("button");
   toggle.type = "button";
   toggle.dataset.testid = "layout-debug-toggle";
   toggle.textContent = "Off";
   Object.assign(toggle.style, buttonStyle());
 
-  header.append(title, toggle);
+  headerControls.append(foldButton, toggle);
+  header.append(title, headerControls);
 
   const filterRow = document.createElement("div");
   filterRow.dataset.testid = "layout-debug-filters";
@@ -126,6 +140,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
 
   let enabled = false;
   let filter: LayoutDebugFilter = "all";
+  let folded = false;
   let destroyed = false;
   let restoreCount = 0;
   let mountedOnce = false;
@@ -153,6 +168,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
       panelConnected: panel.isConnected,
       restoreCount,
       visibilityState: document.visibilityState,
+      folded,
     };
 
     toggle.textContent = enabled ? "On" : "Off";
@@ -164,6 +180,14 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
       setButtonActive(button, value === filter);
     }
 
+    foldButton.textContent = folded ? "Open" : "Fold";
+    foldButton.setAttribute("aria-expanded", String(!folded));
+    setButtonActive(foldButton, folded);
+    filterRow.style.display = folded ? "none" : "grid";
+    sceneButton.style.display = folded ? "none" : "inline-flex";
+    designSystemButton.style.display = folded ? "none" : "inline-flex";
+    reloadButton.style.display = folded ? "none" : "inline-flex";
+    stats.style.display = folded ? "none" : "block";
     stats.textContent = `nodes ${debuggedNodes}/${layoutNodes} | ${layerLabels.join(", ")}`;
   };
 
@@ -181,6 +205,11 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
 
   const onToggleClick = () => {
     void setEnabled(!enabled);
+  };
+
+  const onFoldClick = () => {
+    folded = !folded;
+    syncState();
   };
 
   const onFilterClick = (next: LayoutDebugFilter) => {
@@ -201,6 +230,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     window.location.reload();
   };
 
+  foldButton.addEventListener("click", onFoldClick);
   toggle.addEventListener("click", onToggleClick);
   sceneButton.addEventListener("click", onSceneClick);
   designSystemButton.addEventListener("click", onDesignSystemClick);
@@ -221,6 +251,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     if (destroyed) return;
     destroyed = true;
     app.ticker.remove(syncLayoutFlags);
+    foldButton.removeEventListener("click", onFoldClick);
     toggle.removeEventListener("click", onToggleClick);
     sceneButton.removeEventListener("click", onSceneClick);
     designSystemButton.removeEventListener("click", onDesignSystemClick);
@@ -240,6 +271,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
       panelConnected: false,
       restoreCount,
       visibilityState: document.visibilityState,
+      folded,
     };
   };
 }

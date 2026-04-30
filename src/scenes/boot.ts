@@ -448,13 +448,15 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
     "#facc15",
   ];
   const swatchSize = tokenValue(layout, { design: 104, minScreenPx: 44, maxScreenPx: 70 });
+  const swatchGap = margin * 0.42;
+  const swatchRowWidth = swatches.length * swatchSize + (swatches.length - 1) * swatchGap;
   const swatchRow = new Container({ label: "ds-swatch-row" });
   swatchRow.layout = {
-    width: panelWidth,
+    width: swatchRowWidth,
     height: swatchSize,
     flexDirection: "row",
     alignItems: "center",
-    gap: margin * 0.42,
+    gap: swatchGap,
   };
   swatches.forEach((color, index) => {
     const swatch = new Graphics()
@@ -477,7 +479,7 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   ] as const;
   const typeColumn = new Container({ label: "ds-type-column" });
   typeColumn.layout = {
-    width: panelWidth,
+    width: Math.min(panelWidth, 420 / layout.scale),
     flexDirection: "column",
     gap: margin * 0.28,
   };
@@ -491,16 +493,19 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   });
   root.addChild(typeColumn);
 
+  const buttonWidth = panelWidth * 0.38;
+  const buttonHeight = tokenValue(layout, { design: 92, minScreenPx: 48, maxScreenPx: 64 });
+  const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
+  const motionSize = tokenValue(layout, surfaceTheme.size.player) * 1.6;
+  const componentGap = margin;
   const componentRow = new Container({ label: "ds-component-row" });
   componentRow.layout = {
-    width: panelWidth,
+    width: buttonWidth + markerRadius * 2 + motionSize + componentGap * 2,
     height: tokenValue(layout, { design: 112, minScreenPx: 58, maxScreenPx: 78 }),
     flexDirection: "row",
     alignItems: "center",
-    gap: margin,
+    gap: componentGap,
   };
-  const buttonWidth = panelWidth * 0.38;
-  const buttonHeight = tokenValue(layout, { design: 92, minScreenPx: 48, maxScreenPx: 64 });
   const button = createButton({
     text: "Button",
     width: buttonWidth,
@@ -515,7 +520,6 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
     height: buttonHeight,
   };
 
-  const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
   const marker = new Graphics().circle(0, 0, markerRadius).fill(surfaceTheme.color.marker);
   marker.label = "ds-component-sample";
   marker.layout = {
@@ -526,7 +530,6 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   const motion = createInputTarget(layout);
   motion.label = "ds-motion-ring";
   motion.alpha = 0.78;
-  const motionSize = tokenValue(layout, surfaceTheme.size.player) * 1.6;
   motion.layout = {
     width: motionSize,
     height: motionSize,
