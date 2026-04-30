@@ -64,7 +64,7 @@ type MotionPlayer = Graphics & {
   targetActive?: boolean;
 };
 
-export const bootScene = scene({
+export const verticalSliceScene = scene({
   assets: [demoOrbUrl],
 
   load({ app, assets, layers, layout, switchScene }) {
@@ -131,7 +131,7 @@ export const bootScene = scene({
       },
     });
 
-    syncDemoState("boot", player.x, player.y, layout, layers.root, undefined, assets.isReady(demoOrbUrl));
+    syncDemoState("vertical-slice", player.x, player.y, layout, layers.root, undefined, assets.isReady(demoOrbUrl));
   },
 
   resize({ app, layers, layout }) {
@@ -146,7 +146,7 @@ export const bootScene = scene({
     if (hud) configureHudLayout(hud, layout);
     app.renderer.layout.update(layers.root);
 
-    syncDemoState("boot", player.x, player.y, layout, layers.root, undefined, true);
+    syncDemoState("vertical-slice", player.x, player.y, layout, layers.root, undefined, true);
   },
 
   update(dt, { layers, keyboard, pointer, layout, switchScene }) {
@@ -214,7 +214,7 @@ export const bootScene = scene({
     }
     updateInputTarget(inputTarget, dt);
 
-    syncDemoState("boot", player.x, player.y, layout, layers.root, pointer, true);
+    syncDemoState("vertical-slice", player.x, player.y, layout, layers.root, pointer, true);
   },
 
   unload({ layers }) {
@@ -277,7 +277,7 @@ export const alternateScene = scene({
     app.renderer.layout.update(layers.root);
     removeDebugListeners = installDebugSceneListeners({
       onScene: () => {
-        if (switchScene(bootScene, "debug")) sceneSwitches += 1;
+        if (switchScene(verticalSliceScene, "debug")) sceneSwitches += 1;
       },
       onDesignSystem: () => {
         if (switchScene(designSystemScene, "debug")) sceneSwitches += 1;
@@ -304,7 +304,7 @@ export const alternateScene = scene({
     if (!player) return;
 
     if (keyboard.wasPressed("x")) {
-      if (switchScene(bootScene, "scene")) sceneSwitches += 1;
+      if (switchScene(verticalSliceScene, "scene")) sceneSwitches += 1;
       return;
     }
 
@@ -327,7 +327,7 @@ export const designSystemScene = scene({
     app.renderer.layout.update(layers.root);
     removeDebugListeners = installDebugSceneListeners({
       onScene: () => {
-        if (switchScene(bootScene, "debug")) sceneSwitches += 1;
+        if (switchScene(verticalSliceScene, "debug")) sceneSwitches += 1;
       },
       onDesignSystem: () => undefined,
     });
@@ -343,7 +343,7 @@ export const designSystemScene = scene({
 
   update(dt, { layers, keyboard, layout, switchScene }) {
     if (keyboard.wasPressed("x")) {
-      if (switchScene(bootScene, "scene")) sceneSwitches += 1;
+      if (switchScene(verticalSliceScene, "scene")) sceneSwitches += 1;
       return;
     }
 
@@ -421,7 +421,6 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   const panelWidth = Math.min(layout.visibleWidth - margin * 2, 900 / layout.scale);
   const startX = layout.referenceX + layout.safeArea.left + margin;
   const sectionGap = margin * 0.42;
-  const sectionWidth = panelWidth;
   const sectionLabelHeight = tokenValue(layout, { design: 42, minScreenPx: 24, maxScreenPx: 34 });
   const root = createPanel({
     layout,
@@ -449,7 +448,6 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   const colorSection = createPanel({
     layout,
     label: "ds-section",
-    width: sectionWidth,
     direction: "column",
     alignItems: "flex-start",
     gap: sectionGap,
@@ -504,7 +502,6 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   const typeSection = createPanel({
     layout,
     label: "ds-section",
-    width: sectionWidth,
     direction: "column",
     alignItems: "flex-start",
     gap: sectionGap,
@@ -554,7 +551,6 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   const componentSection = createPanel({
     layout,
     label: "ds-section",
-    width: sectionWidth,
     direction: "column",
     alignItems: "flex-start",
     gap: sectionGap,

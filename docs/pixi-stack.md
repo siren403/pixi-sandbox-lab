@@ -168,7 +168,7 @@ Playwright는 desktop portrait와 mobile portrait를 모두 검증한다.
 - pointer/touch 입력은 keyboard 입력과 별도 런타임 모듈로 제공한다.
 - 현재 pointer runtime은 primary pointer 1개를 추적하고, canvas CSS 픽셀 좌표를 `adaptive-expand` design-space 좌표로 변환한다.
 - scene은 viewport 픽셀을 직접 읽지 않고 `ctx.pointer`의 `isDown()`, `wasPressed()`, `wasReleased()`, `position()`을 사용한다.
-- 첫 모바일 조작 vertical slice는 boot scene에서 tap/click/drag 위치로 player를 이동시키는 방식으로 검증한다.
+- 첫 모바일 조작 vertical slice는 `vertical-slice` scene에서 tap/click/drag 위치로 player를 이동시키는 방식으로 검증한다.
 
 #### 명시적으로 기본값에서 제외
 
@@ -243,7 +243,7 @@ LÖVE는 비동기 문제가 없는 게 아니라 발생할 수 없는 구조다
 
 - `Scene.assets`는 정적 배열 또는 `(ctx) => 배열`을 받는다.
 - `SceneManager.switch()`는 기존 씬을 정리한 뒤 scene asset 목록을 평가하고 `ctx.assets.load()`를 await한다.
-- 앱은 loading overlay 없이 즉시 표시되는 splash/intro scene에서 시작하며, `Tap to start` 버튼 또는 Enter/Space 입력 후 boot scene으로 전환한다.
+- 앱은 loading overlay 없이 즉시 표시되는 `boot` scene에서 시작하며, `Tap to start` 버튼 또는 Enter/Space 입력 후 `vertical-slice` scene으로 전환한다. debug panel의 `Scene`/`DS` 버튼은 boot scene에서도 동작한다.
 - scene 전환 시 기존 화면 위로 runtime-owned transition overlay가 화면 밖에서 들어오는 사선 패널과 슬래시 패턴으로 덮이고, 새 scene load 완료 후 패널이 빠져나가며 로드된 화면을 드러낸다.
 - scene 전환 요청은 `src/runtime/commandRuntime.ts`의 app command gate를 통과한다. 현재 정책은 scene switch 실행 중 추가 요청을 drop하고 accepted/ignored/request count를 runtime state에 기록한다.
 - debug panel의 `DS` 버튼은 Storybook 대신 Pixi runtime 안에서 토큰, 타입, 컴포넌트, 모션 샘플을 확인하는 design system scene으로 전환한다. 이 씬은 실제 adaptive-expand surface, safe area, Pixi layout, E2E 환경에서 검증하며 주요 영역은 `@pixi/layout` 노드로 구성해 layout debug overlay에서 경계를 확인할 수 있어야 한다.

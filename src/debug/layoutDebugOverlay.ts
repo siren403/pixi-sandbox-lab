@@ -439,13 +439,13 @@ function writeStoredState(state: LayoutDebugStorage): void {
 function readCurrentScene(): string {
   const runtimeWindow = window as Window & {
     __pixiDemoState?: { scene?: string };
-    __pixiIntroState?: { scene?: string };
+    __pixiBootState?: { scene?: string };
     __pixiDesignSystemState?: { scene?: string };
   };
   return (
     runtimeWindow.__pixiDesignSystemState?.scene ??
     runtimeWindow.__pixiDemoState?.scene ??
-    runtimeWindow.__pixiIntroState?.scene ??
+    runtimeWindow.__pixiBootState?.scene ??
     "unknown"
   );
 }

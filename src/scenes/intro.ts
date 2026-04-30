@@ -1,11 +1,11 @@
 import { Container, Graphics, Text } from "pixi.js";
-import { bootScene } from "./boot";
+import { designSystemScene, verticalSliceScene } from "./boot";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
 import { surfaceTheme, tokenValue } from "../runtime/surface";
 
-type IntroState = {
-  scene: "intro";
+type BootState = {
+  scene: "boot";
   promptBounds: { x: number; y: number; width: number; height: number };
   buttonBounds: { x: number; y: number; width: number; height: number };
   rendered: boolean;
@@ -13,17 +13,26 @@ type IntroState = {
 
 declare global {
   interface Window {
-    __pixiIntroState?: IntroState;
+    __pixiBootState?: BootState;
   }
 }
 
 let startButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
+let removeDebugListeners: (() => void) | null = null;
 
-export const introScene = scene({
+export const bootScene = scene({
   loading: { overlay: false, minimumMs: 0 },
 
-  load({ layers, layout }) {
+  load({ layers, layout, switchScene }) {
     renderIntro(layers.ui, layout);
+    removeDebugListeners = installDebugSceneListeners({
+      onScene: () => {
+        switchScene(verticalSliceScene, "debug");
+      },
+      onDesignSystem: () => {
+        switchScene(designSystemScene, "debug");
+      },
+    });
   },
 
   resize({ layers, layout }) {
@@ -36,13 +45,15 @@ export const introScene = scene({
     const startByPointer = pointer.wasPressed() && containsPoint(startButtonBounds, pointerPosition.x, pointerPosition.y);
     const startByKeyboard = keyboard.wasPressed("enter") || keyboard.wasPressed(" ");
     if (startByPointer || startByKeyboard) {
-      switchScene(bootScene, "intro");
+      switchScene(verticalSliceScene, "intro");
     }
   },
 
   unload({ layers }) {
+    removeDebugListeners?.();
+    removeDebugListeners = null;
     clearLayer(layers.ui);
-    window.__pixiIntroState = undefined;
+    window.__pixiBootState = undefined;
   },
 });
 
@@ -102,13 +113,24 @@ function renderIntro(layer: Container, layout: SurfaceLayout): void {
 function syncIntroState(layout: SurfaceLayout, root: Container): void {
   const prompt = root.getChildByLabel("intro-prompt", true);
   const bounds = prompt?.getBounds();
-  window.__pixiIntroState = {
-    scene: "intro",
+  window.__pixiBootState = {
+    scene: "boot",
     promptBounds: bounds
       ? { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }
       : { x: 0, y: 0, width: 0, height: 0 },
     buttonBounds: startButtonBounds,
     rendered: layout.visibleWidth > 0,
+  };
+}
+
+function installDebugSceneListeners(handlers: { onScene: () => void; onDesignSystem: () => void }): () => void {
+  const sceneListener = () => handlers.onScene();
+  const designSystemListener = () => handlers.onDesignSystem();
+  window.addEventListener("pixi:scene-switch", sceneListener);
+  window.addEventListener("pixi:design-system", designSystemListener);
+  return () => {
+    window.removeEventListener("pixi:scene-switch", sceneListener);
+    window.removeEventListener("pixi:design-system", designSystemListener);
   };
 }
 

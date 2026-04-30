@@ -26,8 +26,8 @@ declare global {
       pointerY: number;
       rendered: boolean;
     };
-    __pixiIntroState?: {
-      scene: "intro";
+    __pixiBootState?: {
+      scene: "boot";
       promptBounds: { x: number; y: number; width: number; height: number };
       buttonBounds: { x: number; y: number; width: number; height: number };
       rendered: boolean;
@@ -93,7 +93,7 @@ test("renders the PixiJS demo with assets and input", async ({
   const canvas = page.locator("canvas");
   await expect(canvas).toBeVisible();
   await expect
-    .poll(() => page.evaluate(() => window.__pixiIntroState?.rendered))
+    .poll(() => page.evaluate(() => window.__pixiBootState?.rendered))
     .toBe(true);
 
   const box = await canvas.boundingBox();
@@ -105,11 +105,28 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(Math.round(box?.height ?? 0)).toBe(viewport?.height);
 
   await expect.poll(() => hasVisibleCanvasPixels(page)).toBe(true);
-  const intro = await page.evaluate(() => window.__pixiIntroState);
-  expect(intro?.scene).toBe("intro");
-  expect(intro?.promptBounds.width).toBeGreaterThan(0);
-  expect(intro?.buttonBounds.width).toBeGreaterThan(intro?.promptBounds.width ?? 0);
+  const boot = await page.evaluate(() => window.__pixiBootState);
+  expect(boot?.scene).toBe("boot");
+  expect(boot?.promptBounds.width).toBeGreaterThan(0);
+  expect(boot?.buttonBounds.width).toBeGreaterThan(boot?.promptBounds.width ?? 0);
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0)).toBe(0);
+
+  const initialFold = page.getByTestId("layout-debug-fold");
+  const initialDesignSystem = page.getByTestId("layout-debug-design-system");
+  const initialSceneSwitch = page.getByTestId("layout-debug-scene");
+  const initialCurrentScene = page.getByTestId("layout-debug-current-scene");
+  await expect(initialCurrentScene).toContainText("boot");
+  await initialFold.click();
+  await expect(initialDesignSystem).toBeVisible();
+  await initialDesignSystem.click();
+  await expect.poll(() => page.evaluate(() => window.__pixiDesignSystemState?.rendered)).toBe(true);
+  await expect(initialCurrentScene).toContainText("design-system");
+  await initialSceneSwitch.click();
+  await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("vertical-slice");
+  await initialFold.click();
+  await expect(initialFold).toHaveAttribute("aria-expanded", "false");
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => window.__pixiBootState?.rendered)).toBe(true);
 
   const bootLoadingShows = await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0);
   await canvas.click({ position: { x: Math.floor((box?.width ?? 0) / 2), y: Math.floor((box?.height ?? 0) * 0.56) } });
@@ -119,7 +136,7 @@ test("renders the PixiJS demo with assets and input", async ({
   await expect
     .poll(() => page.evaluate(() => window.__pixiDemoState?.rendered))
     .toBe(true);
-  await expect.poll(() => page.evaluate(() => window.__pixiIntroState)).toBeUndefined();
+  await expect.poll(() => page.evaluate(() => window.__pixiBootState)).toBeUndefined();
   await expect
     .poll(() => page.evaluate(() => window.__pixiRuntimeState?.lastLoadingDurationMs ?? 0))
     .toBeGreaterThanOrEqual(490);
@@ -154,7 +171,7 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(before?.assetBounds.height).toBeGreaterThan(0);
   expect(rectsOverlap(before?.titleBounds, before?.markerBounds)).toBe(false);
   expect(before?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
-  expect(before?.scene).toBe("boot");
+  expect(before?.scene).toBe("vertical-slice");
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loading)).toBe(false);
   expect(await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayVisible)).toBe(false);
 
@@ -192,7 +209,7 @@ test("renders the PixiJS demo with assets and input", async ({
   await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "false");
   await expect(sceneSwitch).not.toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.folded)).toBe(true);
-  await expect(layoutDebugCurrentScene).toContainText("boot");
+  await expect(layoutDebugCurrentScene).toContainText("vertical-slice");
   await layoutDebugFold.click();
   await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "true");
   await expect(sceneSwitch).toBeVisible();
@@ -210,14 +227,14 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(panelAfterDrag).not.toBeNull();
   expect(Math.abs((panelAfterDrag?.x ?? 0) - (panelBeforeDrag?.x ?? 0))).toBeGreaterThan(20);
   await page.reload();
-  await expect.poll(() => page.evaluate(() => window.__pixiIntroState?.rendered)).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__pixiBootState?.rendered)).toBe(true);
   await page.keyboard.press("Enter");
   await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.rendered)).toBe(true);
   await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "true");
   const panelAfterReload = await layoutDebugPanel.boundingBox();
   expect(Math.abs((panelAfterReload?.x ?? 0) - (panelAfterDrag?.x ?? 0))).toBeLessThanOrEqual(2);
   expect(Math.abs((panelAfterReload?.y ?? 0) - (panelAfterDrag?.y ?? 0))).toBeLessThanOrEqual(2);
-  await expect(layoutDebugCurrentScene).toContainText("boot");
+  await expect(layoutDebugCurrentScene).toContainText("vertical-slice");
   const runtimeSwitches = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitches ?? 0);
   const loadingOverlayShows = await page.evaluate(() => window.__pixiRuntimeState?.loadingOverlayShows ?? 0);
   const sceneSwitchRequests = await page.evaluate(() => window.__pixiRuntimeState?.sceneSwitchRequests ?? 0);
@@ -254,7 +271,7 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(alternate?.assetBounds.width).toBeGreaterThan(0);
 
   await sceneSwitch.click();
-  await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("boot");
+  await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("vertical-slice");
   expect(await page.evaluate(() => window.__pixiDemoState?.sceneSwitches)).toBe(2);
 
   await designSystem.click();
@@ -274,7 +291,7 @@ test("renders the PixiJS demo with assets and input", async ({
   await expect(layoutDebugCurrentScene).toContainText("design-system");
 
   await sceneSwitch.click();
-  await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("boot");
+  await expect.poll(() => page.evaluate(() => window.__pixiDemoState?.scene)).toBe("vertical-slice");
 
   await expect(layoutDebug).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByTestId("layout-debug-stats")).toContainText("world-layer");
@@ -308,7 +325,7 @@ test("renders the PixiJS demo with assets and input", async ({
 test("reload button reloads the page", async ({ page }) => {
   await page.goto("/");
 
-  await expect.poll(() => page.evaluate(() => window.__pixiIntroState?.rendered)).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__pixiBootState?.rendered)).toBe(true);
   await page.getByTestId("layout-debug-fold").click();
   const reloadButton = page.getByTestId("layout-debug-reload");
 
@@ -317,7 +334,7 @@ test("reload button reloads the page", async ({ page }) => {
     reloadButton.click(),
   ]);
 
-  await expect.poll(() => page.evaluate(() => window.__pixiIntroState?.rendered)).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__pixiBootState?.rendered)).toBe(true);
   await expect(page.getByTestId("layout-debug-panel")).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__pixiLayoutDebug?.panelConnected)).toBe(true);
 });
