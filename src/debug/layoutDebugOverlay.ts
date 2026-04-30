@@ -1,7 +1,8 @@
-import type { Application, Container } from "pixi.js";
+import { Graphics, type Application, type Container } from "pixi.js";
 import { readCurrentDebugScene, setLayoutDebugState, type PixiLayoutDebugState } from "./stateBridge";
 
 type LayoutDebugFilter = "all" | "world" | "ui";
+type LayoutDebugMode = "layout" | "bounds";
 
 type DebuggableContainer = Container & {
   _layout?: {
@@ -12,6 +13,7 @@ type DebuggableContainer = Container & {
 
 type LayoutDebugStorage = {
   folded?: boolean;
+  mode?: LayoutDebugMode;
   filter?: LayoutDebugFilter;
   x?: number;
   y?: number;
@@ -21,6 +23,11 @@ const storageKey = "prompt-ops:pixi-layout-debug";
 
 export function installLayoutDebug(app: Application, root: Container): () => void {
   const stored = readStoredState();
+  const semanticBounds = new Graphics();
+  semanticBounds.label = "semantic-bounds-debug";
+  const debugLayer = root.getChildByLabel("debug-layer") as Container | null;
+  debugLayer?.addChild(semanticBounds);
+
   const panel = document.createElement("section");
   panel.dataset.testid = "layout-debug-panel";
   Object.assign(panel.style, {
@@ -41,7 +48,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     panel.style.top = `${stored.y}px`;
   } else {
     panel.style.right = "max(16px, env(safe-area-inset-right))";
-    panel.style.bottom = "max(16px, env(safe-area-inset-bottom))";
+    panel.style.top = "max(16px, env(safe-area-inset-top))";
   }
 
   const header = document.createElement("div");
@@ -115,6 +122,26 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     filterRow.appendChild(button);
   }
 
+  const modeRow = document.createElement("div");
+  modeRow.dataset.testid = "layout-debug-modes";
+  Object.assign(modeRow.style, {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "6px",
+    marginBottom: "8px",
+  });
+
+  const modeButtons = new Map<LayoutDebugMode, HTMLButtonElement>();
+  for (const value of ["layout", "bounds"] as const) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.testid = `layout-debug-mode-${value}`;
+    button.textContent = value === "layout" ? "Layout" : "Bounds";
+    Object.assign(button.style, buttonStyle());
+    modeButtons.set(value, button);
+    modeRow.appendChild(button);
+  }
+
   const sceneButton = document.createElement("button");
   sceneButton.type = "button";
   sceneButton.dataset.testid = "layout-debug-scene";
@@ -153,9 +180,10 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     lineHeight: "1.45",
   });
 
-  panel.append(header, filterRow, sceneButton, designSystemButton, reloadButton, stats);
+  panel.append(header, modeRow, filterRow, sceneButton, designSystemButton, reloadButton, stats);
 
   let enabled = false;
+  let mode: LayoutDebugMode = stored.mode ?? "layout";
   let filter: LayoutDebugFilter = stored.filter ?? "all";
   let folded = stored.folded ?? true;
   let destroyed = false;
@@ -184,6 +212,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     const rect = panel.getBoundingClientRect();
     writeStoredState({
       folded,
+      mode,
       filter,
       x: Math.round(rect.left),
       y: Math.round(rect.top),
@@ -194,14 +223,17 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     ensurePanelConnected();
     const layoutNodes = countLayoutNodes(root);
     const debuggedNodes = countDebuggedNodes(root);
+    const semanticBoxes = countSemanticBoxes(root, filter);
     const layerLabels = root.children.map((child) => child.label ?? "");
     const currentScene = readCurrentDebugScene();
     const rect = panel.getBoundingClientRect();
     setLayoutDebugState({
       enabled,
+      mode,
       filter,
       layoutNodes,
       debuggedNodes,
+      semanticBoxes,
       layerLabels,
       installedAt,
       panelConnected: panel.isConnected,
@@ -222,27 +254,34 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
       button.setAttribute("aria-pressed", String(value === filter));
       setButtonActive(button, value === filter);
     }
+    for (const [value, button] of modeButtons) {
+      button.setAttribute("aria-pressed", String(value === mode));
+      setButtonActive(button, value === mode);
+    }
 
     foldButton.textContent = folded ? "Open" : "Fold";
     foldButton.setAttribute("aria-expanded", String(!folded));
     setButtonActive(foldButton, folded);
+    modeRow.style.display = folded ? "none" : "grid";
     filterRow.style.display = folded ? "none" : "grid";
     sceneButton.style.display = folded ? "none" : "inline-flex";
     designSystemButton.style.display = folded ? "none" : "inline-flex";
     reloadButton.style.display = folded ? "none" : "inline-flex";
     stats.style.display = folded ? "none" : "block";
-    stats.textContent = `nodes ${debuggedNodes}/${layoutNodes} | ${layerLabels.join(", ")}`;
+    stats.textContent = `mode ${mode} | nodes ${debuggedNodes}/${layoutNodes} | boxes ${semanticBoxes} | ${layerLabels.join(", ")}`;
   };
 
   const syncLayoutFlags = () => {
-    applyDebugFlag(root, enabled, filter);
+    const layoutDebugEnabled = enabled && mode === "layout";
+    applyDebugFlag(root, layoutDebugEnabled, filter);
+    drawSemanticBounds(semanticBounds, root, enabled && mode === "bounds", filter);
     syncState();
   };
 
   const setEnabled = async (next: boolean) => {
     enabled = next;
     syncLayoutFlags();
-    await app.renderer.layout.enableDebug(enabled);
+    await app.renderer.layout.enableDebug(enabled && mode === "layout");
     app.renderer.layout.update(app.stage);
   };
 
@@ -259,6 +298,14 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   const onFilterClick = (next: LayoutDebugFilter) => {
     filter = next;
     syncLayoutFlags();
+    app.renderer.layout.update(app.stage);
+    saveState();
+  };
+
+  const onModeClick = async (next: LayoutDebugMode) => {
+    mode = next;
+    syncLayoutFlags();
+    await app.renderer.layout.enableDebug(enabled && mode === "layout");
     app.renderer.layout.update(app.stage);
     saveState();
   };
@@ -329,6 +376,11 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   for (const [value, button] of filterButtons) {
     button.addEventListener("click", () => onFilterClick(value));
   }
+  for (const [value, button] of modeButtons) {
+    button.addEventListener("click", () => {
+      void onModeClick(value);
+    });
+  }
   ensurePanelConnected();
   syncState();
 
@@ -358,11 +410,14 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     panel.remove();
     void app.renderer.layout.enableDebug(false);
     applyDebugFlag(root, false, "all");
+    semanticBounds.destroy();
     setLayoutDebugState({
       enabled: false,
+      mode,
       filter,
       layoutNodes: 0,
       debuggedNodes: 0,
+      semanticBoxes: 0,
       layerLabels: [],
       installedAt,
       panelConnected: false,
@@ -400,6 +455,7 @@ function readStoredState(): LayoutDebugStorage {
     const parsed = JSON.parse(raw) as LayoutDebugStorage;
     return {
       folded: typeof parsed.folded === "boolean" ? parsed.folded : undefined,
+      mode: parsed.mode === "layout" || parsed.mode === "bounds" ? parsed.mode : undefined,
       filter: parsed.filter === "all" || parsed.filter === "world" || parsed.filter === "ui" ? parsed.filter : undefined,
       x: typeof parsed.x === "number" ? parsed.x : undefined,
       y: typeof parsed.y === "number" ? parsed.y : undefined,
@@ -415,6 +471,81 @@ function writeStoredState(state: LayoutDebugStorage): void {
   } catch {
     // Storage can be unavailable in private or restricted contexts.
   }
+}
+
+function drawSemanticBounds(
+  graphics: Graphics,
+  root: Container,
+  enabled: boolean,
+  filter: LayoutDebugFilter,
+): void {
+  graphics.clear();
+  if (!enabled) return;
+
+  let index = 0;
+  visitSemanticTargets(root, filter, (container) => {
+    const bounds = container.getBounds();
+    if (bounds.width <= 0 || bounds.height <= 0) return;
+
+    const topLeft = graphics.toLocal({ x: bounds.x, y: bounds.y });
+    const bottomRight = graphics.toLocal({ x: bounds.x + bounds.width, y: bounds.y + bounds.height });
+    const width = bottomRight.x - topLeft.x;
+    const height = bottomRight.y - topLeft.y;
+    if (width <= 0 || height <= 0) return;
+
+    graphics
+      .rect(topLeft.x, topLeft.y, width, height)
+      .stroke({ color: semanticColor(index), width: 2, alpha: 0.94 });
+    index += 1;
+  });
+}
+
+function countSemanticBoxes(root: Container, filter: LayoutDebugFilter): number {
+  let count = 0;
+  visitSemanticTargets(root, filter, (container) => {
+    const bounds = container.getBounds();
+    if (bounds.width > 0 && bounds.height > 0) count += 1;
+  });
+  return count;
+}
+
+function visitSemanticTargets(
+  container: Container,
+  filter: LayoutDebugFilter,
+  visitor: (container: Container) => void,
+): void {
+  for (const child of container.children) {
+    if (child.label !== "semantic-bounds-debug" && matchesFilter(child, filter) && shouldDrawSemanticBounds(child)) {
+      visitor(child);
+    }
+
+    if ("children" in child) {
+      visitSemanticTargets(child, filter, visitor);
+    }
+  }
+}
+
+function shouldDrawSemanticBounds(container: Container): boolean {
+  const label = container.label ?? "";
+  return (
+    label === "hud" ||
+    label === "title" ||
+    label === "marker" ||
+    label === "player" ||
+    label === "asset-orb" ||
+    label === "input-target" ||
+    label === "intro-title" ||
+    label === "intro-prompt" ||
+    label === "tap-start-button" ||
+    label === "design-system-root" ||
+    label.startsWith("ds-") ||
+    (container as DebuggableContainer)._layout !== undefined
+  );
+}
+
+function semanticColor(index: number): number {
+  const colors = [0x38bdf8, 0xfacc15, 0xfb7185, 0x80ed99, 0xc77dff, 0xf97316];
+  return colors[index % colors.length];
 }
 
 function applyDebugFlag(container: Container, enabled: boolean, filter: LayoutDebugFilter): void {

@@ -16,6 +16,7 @@ let startButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
 let removeDebugListeners: (() => void) | null = null;
 
 export const bootScene = scene({
+  name: "boot",
   loading: { overlay: false, minimumMs: 0 },
 
   load({ layers, layout, switchScene }) {

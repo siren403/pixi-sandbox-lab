@@ -66,9 +66,11 @@ export type PixiRuntimeDebugState = {
 
 export type PixiLayoutDebugState = {
   enabled: boolean;
+  mode: "layout" | "bounds";
   filter: "all" | "world" | "ui";
   layoutNodes: number;
   debuggedNodes: number;
+  semanticBoxes: number;
   layerLabels: string[];
   installedAt: number;
   panelConnected: boolean;
@@ -81,6 +83,7 @@ export type PixiLayoutDebugState = {
 };
 
 export type PixiDebugState = {
+  activeScene?: string;
   scene?: PixiBootDebugState | PixiDemoDebugState | PixiDesignSystemDebugState;
   boot?: PixiBootDebugState;
   demo?: PixiDemoDebugState;
@@ -149,8 +152,13 @@ export function setLayoutDebugState(state: PixiLayoutDebugState): void {
   ensureDebugState().layout = state;
 }
 
+export function setActiveDebugScene(scene: string): void {
+  if (!debugEnabled) return;
+  ensureDebugState().activeScene = scene;
+}
+
 export function readCurrentDebugScene(): string {
-  return window.__pixiDebug?.scene?.scene ?? "unknown";
+  return window.__pixiDebug?.scene?.scene ?? window.__pixiDebug?.activeScene ?? "unknown";
 }
 
 function ensureDebugState(): PixiDebugState {

@@ -64,6 +64,7 @@ type MotionPlayer = Graphics & {
 };
 
 export const verticalSliceScene = scene({
+  name: "vertical-slice",
   assets: [demoOrbUrl],
 
   load({ app, assets, layers, layout, switchScene }) {
@@ -225,6 +226,7 @@ export const verticalSliceScene = scene({
 });
 
 export const alternateScene = scene({
+  name: "alternate",
   assets: () => [demoOrbUrl],
 
   load({ app, assets, layers, layout, switchScene }) {
@@ -319,6 +321,7 @@ export const alternateScene = scene({
 });
 
 export const designSystemScene = scene({
+  name: "design-system",
   loading: { minimumMs: 0 },
 
   load({ app, layers, layout, switchScene }) {

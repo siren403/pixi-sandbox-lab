@@ -61,6 +61,7 @@ export type SceneContext = {
 };
 
 export type Scene = {
+  name: string;
   assets?: AssetList | ((ctx: SceneContext) => AssetList);
   loading?: {
     overlay?: boolean;

@@ -1,5 +1,6 @@
 import type { Scene, SceneContext } from "./scene";
 import { createTransition, minimumLoadingMsRange, syncTransitionState } from "./transition";
+import { setActiveDebugScene } from "../debug/stateBridge";
 
 export class SceneManager {
   private current: Scene | null = null;
@@ -13,6 +14,7 @@ export class SceneManager {
     const switchId = ++this.switchId;
     const previous = this.current;
     ctx.runtime.sceneSwitches += 1;
+    setActiveDebugScene(scene.name);
 
     const loadingOptions = scene.loading ?? {};
     const showOverlay = loadingOptions.overlay !== false;
@@ -44,6 +46,7 @@ export class SceneManager {
       if (switchId !== this.switchId) return;
 
       this.current = scene;
+      setActiveDebugScene(scene.name);
       this.current.load?.(ctx);
 
       if (transition) {
@@ -81,6 +84,7 @@ export class SceneManager {
     ctx.runtime.appMode = "destroyed";
     ctx.runtime.loadingPhase = "idle";
     ctx.runtime.loadingOverlayAlpha = 0;
+    setActiveDebugScene("destroyed");
     this.current?.unload?.(ctx);
     this.current = null;
   }
