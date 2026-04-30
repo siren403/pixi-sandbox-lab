@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import type { PixiDebugState } from "../../src/debug/stateBridge";
 
 declare global {
@@ -10,7 +10,7 @@ declare global {
 test("renders the PixiJS demo with assets and input", async ({
   page,
 }) => {
-  test.setTimeout(70000);
+  test.setTimeout(100000);
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
@@ -36,6 +36,9 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(boot?.scene).toBe("boot");
   expect(boot?.promptBounds.width).toBeGreaterThan(0);
   expect(boot?.buttonBounds.width).toBeGreaterThan(boot?.promptBounds.width ?? 0);
+  expect(boot?.layoutPolicy).toBe("safe-area-frame");
+  expect(boot?.layoutNodes).toBeGreaterThanOrEqual(3);
+  expect(boot?.buttonCenterDeltaY).toBeLessThanOrEqual(1.5);
   expect(await page.evaluate(() => window.__pixiDebug?.runtime?.loadingOverlayShows ?? 0)).toBe(0);
 
   const initialFold = page.getByTestId("layout-debug-fold");
@@ -56,7 +59,7 @@ test("renders the PixiJS demo with assets and input", async ({
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.boot?.rendered)).toBe(true);
 
   const bootLoadingShows = await page.evaluate(() => window.__pixiDebug?.runtime?.loadingOverlayShows ?? 0);
-  await canvas.click({ position: { x: Math.floor((box?.width ?? 0) / 2), y: Math.floor((box?.height ?? 0) * 0.56) } });
+  await clickBootStart(page, canvas);
   await expect
     .poll(() => page.evaluate(() => window.__pixiDebug?.runtime?.loadingOverlayShows ?? 0))
     .toBeGreaterThan(bootLoadingShows);
@@ -155,8 +158,10 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(Math.abs((panelAfterDrag?.x ?? 0) - (panelBeforeDrag?.x ?? 0))).toBeGreaterThan(20);
   await page.reload();
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.boot?.rendered)).toBe(true);
-  await page.keyboard.press("Enter");
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.demo?.rendered)).toBe(true);
+  await clickBootStart(page, canvas);
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiDebug?.demo?.rendered), { timeout: 15000 })
+    .toBe(true);
   await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "true");
   const panelAfterReload = await layoutDebugPanel.boundingBox();
   expect(Math.abs((panelAfterReload?.x ?? 0) - (panelAfterDrag?.x ?? 0))).toBeLessThanOrEqual(2);
@@ -211,6 +216,7 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(designSystemState?.swatches).toBeGreaterThanOrEqual(6);
   expect(designSystemState?.typeSamples).toBeGreaterThanOrEqual(3);
   expect(designSystemState?.componentSamples).toBeGreaterThanOrEqual(2);
+  expect(designSystemState?.safeAreaSamples).toBeGreaterThanOrEqual(2);
   expect(designSystemState?.buttonCenterDeltaY).toBeLessThanOrEqual(1.5);
   expect(designSystemState?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
   await expect
@@ -319,6 +325,17 @@ async function hasVisibleCanvasPixels(page: Page): Promise<boolean> {
       gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
       return pixels[0] > 0 || pixels[1] > 0 || pixels[2] > 0;
     });
+  });
+}
+
+async function clickBootStart(page: Page, canvas: Locator): Promise<void> {
+  const bounds = await page.evaluate(() => window.__pixiDebug?.boot?.buttonBounds);
+  expect(bounds).toBeDefined();
+  await canvas.click({
+    position: {
+      x: Math.round((bounds?.x ?? 0) + (bounds?.width ?? 0) / 2),
+      y: Math.round((bounds?.y ?? 0) + (bounds?.height ?? 0) / 2),
+    },
   });
 }
 

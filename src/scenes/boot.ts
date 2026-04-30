@@ -1,10 +1,11 @@
-import { Container, Graphics, Sprite, Text, type Texture } from "pixi.js";
+import { Container, Graphics, Sprite, type Texture } from "pixi.js";
 import demoOrbUrl from "../assets/demo-orb.svg";
 import { screenValue, surfaceTheme, tokenValue } from "../runtime/surface";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
 import { createButton } from "../ui/button";
 import { createLabel } from "../ui/label";
+import { configureSafeAreaRow } from "../ui/layout";
 import { createPanel } from "../ui/panel";
 import {
   clearDemoDebugState,
@@ -49,6 +50,7 @@ type DesignSystemState = {
   swatches: number;
   typeSamples: number;
   componentSamples: number;
+  safeAreaSamples: number;
   buttonCenterDeltaY: number;
   layerLabels: string[];
   rendered: boolean;
@@ -102,17 +104,17 @@ export const verticalSliceScene = scene({
       height: markerRadius * 2,
     };
 
-    const title = new Text({
+    const title = createLabel({
       text: "PixiJS vertical slice",
-      style: {
-        fill: surfaceTheme.color.text,
-        fontFamily: "Inter, system-ui, sans-serif",
-        fontSize: titleFontSize,
-        fontWeight: "600",
-      },
+      layout,
+      fontSize: surfaceTheme.font.title,
+      color: surfaceTheme.color.text,
+      label: "title",
     });
     title.label = "title";
-    title.layout = true;
+    title.layout = {
+      height: titleFontSize * 1.25,
+    };
 
     const spacer = new Container();
     spacer.label = "hud-spacer";
@@ -246,17 +248,17 @@ export const alternateScene = scene({
       height: markerRadius * 2,
     };
 
-    const title = new Text({
+    const title = createLabel({
       text: "Alternate scene",
-      style: {
-        fill: surfaceTheme.color.text,
-        fontFamily: "Inter, system-ui, sans-serif",
-        fontSize: titleFontSize,
-        fontWeight: "600",
-      },
+      layout,
+      fontSize: surfaceTheme.font.title,
+      color: surfaceTheme.color.text,
+      label: "title",
     });
     title.label = "title";
-    title.layout = true;
+    title.layout = {
+      height: titleFontSize * 1.25,
+    };
 
     const spacer = new Container();
     spacer.label = "hud-spacer";
@@ -374,17 +376,14 @@ function lerp(start: number, end: number, progress: number): number {
 }
 
 function configureHudLayout(hud: Container, layout: SurfaceLayout): void {
-  const margin = tokenValue(layout, surfaceTheme.spacing.screen);
   const hudHeight = tokenValue(layout, surfaceTheme.font.title) * 1.25;
-  hud.position.set(layout.referenceX + layout.safeArea.left + margin, layout.referenceY + layout.safeArea.top + margin);
-  hud.layout = {
-    width: layout.referenceWidth - layout.safeArea.left - layout.safeArea.right - margin * 2,
+  configureSafeAreaRow(hud, layout, {
+    label: "hud",
     height: hudHeight,
-    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: margin,
-  };
+  });
+  hud.label = "hud";
 }
 
 function createAssetOrb(texture: Texture, layout: SurfaceLayout, xRatio: number, yRatio: number): Sprite {
@@ -446,6 +445,66 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
     height: tokenValue(layout, { design: 84, minScreenPx: 42, maxScreenPx: 62 }),
   };
   root.addChild(title);
+
+  const safeAreaSection = createPanel({
+    layout,
+    label: "ds-section",
+    direction: "column",
+    alignItems: "flex-start",
+    gap: sectionGap,
+  });
+  const safeAreaLabel = createLabel({
+    text: "Safe-area controls",
+    layout,
+    fontSize: { design: 34, minScreenPx: 18, maxScreenPx: 26 },
+    color: "#bfdbfe",
+    label: "ds-section-label",
+  });
+  safeAreaLabel.layout = {
+    height: sectionLabelHeight,
+  };
+  const safeControlHeight = tokenValue(layout, { design: 82, minScreenPx: 46, maxScreenPx: 62 });
+  const safeControlWidth = Math.min(panelWidth * 0.42, 340 / layout.scale);
+  const safeAreaRow = createPanel({
+    layout,
+    label: "ds-safe-area-row",
+    width: safeControlWidth * 2 + margin * 0.5,
+    height: safeControlHeight,
+    direction: "row",
+    alignItems: "center",
+    gap: margin * 0.5,
+  });
+  const topControl = createButton({
+    text: "Top",
+    width: safeControlWidth,
+    height: safeControlHeight,
+    layout,
+    fontSize: { design: 30, minScreenPx: 16, maxScreenPx: 24 },
+    textColor: surfaceTheme.color.text,
+  });
+  topControl.label = "ds-safe-area-control";
+  topControl.layout = {
+    width: safeControlWidth,
+    height: safeControlHeight,
+  };
+  const bottomControl = createButton({
+    text: "Bottom",
+    width: safeControlWidth,
+    height: safeControlHeight,
+    layout,
+    fontSize: { design: 30, minScreenPx: 16, maxScreenPx: 24 },
+    fill: 0x1d4ed8,
+    stroke: "#93c5fd",
+    textColor: surfaceTheme.color.text,
+  });
+  bottomControl.label = "ds-safe-area-control";
+  bottomControl.layout = {
+    width: safeControlWidth,
+    height: safeControlHeight,
+  };
+  safeAreaRow.addChild(topControl, bottomControl);
+  safeAreaSection.addChild(safeAreaLabel, safeAreaRow);
+  root.addChild(safeAreaSection);
 
   const colorSection = createPanel({
     layout,
@@ -664,6 +723,7 @@ function syncDesignSystemState(layout: SurfaceLayout, stage: Container): void {
     swatches: countChildrenByLabel(stage, "ds-swatch"),
     typeSamples: countChildrenByLabel(stage, "ds-type-sample"),
     componentSamples: countChildrenByLabel(stage, "ds-component-sample"),
+    safeAreaSamples: countChildrenByLabel(stage, "ds-safe-area-control"),
     buttonCenterDeltaY: measureButtonCenterDeltaY(stage),
     layerLabels: stage.children.map((child) => child.label ?? ""),
     rendered: layout.visibleWidth > 0,

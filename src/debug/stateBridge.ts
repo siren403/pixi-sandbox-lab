@@ -4,6 +4,9 @@ export type PixiBootDebugState = {
   scene: "boot";
   promptBounds: RectState;
   buttonBounds: RectState;
+  layoutPolicy: "safe-area-frame";
+  layoutNodes: number;
+  buttonCenterDeltaY: number;
   rendered: boolean;
 };
 
@@ -39,6 +42,7 @@ export type PixiDesignSystemDebugState = {
   swatches: number;
   typeSamples: number;
   componentSamples: number;
+  safeAreaSamples: number;
   buttonCenterDeltaY: number;
   layerLabels: string[];
   rendered: boolean;
