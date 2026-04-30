@@ -17,6 +17,8 @@ README.md
 .codex/agents/*.toml
 .codex/config.toml
 .codex/hooks/*
+.serena/project.yml
+.serena/memories/*
 .mise.toml
 .mise/tasks/*
 .mise/tasks/lib/*
@@ -131,7 +133,7 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 ### Codex Hooks
 
 - `.codex/config.toml`  
-  Project-scoped Codex config. Enables `codex_hooks` and registers the `SessionStart` checkpoint reminder hook and `Stop` dirty-state warning hook.
+  Project-scoped Codex config. Enables `codex_hooks`, declares the Serena MCP server, and registers the `SessionStart` checkpoint reminder hook and `Stop` dirty-state warning hook.
   Discovery route: `harness_architect` boot discovery reads `.codex/config.toml`.
 
 - `.codex/hooks/checkpoint-session-start.ts`
@@ -155,7 +157,25 @@ When hooks are added, register:
 
 ### MCP Config
 
-- None yet.
+- `.codex/config.toml` (`mcp_servers.serena`)
+  Project-scoped Codex MCP declaration for Serena semantic code analysis in this repository.
+  Transport: stdio, launched with `serena start-mcp-server --project-from-cwd --context=codex`.
+  Discovery route: `harness_architect` boot discovery reads `.codex/config.toml`; Codex sessions may need to restart before newly configured MCP tools are exposed.
+  Expected user/agent: parent Codex and coding agents doing symbol-aware codebase exploration or refactors inside this yolobox project.
+  Required assumptions: sandbox-local `uv` and `serena` command availability, network access for first install, and project CWD detection through `.git`.
+  Validation: `mise run setup-serena`, `mise run check-serena`, and `codex mcp list`.
+
+- `.serena/project.yml`
+  Serena project metadata for this repository. Declares the project name, TypeScript language backend, encoding, ignore behavior, and tool inclusion/exclusion defaults.
+  Discovery route: Serena loads this file after project activation; `harness_architect` discovery includes `.serena/project.yml`.
+  Expected user/agent: parent Codex and Serena-backed coding agents using symbol-aware codebase exploration.
+  Validation: `mise run check-serena` and Serena `get_current_config`.
+
+- `.serena/memories/*.md`
+  Serena project onboarding memories for project overview, code structure, style conventions, suggested commands, and task completion checks.
+  Discovery route: Serena memory tools (`list_memories`, `read_memory`) after project activation; `harness_architect` discovery includes `.serena/memories/*`.
+  Expected user/agent: parent Codex and Serena-backed coding agents that need lightweight project orientation before analysis.
+  Validation: Serena `check_onboarding_performed` and `list_memories`.
 
 When MCP config is added, register:
 
@@ -206,6 +226,18 @@ When MCP config is added, register:
   Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
   Expected user/agent: parent Codex and harness agents confirming browser validation readiness before app work.
   Validation: `mise run check-browser`.
+
+- `.mise/tasks/setup-serena`
+  Prepares the sandbox-local Serena MCP analysis environment. Installs `serena-agent` through `uv tool install` and smoke-checks the `serena` CLI plus MCP server help output.
+  Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
+  Expected user/agent: parent Codex and harness agents preparing symbol-aware code analysis for this project.
+  Validation: `mise run setup-serena`.
+
+- `.mise/tasks/check-serena`
+  Verifies the sandbox-local Serena MCP analysis environment without changing project code. Checks `uv`, `serena`, Serena MCP server help, and the Codex MCP listing command.
+  Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
+  Expected user/agent: parent Codex and harness agents confirming Serena readiness before codebase analysis or refactor work.
+  Validation: `mise run check-serena`.
 
 - `.mise/tasks/checkpoint`
   Official mise execution surface for the checkpoint continuity guard. Agents should call `mise run checkpoint -- <command>` instead of invoking the Bun script directly.

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#MISE description="Serena MCP 분석 환경 준비"
+set -euo pipefail
+
+ROOT="${MISE_PROJECT_ROOT:-$(pwd)}"
+cd "$ROOT"
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "uv is required to install Serena." >&2
+  exit 1
+fi
+
+uv tool install -p 3.13 serena-agent@latest --prerelease=allow
+
+if ! command -v serena >/dev/null 2>&1; then
+  echo "serena was installed but is not on PATH." >&2
+  exit 1
+fi
+
+serena --help >/dev/null
+serena start-mcp-server --help >/dev/null

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+#MISE description="Serena MCP 분석 환경 확인"
+set -euo pipefail
+
+ROOT="${MISE_PROJECT_ROOT:-$(pwd)}"
+cd "$ROOT"
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "uv is not available." >&2
+  exit 1
+fi
+
+if ! command -v serena >/dev/null 2>&1; then
+  echo "serena is not available. Run: mise run setup-serena" >&2
+  exit 1
+fi
+
+serena --help >/dev/null
+serena start-mcp-server --help >/dev/null
+codex mcp get serena --json >/dev/null
