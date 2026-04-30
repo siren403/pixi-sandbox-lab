@@ -6,6 +6,12 @@ import { scene } from "../runtime/scene";
 import { createButton } from "../ui/button";
 import { createLabel } from "../ui/label";
 import { createPanel } from "../ui/panel";
+import {
+  clearDemoDebugState,
+  clearDesignSystemDebugState,
+  setDemoDebugState,
+  setDesignSystemDebugState,
+} from "../debug/stateBridge";
 
 const speed = 520;
 const pointerFollowRate = 10;
@@ -47,13 +53,6 @@ type DesignSystemState = {
   layerLabels: string[];
   rendered: boolean;
 };
-
-declare global {
-  interface Window {
-    __pixiDemoState?: DemoState;
-    __pixiDesignSystemState?: DesignSystemState;
-  }
-}
 
 let sceneSwitches = 0;
 let removeDebugListeners: (() => void) | null = null;
@@ -221,7 +220,7 @@ export const verticalSliceScene = scene({
     removeDebugListeners?.();
     removeDebugListeners = null;
     clearSceneLayers(layers.world, layers.ui);
-    window.__pixiDemoState = undefined;
+    clearDemoDebugState();
   },
 });
 
@@ -315,7 +314,7 @@ export const alternateScene = scene({
     removeDebugListeners?.();
     removeDebugListeners = null;
     clearSceneLayers(layers.world, layers.ui);
-    window.__pixiDemoState = undefined;
+    clearDemoDebugState();
   },
 });
 
@@ -359,7 +358,7 @@ export const designSystemScene = scene({
     removeDebugListeners?.();
     removeDebugListeners = null;
     clearSceneLayers(layers.world, layers.ui);
-    window.__pixiDesignSystemState = undefined;
+    clearDesignSystemDebugState();
   },
 });
 
@@ -628,7 +627,7 @@ function syncDemoState(
   const marker = getPixiBounds(stage, "marker");
   const asset = getPixiBounds(stage, "asset-orb");
   const pointerPosition = pointer?.position() ?? { x: 0, y: 0 };
-  window.__pixiDemoState = {
+  setDemoDebugState({
     playerX,
     playerY,
     canvasWidth: Math.round(layout.viewportWidth),
@@ -651,11 +650,11 @@ function syncDemoState(
     pointerX: pointerPosition.x,
     pointerY: pointerPosition.y,
     rendered: true,
-  };
+  });
 }
 
 function syncDesignSystemState(layout: SurfaceLayout, stage: Container): void {
-  window.__pixiDesignSystemState = {
+  setDesignSystemDebugState({
     scene: "design-system",
     sections: countChildrenByLabel(stage, "ds-section"),
     labels: countChildrenByLabel(stage, "ds-section-label"),
@@ -665,7 +664,7 @@ function syncDesignSystemState(layout: SurfaceLayout, stage: Container): void {
     buttonCenterDeltaY: measureButtonCenterDeltaY(stage),
     layerLabels: stage.children.map((child) => child.label ?? ""),
     rendered: layout.visibleWidth > 0,
-  };
+  });
 }
 
 function measureButtonCenterDeltaY(stage: Container): number {

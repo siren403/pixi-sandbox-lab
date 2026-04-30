@@ -34,6 +34,16 @@ async function run(command: string): Promise<void> {
   }
 }
 
+async function runCheck(command: string, failureHint: string): Promise<void> {
+  info(`$ ${command}`);
+  const result = await $`bash -lc ${command}`.nothrow();
+  if (result.exitCode !== 0) {
+    console.error(`[browser-env] ${failureHint}`);
+    console.error("[browser-env] run mise run setup-browser to install Playwright browsers and Chromium system dependencies.");
+    process.exit(result.exitCode);
+  }
+}
+
 async function setup(): Promise<void> {
   await run("bun install");
   await run("PLAYWRIGHT_BROWSERS_PATH=0 bunx playwright install chromium");
@@ -63,9 +73,10 @@ async function check(): Promise<void> {
     process.exit(1);
   }
 
-  await run(
+  await runCheck(
     "PLAYWRIGHT_BROWSERS_PATH=0 bunx playwright --version && " +
       "PLAYWRIGHT_BROWSERS_PATH=0 bun -e \"const { chromium } = require('playwright'); const browser = await chromium.launch({ headless: true }); const page = await browser.newPage(); await page.goto('about:blank'); await browser.close(); console.log('headless chromium launch ok');\"",
+    "headless Chromium smoke check failed. This usually means sandbox OS packages such as libglib/libnss/xvfb are missing after a fresh container start.",
   );
 }
 

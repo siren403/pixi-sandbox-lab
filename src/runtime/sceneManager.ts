@@ -1,30 +1,6 @@
 import type { Scene, SceneContext } from "./scene";
 import { createTransition, minimumLoadingMsRange, syncTransitionState } from "./transition";
 
-declare global {
-  interface Window {
-    __pixiRuntimeState?: {
-      appMode: "interactive" | "transitioning" | "loading" | "destroyed";
-      loading: boolean;
-      loadingPhase: "idle" | "in" | "loading" | "out";
-      sceneSwitches: number;
-      sceneSwitchRequests: number;
-      acceptedCommands: number;
-      ignoredCommands: number;
-      runningCommands: string[];
-      loadingOverlayShows: number;
-      loadingMinimumMs: number;
-      lastLoadingDurationMs: number;
-      loadingProgress: number;
-      loadingOverlayAlpha: number;
-      loadingOverlayMaxAlpha: number;
-      loadingOverlayVisible: boolean;
-      transitionPanels: number;
-      transitionPanelMaxCount: number;
-    };
-  }
-}
-
 export class SceneManager {
   private current: Scene | null = null;
   private switchId = 0;

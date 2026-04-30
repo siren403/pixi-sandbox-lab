@@ -3,6 +3,7 @@ import { designSystemScene, verticalSliceScene } from "./boot";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
 import { surfaceTheme, tokenValue } from "../runtime/surface";
+import { clearBootDebugState, setBootDebugState } from "../debug/stateBridge";
 
 type BootState = {
   scene: "boot";
@@ -10,12 +11,6 @@ type BootState = {
   buttonBounds: { x: number; y: number; width: number; height: number };
   rendered: boolean;
 };
-
-declare global {
-  interface Window {
-    __pixiBootState?: BootState;
-  }
-}
 
 let startButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
 let removeDebugListeners: (() => void) | null = null;
@@ -53,7 +48,7 @@ export const bootScene = scene({
     removeDebugListeners?.();
     removeDebugListeners = null;
     clearLayer(layers.ui);
-    window.__pixiBootState = undefined;
+    clearBootDebugState();
   },
 });
 
@@ -113,14 +108,14 @@ function renderIntro(layer: Container, layout: SurfaceLayout): void {
 function syncIntroState(layout: SurfaceLayout, root: Container): void {
   const prompt = root.getChildByLabel("intro-prompt", true);
   const bounds = prompt?.getBounds();
-  window.__pixiBootState = {
+  setBootDebugState({
     scene: "boot",
     promptBounds: bounds
       ? { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }
       : { x: 0, y: 0, width: 0, height: 0 },
     buttonBounds: startButtonBounds,
     rendered: layout.visibleWidth > 0,
-  };
+  });
 }
 
 function installDebugSceneListeners(handlers: { onScene: () => void; onDesignSystem: () => void }): () => void {

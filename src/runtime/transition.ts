@@ -10,6 +10,7 @@ import {
   type MotionAnimation,
 } from "./motion";
 import type { SceneContext } from "./scene";
+import { setRuntimeDebugState } from "../debug/stateBridge";
 
 export const minimumLoadingMsRange = { min: 500, max: 1000 } as const;
 
@@ -61,7 +62,7 @@ export function createTransition(ctx: SceneContext): TransitionController {
 }
 
 export function syncTransitionState(ctx: SceneContext): void {
-  window.__pixiRuntimeState = {
+  setRuntimeDebugState({
     appMode: ctx.runtime.appMode,
     loading: ctx.runtime.loading,
     loadingPhase: ctx.runtime.loadingPhase,
@@ -79,7 +80,7 @@ export function syncTransitionState(ctx: SceneContext): void {
     loadingOverlayVisible: ctx.layers.debug.getChildByLabel("loading-overlay")?.visible === true,
     transitionPanels: countTransitionPanels(ctx),
     transitionPanelMaxCount: ctx.runtime.transitionPanelMaxCount,
-  };
+  });
 }
 
 function createTransitionRoot(ctx: SceneContext): Container {

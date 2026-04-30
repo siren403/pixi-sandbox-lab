@@ -222,7 +222,7 @@ When MCP config is added, register:
   Validation: `mise run setup-browser`.
 
 - `.mise/tasks/check-browser`
-  Verifies the prepared headless browser environment without changing app code. Checks project dependencies, project-local Playwright browser installation, Playwright version, and a headless Chromium launch.
+  Verifies the prepared headless browser environment without changing app code. Checks project dependencies, project-local Playwright browser installation, Playwright version, and a headless Chromium launch. If Chromium fails because sandbox OS packages are missing after a fresh container start, it reports `mise run setup-browser` as the recovery command.
   Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
   Expected user/agent: parent Codex and harness agents confirming browser validation readiness before app work.
   Validation: `mise run check-browser`.

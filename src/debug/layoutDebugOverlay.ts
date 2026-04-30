@@ -1,4 +1,5 @@
 import type { Application, Container } from "pixi.js";
+import { readCurrentDebugScene, setLayoutDebugState, type PixiLayoutDebugState } from "./stateBridge";
 
 type LayoutDebugFilter = "all" | "world" | "ui";
 
@@ -17,26 +18,6 @@ type LayoutDebugStorage = {
 };
 
 const storageKey = "prompt-ops:pixi-layout-debug";
-
-declare global {
-  interface Window {
-    __pixiLayoutDebug?: {
-      enabled: boolean;
-      filter: LayoutDebugFilter;
-      layoutNodes: number;
-      debuggedNodes: number;
-      layerLabels: string[];
-      installedAt: number;
-      panelConnected: boolean;
-      restoreCount: number;
-      visibilityState: DocumentVisibilityState;
-      folded: boolean;
-      x: number;
-      y: number;
-      currentScene: string;
-    };
-  }
-}
 
 export function installLayoutDebug(app: Application, root: Container): () => void {
   const stored = readStoredState();
@@ -214,9 +195,9 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     const layoutNodes = countLayoutNodes(root);
     const debuggedNodes = countDebuggedNodes(root);
     const layerLabels = root.children.map((child) => child.label ?? "");
-    const currentScene = readCurrentScene();
+    const currentScene = readCurrentDebugScene();
     const rect = panel.getBoundingClientRect();
-    window.__pixiLayoutDebug = {
+    setLayoutDebugState({
       enabled,
       filter,
       layoutNodes,
@@ -230,7 +211,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
       x: Math.round(rect.left),
       y: Math.round(rect.top),
       currentScene,
-    };
+    });
     sceneName.textContent = `Scene: ${currentScene}`;
 
     toggle.textContent = enabled ? "On" : "Off";
@@ -377,7 +358,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     panel.remove();
     void app.renderer.layout.enableDebug(false);
     applyDebugFlag(root, false, "all");
-    window.__pixiLayoutDebug = {
+    setLayoutDebugState({
       enabled: false,
       filter,
       layoutNodes: 0,
@@ -390,8 +371,8 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
       folded,
       x: Math.round(panel.getBoundingClientRect().left),
       y: Math.round(panel.getBoundingClientRect().top),
-      currentScene: readCurrentScene(),
-    };
+      currentScene: readCurrentDebugScene(),
+    });
   };
 
   function setPanelPosition(x: number, y: number): void {
@@ -434,20 +415,6 @@ function writeStoredState(state: LayoutDebugStorage): void {
   } catch {
     // Storage can be unavailable in private or restricted contexts.
   }
-}
-
-function readCurrentScene(): string {
-  const runtimeWindow = window as Window & {
-    __pixiDemoState?: { scene?: string };
-    __pixiBootState?: { scene?: string };
-    __pixiDesignSystemState?: { scene?: string };
-  };
-  return (
-    runtimeWindow.__pixiDesignSystemState?.scene ??
-    runtimeWindow.__pixiDemoState?.scene ??
-    runtimeWindow.__pixiBootState?.scene ??
-    "unknown"
-  );
 }
 
 function applyDebugFlag(container: Container, enabled: boolean, filter: LayoutDebugFilter): void {
