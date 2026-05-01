@@ -15,6 +15,7 @@ export class SceneManager {
     const previous = this.current;
     ctx.runtime.sceneSwitches += 1;
     setActiveDebugScene(scene.name);
+    syncTransitionState(ctx);
 
     const loadingOptions = scene.loading ?? {};
     const showOverlay = loadingOptions.overlay !== false;

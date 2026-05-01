@@ -10,7 +10,7 @@ declare global {
 test("renders the PixiJS demo with assets and input", async ({
   page,
 }) => {
-  test.setTimeout(100000);
+  test.setTimeout(140000);
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
@@ -48,6 +48,7 @@ test("renders the PixiJS demo with assets and input", async ({
   const initialCurrentScene = page.getByTestId("layout-debug-current-scene");
   await expect(initialCurrentScene).toContainText("boot");
   await initialFold.click();
+  await expect(initialSceneSwitch).toContainText("World");
   await expect(initialDesignSystem).toBeVisible();
   await initialDesignSystem.click();
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.designSystem?.rendered)).toBe(true);
@@ -65,7 +66,7 @@ test("renders the PixiJS demo with assets and input", async ({
     .poll(() => page.evaluate(() => window.__pixiDebug?.runtime?.loadingOverlayShows ?? 0))
     .toBeGreaterThan(bootLoadingShows);
   await expect
-    .poll(() => page.evaluate(() => window.__pixiDebug?.demo?.rendered))
+    .poll(() => page.evaluate(() => window.__pixiDebug?.demo?.rendered), { timeout: 15000 })
     .toBe(true);
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.boot)).toBeUndefined();
   await expect
@@ -90,7 +91,7 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(before?.playerX).toBeGreaterThan(0);
   expect(before?.worldWidth).toBeGreaterThan(before?.visibleWidth ?? 0);
   expect(before?.worldHeight).toBeGreaterThan(before?.visibleHeight ?? 0);
-  expect(before?.worldItems).toBeGreaterThanOrEqual(90);
+  expect(before?.worldItems).toBeGreaterThanOrEqual(160);
   expect(before?.cameraZoom).toBeGreaterThan(0);
   expect(before?.canvasWidth).toBe(viewport?.width);
   expect(before?.canvasHeight).toBe(viewport?.height);

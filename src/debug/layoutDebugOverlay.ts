@@ -148,7 +148,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   const sceneButton = document.createElement("button");
   sceneButton.type = "button";
   sceneButton.dataset.testid = "layout-debug-scene";
-  sceneButton.textContent = "Scene";
+  sceneButton.textContent = "World";
   Object.assign(sceneButton.style, {
     ...buttonStyle(),
     width: "100%",
@@ -252,6 +252,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
       currentScene,
     });
     sceneName.textContent = `Scene: ${currentScene}`;
+    sceneButton.textContent = currentScene === "vertical-slice" ? "Alt" : "World";
 
     toggle.textContent = enabled ? "On" : "Off";
     toggle.setAttribute("aria-pressed", String(enabled));
@@ -581,7 +582,9 @@ function clearContainer(container: Container): void {
 
 function shouldDrawSemanticBounds(container: Container): boolean {
   const label = container.label ?? "";
-  if (label === "world-item" || label === "world-grid") return false;
+  if (label === "world-field" || label === "world-item" || label === "world-items" || label === "world-grid") {
+    return false;
+  }
   return (
     label === "hud" ||
     label === "title" ||

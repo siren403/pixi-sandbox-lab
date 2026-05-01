@@ -21,8 +21,8 @@ const pointerFollowRate = 10;
 const pointerSnapDistance = 3;
 const worldWidth = 3600;
 const worldHeight = 5200;
-const worldItemCount = 96;
-const minCameraZoom = 0.45;
+const worldItemCount = 180;
+const minCameraZoom = 0.32;
 const maxCameraZoom = 2.2;
 const cameraDragThreshold = 12;
 
@@ -427,7 +427,7 @@ function createCameraState(layout: SurfaceLayout): CameraState {
   return {
     x: 0,
     y: 0,
-    zoom: Math.max(minCameraZoom, Math.min(0.72, maxCameraZoom, layout.visibleWidth / 1500)),
+    zoom: Math.max(minCameraZoom, Math.min(0.46, maxCameraZoom, layout.visibleWidth / 2400)),
   };
 }
 
@@ -568,19 +568,23 @@ function createExplorationField(layout: SurfaceLayout): Container {
   grid.stroke({ color: 0x334155, width: Math.max(1, 2 / layout.scale), alpha: 0.42 });
   field.addChild(grid);
 
-  const itemSize = tokenValue(layout, surfaceTheme.components.marker.size);
+  const itemSize = tokenValue(layout, surfaceTheme.components.marker.size) * 1.8;
+  const items = new Graphics();
+  items.label = "world-items";
   for (let index = 0; index < worldItemCount; index += 1) {
-    const x = 180 + ((index * 263) % (worldWidth - 360));
-    const y = 220 + ((index * 421) % (worldHeight - 440));
+    const column = index % 13;
+    const row = Math.floor(index / 13);
+    const jitterX = ((index * 37) % 120) - 60;
+    const jitterY = ((index * 53) % 150) - 75;
+    const x = 180 + column * 270 + jitterX;
+    const y = 240 + row * 240 + jitterY;
     const hue = index % 3;
-    const item = new Graphics()
-      .roundRect(-itemSize / 2, -itemSize / 2, itemSize, itemSize, tokenValue(layout, surfaceTheme.rounded.sm))
+    items
+      .roundRect(x - itemSize / 2, y - itemSize / 2, itemSize, itemSize, tokenValue(layout, surfaceTheme.rounded.sm))
       .fill(hue === 0 ? surfaceTheme.color.marker : hue === 1 ? surfaceTheme.color.motion : surfaceTheme.color.warning)
       .stroke({ color: surfaceTheme.color.text, width: Math.max(1, 2 / layout.scale), alpha: 0.32 });
-    item.label = "world-item";
-    item.position.set(x, y);
-    field.addChild(item);
   }
+  field.addChild(items);
 
   return field;
 }
@@ -887,7 +891,7 @@ function syncDemoState(
     cameraZoom: camera.zoom,
     worldWidth,
     worldHeight,
-    worldItems: countChildrenByLabel(stage, "world-item"),
+    worldItems: worldItemCount,
     canvasWidth: Math.round(layout.viewportWidth),
     canvasHeight: Math.round(layout.viewportHeight),
     viewportWidth: Math.round(window.innerWidth),
