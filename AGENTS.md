@@ -19,6 +19,7 @@ The current demonstration domain is a fast PixiJS-based game prototyping stack i
 - `.agents/skills/hook-creator/` contains the project-local skill for designing Codex lifecycle hooks and hook-backed guardrails.
 - `.codex/agents/harness-architect.toml` defines the project-local Codex custom agent for sandbox harness architecture.
 - `.codex/agents/plan-reviewer.toml` defines the project-local Codex custom agent for reviewing implementation plans before execution.
+- `.codex/agents/context-engineer.toml` defines the project-local Codex custom agent for context architecture, source-of-truth boundaries, prompt/doc refactors, and context-loading strategy.
 - `.mise/tasks/validate-skills` validates project-local Codex skills using the mise-managed Python runtime and project `.venv`.
 - `docs/harness.md` documents the current PromptOps/yolobox agent harness and sandbox launch workflow.
 - `docs/harness-inventory.md` registers harness components and discovery paths.

@@ -130,6 +130,12 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   Expected user/agent: parent Codex and Pixi implementation agents needing specialist review before surface/UI changes.
   Validation: TOML syntax smoke check and `mise run validate-skills` for its supporting skill.
 
+- `.codex/agents/context-engineer.toml`
+  Project-local custom agent responsible for context architecture, source-of-truth boundaries, prompt/doc refactors, task-specific context bundles, and stale or conflicting instruction detection.
+  Discovery route: `harness_architect` boot discovery reads `.codex/agents/*.toml`; parent Codex may spawn this specialist before documentation, prompt, skill, custom-agent, checkpoint, or source-of-truth refactors.
+  Expected user/agent: parent Codex, harness agents, and documentation/refactor workflows that need context-loading strategy or instruction-boundary review.
+  Validation: TOML syntax smoke check and reference search for required context files.
+
 ### Codex Hooks
 
 - `.codex/config.toml`  
