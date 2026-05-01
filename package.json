@@ -8,6 +8,7 @@
     "build": "bun run build:demo",
     "build:demo": "tsc && VITE_DEMO_DEBUG=true vite build",
     "build:release": "tsc && bun run check:design-tokens && VITE_DEMO_DEBUG=false vite build && bun run check:bundle",
+    "check": "bun run check:design-tokens && bun run build:demo",
     "check:bundle": "bun scripts/check-bundle-size.ts",
     "check:design-tokens": "bun scripts/check-design-tokens.ts",
     "pw:install": "PLAYWRIGHT_BROWSERS_PATH=0 bunx playwright install chromium",

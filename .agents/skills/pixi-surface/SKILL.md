@@ -89,7 +89,7 @@ Before implementation:
 After implementation:
 
 - Run `mise run check-browser`.
-- Run `bun run build`.
+- Run `bun run check`.
 - Run `bun run test:e2e`.
 - If deployed, verify the GitHub Pages URL with headless Playwright against the relevant viewport checks.
 

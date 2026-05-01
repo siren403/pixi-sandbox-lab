@@ -57,6 +57,12 @@ bun run dev
 
 Open the Vite URL shown by the dev server. Inside the sandbox the app binds to `0.0.0.0`, while automated checks use `http://127.0.0.1:5173` from inside the container.
 
+Fast local validation:
+
+```bash
+bun run check
+```
+
 Build and E2E checks:
 
 ```bash
