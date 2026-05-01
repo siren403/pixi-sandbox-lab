@@ -19,6 +19,7 @@ This document tracks the current implementation and validation state for the Pix
 - The loading overlay includes a progress bar and GSAP/PixiPlugin-based loop animation with a randomized minimum display time between 500ms and 1000ms.
 - Motion code is isolated behind `src/runtime/motion.ts`. PixiPlugin is used for supported display-object properties, while filter animation uses Pixi filter instances plus GSAP core.
 - Demo builds use code splitting across entry, Pixi vendor, motion vendor, shared vendor, and debug-only dynamic chunks.
+- GitHub Pages deployment runs `bun run check` before uploading the demo build artifact.
 - Vite `chunkSizeWarningLimit` is set to 1100kB. `bun run check:bundle` enforces total JS, gzip, max chunk, and entry budgets.
 - `window.__pixiDebug.runtime` exposes E2E-only app mode, command counts, loading state, transition state, sampled timing, progress, overlay alpha, and transition panel counts.
 - `scene.load(ctx)` is sync; assets are already available through `ctx.assets.get(source)` at that point.

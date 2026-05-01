@@ -47,7 +47,7 @@ UI composition should prefer `@pixi/layout` and semantic primitives from `src/ui
 - `bun run build`는 `build:demo` alias다.
 - `bun run build:demo`는 `VITE_DEMO_DEBUG=true`로 빌드하며 layout debug panel을 포함한다.
 - `bun run build:release`는 `VITE_DEMO_DEBUG=false`로 빌드하며 debug overlay module을 번들에서 제외한다.
-- Pages workflow는 `bun run build:demo`를 사용한다.
+- Pages workflow는 `bun run check` 후 `bun run build:demo`를 사용한다.
 
 layout debug panel:
 
