@@ -7,6 +7,7 @@ This document tracks the current implementation and validation state for the Pix
 - `Scene.assets` accepts a static array or `(ctx) => array`.
 - `SceneManager.switch()` cleans up the previous scene, evaluates scene assets, awaits `ctx.assets.load()`, then runs sync scene loading.
 - The app starts in the `boot` scene with `Tap to start`; Enter/Space or the boot button switches to `vertical-slice`.
+- The vertical slice scene contains a larger explorable world with many demo objects; drag pans the camera and wheel/pinch zoom adjusts the view while taps still move the player.
 - The debug panel can switch to the vertical slice scene or the runtime design-system scene from boot.
 - Scene transitions use a runtime-owned overlay with animated panels and slash patterns.
 - Scene switch commands go through `src/runtime/commandRuntime.ts`; duplicate scene switch requests are dropped while a switch is active and counts are exposed through runtime debug state.
@@ -35,6 +36,7 @@ Current checks include:
 - canvas starts at viewport origin and fills the viewport
 - visible design bounds meet the reference surface contract from `DESIGN.md`
 - player, marker, and title have readable/touchable screen-space sizes
+- vertical slice world size, object count, camera pan, and zoom behavior are observable through E2E debug state
 - HUD title and marker do not overlap
 - surface layers appear in the expected world/UI/debug order
 - layout debug panel appears and its bounds/filter toggles work

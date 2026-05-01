@@ -13,6 +13,12 @@ export type PixiBootDebugState = {
 export type PixiDemoDebugState = {
   playerX: number;
   playerY: number;
+  cameraX: number;
+  cameraY: number;
+  cameraZoom: number;
+  worldWidth: number;
+  worldHeight: number;
+  worldItems: number;
   canvasWidth: number;
   canvasHeight: number;
   viewportWidth: number;

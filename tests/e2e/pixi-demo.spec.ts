@@ -88,6 +88,10 @@ test("renders the PixiJS demo with assets and input", async ({
 
   const before = await page.evaluate(() => window.__pixiDebug?.demo);
   expect(before?.playerX).toBeGreaterThan(0);
+  expect(before?.worldWidth).toBeGreaterThan(before?.visibleWidth ?? 0);
+  expect(before?.worldHeight).toBeGreaterThan(before?.visibleHeight ?? 0);
+  expect(before?.worldItems).toBeGreaterThanOrEqual(90);
+  expect(before?.cameraZoom).toBeGreaterThan(0);
   expect(before?.canvasWidth).toBe(viewport?.width);
   expect(before?.canvasHeight).toBe(viewport?.height);
   expect(before?.visibleWidth).toBeGreaterThanOrEqual(1080);
@@ -128,6 +132,21 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(afterPointer?.pointerX).toBeLessThan((afterPointer?.visibleWidth ?? 0) * 0.82);
   expect(afterPointer?.pointerY).toBeGreaterThan((afterPointer?.visibleHeight ?? 0) * 0.68);
   expect(afterPointer?.pointerY).toBeLessThan((afterPointer?.visibleHeight ?? 0) * 0.72);
+
+  const cameraBeforeZoom = await page.evaluate(() => window.__pixiDebug?.demo);
+  await page.mouse.wheel(0, -420);
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiDebug?.demo?.cameraZoom ?? 0))
+    .toBeGreaterThan(cameraBeforeZoom?.cameraZoom ?? 0);
+
+  const cameraBeforePan = await page.evaluate(() => window.__pixiDebug?.demo);
+  await page.mouse.move(Math.round((box?.width ?? 0) * 0.48), Math.round((box?.height ?? 0) * 0.52));
+  await page.mouse.down();
+  await page.mouse.move(Math.round((box?.width ?? 0) * 0.65), Math.round((box?.height ?? 0) * 0.62), { steps: 6 });
+  await page.mouse.up();
+  await expect
+    .poll(() => page.evaluate(() => window.__pixiDebug?.demo?.cameraX ?? 0))
+    .toBeGreaterThan((cameraBeforePan?.cameraX ?? 0) + 20);
 
   const layoutDebugPanel = page.getByTestId("layout-debug-panel");
   const layoutDebug = page.getByTestId("layout-debug-toggle");

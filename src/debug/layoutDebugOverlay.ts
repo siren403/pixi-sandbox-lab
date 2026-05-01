@@ -581,6 +581,7 @@ function clearContainer(container: Container): void {
 
 function shouldDrawSemanticBounds(container: Container): boolean {
   const label = container.label ?? "";
+  if (label === "world-item" || label === "world-grid") return false;
   return (
     label === "hud" ||
     label === "title" ||
