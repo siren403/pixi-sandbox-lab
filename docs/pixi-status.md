@@ -29,7 +29,7 @@ This document tracks the current implementation and validation state for the Pix
 
 ## Current Validation
 
-Playwright covers desktop portrait and mobile portrait.
+Playwright covers desktop portrait and mobile portrait. E2E coverage is split by behavior area so framework changes can fail against boot, transition, world camera, debug panel, design-system, or reload checks independently.
 
 Current checks include:
 
