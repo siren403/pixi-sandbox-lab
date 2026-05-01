@@ -1,10 +1,10 @@
 import { Container, Graphics, Sprite, type Texture } from "pixi.js";
 import demoOrbUrl from "../assets/demo-orb.svg";
-import type { Pointer } from "../runtime/pointer";
 import { screenValue, tokenValue } from "../runtime/surface";
 import { surfaceTheme } from "../ui/tokens";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
+import { createWorldCamera, type WorldCamera } from "../runtime/worldCamera";
 import { createButton } from "../ui/button";
 import { createLabel } from "../ui/label";
 import { configureSafeAreaRow } from "../ui/layout";
@@ -72,26 +72,12 @@ type DesignSystemState = {
 
 let sceneSwitches = 0;
 let removeDebugListeners: (() => void) | null = null;
-const cameraByWorld = new WeakMap<Container, CameraState>();
-const gestureByWorld = new WeakMap<Container, GestureState>();
+const cameraByWorld = new WeakMap<Container, WorldCamera>();
 
 type MotionPlayer = Graphics & {
   targetX?: number;
   targetY?: number;
   targetActive?: boolean;
-};
-
-type CameraState = {
-  x: number;
-  y: number;
-  zoom: number;
-};
-
-type GestureState = {
-  lastPrimary?: { x: number; y: number };
-  lastPinchDistance?: number;
-  lastPinchCenter?: { x: number; y: number };
-  dragged: boolean;
 };
 
 export const verticalSliceScene = scene({
@@ -108,10 +94,8 @@ export const verticalSliceScene = scene({
     const hud = new Container();
     hud.label = "hud";
     configureHudLayout(hud, layout);
-    const camera = createCameraState(layout);
-    const gesture: GestureState = { dragged: false };
+    const camera = createDemoCamera(layers.world, layout);
     cameraByWorld.set(layers.world, camera);
-    gestureByWorld.set(layers.world, gesture);
 
     const player = new Graphics()
       .roundRect(-playerSize / 2, -playerSize / 2, playerSize, playerSize, playerRadius)
@@ -157,8 +141,8 @@ export const verticalSliceScene = scene({
     hud.addChild(title, spacer, marker);
     layers.ui.addChild(hud);
     layers.world.addChild(field, assetOrb, inputTarget, player);
-    centerCameraOn(camera, player.x, player.y, layout);
-    applyCamera(layers.world, camera, layout);
+    camera.centerOn(player.x, player.y, layout);
+    camera.apply(layout);
     app.renderer.layout.update(layers.root);
     removeDebugListeners = installDebugSceneListeners({
       onScene: () => {
@@ -175,14 +159,14 @@ export const verticalSliceScene = scene({
   resize({ app, layers, layout }) {
     const player = layers.world.getChildByLabel("player") as Graphics | null;
     const hud = layers.ui.getChildByLabel("hud") as Container | null;
-    const camera = readCamera(layers.world);
+    const camera = readCamera(layers.world, layout);
     if (!player) return;
 
     const playerPadding = tokenValue(layout, surfaceTheme.size.player) / 2;
     player.x = clamp(player.x, playerPadding, worldWidth - playerPadding);
     player.y = clamp(player.y, playerPadding, worldHeight - playerPadding);
-    clampCamera(camera, layout);
-    applyCamera(layers.world, camera, layout);
+    camera.clamp(layout);
+    camera.apply(layout);
 
     if (hud) configureHudLayout(hud, layout);
     app.renderer.layout.update(layers.root);
@@ -193,8 +177,7 @@ export const verticalSliceScene = scene({
   update(dt, { layers, keyboard, pointer, layout, switchScene }) {
     const player = layers.world.getChildByLabel("player") as MotionPlayer | null;
     const inputTarget = layers.world.getChildByLabel("input-target") as Graphics | null;
-    const camera = readCamera(layers.world);
-    const gesture = readGesture(layers.world);
+    const camera = readCamera(layers.world, layout);
     if (!player) return;
 
     if (keyboard.wasPressed("x")) {
@@ -221,11 +204,11 @@ export const verticalSliceScene = scene({
     }
 
     const playerPadding = tokenValue(layout, surfaceTheme.size.player) / 2;
-    updateCameraGesture(pointer, camera, gesture, layout);
+    camera.updateGesture(pointer, layout);
     const pointerPressed = pointer.wasPressed();
     const pointerReleased = pointer.wasReleased();
-    if (pointerReleased && !gesture.dragged && pointer.pointers().length === 0) {
-      const position = screenToWorld(pointer.position(), camera);
+    if (pointerReleased && !camera.hasDragged() && pointer.pointers().length === 0) {
+      const position = camera.screenToWorld(pointer.position());
       player.targetX = clamp(position.x, playerPadding, worldWidth - playerPadding);
       player.targetY = clamp(position.y, playerPadding, worldHeight - playerPadding);
       player.targetActive = true;
@@ -236,10 +219,7 @@ export const verticalSliceScene = scene({
       }
     }
     if (pointerReleased && pointer.pointers().length === 0) {
-      gesture.lastPrimary = undefined;
-      gesture.lastPinchDistance = undefined;
-      gesture.lastPinchCenter = undefined;
-      gesture.dragged = false;
+      camera.resetGesture();
     }
 
     if (player.targetActive && player.targetX !== undefined && player.targetY !== undefined) {
@@ -262,7 +242,7 @@ export const verticalSliceScene = scene({
       player.rotation = lerp(player.rotation, 0, 1 - Math.exp(-12 * dt));
     }
     updateInputTarget(inputTarget, dt);
-    applyCamera(layers.world, camera, layout);
+    camera.apply(layout);
 
     syncDemoState("vertical-slice", player.x, player.y, layout, layers.root, pointer, true);
   },
@@ -423,113 +403,28 @@ function lerp(start: number, end: number, progress: number): number {
   return start + (end - start) * progress;
 }
 
-function createCameraState(layout: SurfaceLayout): CameraState {
-  return {
-    x: 0,
-    y: 0,
-    zoom: Math.max(minCameraZoom, Math.min(0.46, maxCameraZoom, layout.visibleWidth / 2400)),
-  };
+function createDemoCamera(world: Container, layout: SurfaceLayout): WorldCamera {
+  return createWorldCamera(
+    {
+      world,
+      width: worldWidth,
+      height: worldHeight,
+      minZoom: minCameraZoom,
+      maxZoom: maxCameraZoom,
+      dragThreshold: cameraDragThreshold,
+      initialZoom: (nextLayout) => Math.max(minCameraZoom, Math.min(0.46, maxCameraZoom, nextLayout.visibleWidth / 2400)),
+    },
+    layout,
+  );
 }
 
-function readCamera(world: Container): CameraState {
+function readCamera(world: Container, layout: SurfaceLayout): WorldCamera {
   let camera = cameraByWorld.get(world);
   if (!camera) {
-    camera = { x: 0, y: 0, zoom: 1 };
+    camera = createDemoCamera(world, layout);
     cameraByWorld.set(world, camera);
   }
   return camera;
-}
-
-function readGesture(world: Container): GestureState {
-  let gesture = gestureByWorld.get(world);
-  if (!gesture) {
-    gesture = { dragged: false };
-    gestureByWorld.set(world, gesture);
-  }
-  return gesture;
-}
-
-function centerCameraOn(camera: CameraState, worldX: number, worldY: number, layout: SurfaceLayout): void {
-  camera.x = layout.visibleWidth / 2 - worldX * camera.zoom;
-  camera.y = layout.visibleHeight / 2 - worldY * camera.zoom;
-  clampCamera(camera, layout);
-}
-
-function applyCamera(world: Container, camera: CameraState, layout: SurfaceLayout): void {
-  clampCamera(camera, layout);
-  world.position.set(camera.x, camera.y);
-  world.scale.set(camera.zoom);
-}
-
-function clampCamera(camera: CameraState, layout: SurfaceLayout): void {
-  camera.zoom = clamp(camera.zoom, minCameraZoom, maxCameraZoom);
-  camera.x = clampCameraAxis(camera.x, layout.visibleWidth, worldWidth * camera.zoom);
-  camera.y = clampCameraAxis(camera.y, layout.visibleHeight, worldHeight * camera.zoom);
-}
-
-function clampCameraAxis(offset: number, visible: number, scaledWorld: number): number {
-  if (scaledWorld <= visible) return (visible - scaledWorld) / 2;
-  return clamp(offset, visible - scaledWorld, 0);
-}
-
-function updateCameraGesture(pointer: Pointer, camera: CameraState, gesture: GestureState, layout: SurfaceLayout): void {
-  const wheel = pointer.wheelDelta();
-  const pointers = pointer.pointers();
-  if (wheel !== 0) {
-    zoomCameraAt(camera, 1 - wheel * 0.0012, pointer.position(), layout);
-    gesture.dragged = true;
-  }
-
-  if (pointers.length >= 2) {
-    const [first, second] = pointers;
-    const center = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
-    const distance = Math.hypot(second.x - first.x, second.y - first.y);
-    if (gesture.lastPinchDistance !== undefined && gesture.lastPinchCenter !== undefined) {
-      camera.x += center.x - gesture.lastPinchCenter.x;
-      camera.y += center.y - gesture.lastPinchCenter.y;
-      zoomCameraAt(camera, distance / gesture.lastPinchDistance, center, layout);
-      gesture.dragged = true;
-    }
-    gesture.lastPinchDistance = distance;
-    gesture.lastPinchCenter = center;
-    gesture.lastPrimary = undefined;
-    return;
-  }
-
-  gesture.lastPinchDistance = undefined;
-  gesture.lastPinchCenter = undefined;
-
-  if (pointers.length === 1) {
-    const current = pointers[0];
-    if (gesture.lastPrimary) {
-      const dx = current.x - gesture.lastPrimary.x;
-      const dy = current.y - gesture.lastPrimary.y;
-      if (gesture.dragged || Math.hypot(dx, dy) >= cameraDragThreshold) {
-        camera.x += dx;
-        camera.y += dy;
-        gesture.dragged = true;
-      }
-    }
-    gesture.lastPrimary = current;
-  } else {
-    gesture.lastPrimary = undefined;
-  }
-  clampCamera(camera, layout);
-}
-
-function zoomCameraAt(camera: CameraState, rawFactor: number, screenPoint: { x: number; y: number }, layout: SurfaceLayout): void {
-  const before = screenToWorld(screenPoint, camera);
-  camera.zoom = clamp(camera.zoom * rawFactor, minCameraZoom, maxCameraZoom);
-  camera.x = screenPoint.x - before.x * camera.zoom;
-  camera.y = screenPoint.y - before.y * camera.zoom;
-  clampCamera(camera, layout);
-}
-
-function screenToWorld(point: { x: number; y: number }, camera: CameraState): { x: number; y: number } {
-  return {
-    x: (point.x - camera.x) / camera.zoom,
-    y: (point.y - camera.y) / camera.zoom,
-  };
 }
 
 function configureHudLayout(hud: Container, layout: SurfaceLayout): void {
@@ -881,7 +776,7 @@ function syncDemoState(
   const marker = getPixiBounds(stage, "marker");
   const asset = getPixiBounds(stage, "asset-orb");
   const worldLayer = stage.getChildByLabel("world-layer") as Container | null;
-  const camera = worldLayer ? readCamera(worldLayer) : { x: 0, y: 0, zoom: 1 };
+  const camera = worldLayer ? (cameraByWorld.get(worldLayer)?.state ?? { x: 0, y: 0, zoom: 1 }) : { x: 0, y: 0, zoom: 1 };
   const pointerPosition = pointer?.position() ?? { x: 0, y: 0 };
   setDemoDebugState({
     playerX,
