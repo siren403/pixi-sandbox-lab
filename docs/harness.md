@@ -160,7 +160,7 @@ bun run test:e2e
 
 이 패턴은 아직 별도 skill로 승격하지 않는다. 두 번째 브라우저 앱/게임 작업에서도 같은 절차가 반복되면 `headless-browser-validation` 같은 project-local skill 후보로 재검토한다.
 
-다음 제품 작업으로는 PixiJS 앱 서페이스 스펙을 먼저 정의해야 한다. 논리 해상도, 스케일 정책, resize 동작, mobile safe area, touch/context-menu 정책, desktop/mobile E2E viewport coverage를 정한 뒤 런타임을 확장한다.
+PixiJS 앱 서페이스 계약은 root `DESIGN.md`가 소유한다. 현재 구현 및 Playwright 검증 상태는 `docs/pixi-status.md`를 기준으로 확인한다.
 
 ## 10. 알려진 이슈
 

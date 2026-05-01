@@ -26,106 +26,21 @@ UI tokens, layout rules, safe-area policy, and component contracts are summarize
 4. 매 프레임 로직은 LÖVE 스타일 콜백으로 작성한다.
 5. 오브젝트 단위 로직은 경량 ECS로 재사용 가능하게 한다.
 
-### 앱 서페이스 정책
+### 앱 서페이스와 UI 계약
 
-브라우저 게임 표면은 **portrait-first adaptive-expand** 정책을 기본으로 한다.
+Pixi surface tokens, reference resolution, `adaptive-expand` behavior, safe-area policy, layer shape, and component contracts are canonical in the root `DESIGN.md`. This document should explain why the runtime needs those concepts, not redefine the contract.
 
-이 정책은 Unity의 `Canvas Scaler > Scale With Screen Size > Expand`와 anchor layout 조합, Phaser의 `Scale.EXPAND`에 가까운 방향이다. PixiJS에는 동일한 고수준 정책이 없으므로 런타임이 viewport resize, visible bounds, safe area, surface layers를 직접 관리하고, UI 배치는 `@pixi/layout`을 우선 사용한다.
+Runtime responsibilities remain project-owned:
 
-#### 기준
+- resize the Pixi renderer/canvas to the browser viewport
+- maintain the surface root, world/UI/debug layers, and design-space layout context
+- collect CSS safe-area insets and expose them in design-space units
+- provide scene APIs that avoid child-index assumptions
+- keep DOM development overlays outside the Pixi scene tree
 
-- 기준 해상도: `1080 x 1920`
-- 방향: portrait-first
-- canvas: viewport 전체를 채운다.
-- 레터박스: 기본 정책에서 허용하지 않는다.
-- 비율 왜곡: 허용하지 않는다.
-- 중요 콘텐츠 crop: 허용하지 않는다.
+UI composition should prefer `@pixi/layout` and semantic primitives from `src/ui`. Gameplay, world, and effect placement may still use explicit design-space coordinates when that keeps game logic clearer. Current implementation and validation status lives in `docs/pixi-status.md`.
 
-#### `adaptive-expand`
-
-```text
-referenceWidth = 1080
-referenceHeight = 1920
-
-scale = min(viewportWidth / referenceWidth, viewportHeight / referenceHeight)
-
-visibleDesignWidth = viewportWidth / scale
-visibleDesignHeight = viewportHeight / scale
-```
-
-의미:
-
-- 렌더러/canvas는 실제 viewport 전체 크기로 resize한다.
-- 게임 좌표는 기준 해상도 기반 design space를 사용한다.
-- 실제 viewport 비율이 기준 비율과 다르면 visible design bounds를 가로 또는 세로로 확장한다.
-- 중요한 게임플레이 영역과 UI는 확장된 bounds와 safe area 안에서 anchor 기반으로 재배치한다.
-- 배경과 비핵심 장식 요소만 확장 영역을 채우거나 넘칠 수 있다.
-
-```text
-┌──────────────────── actual viewport / canvas ───────────────────┐
-│ expanded area    ┌──── 1080 x 1920 reference area ────┐          │
-│                  │                                     │          │
-│                  │   gameplay-critical content          │          │
-│                  │   and UI stay visible                │          │
-│                  │                                     │          │
-│                  └─────────────────────────────────────┘          │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-#### Layout
-
-씬과 UI는 절대 viewport 픽셀에 직접 고정하지 않는다. 배치 기준은 design space, visible bounds, safe area, 그리고 `@pixi/layout`이다.
-
-기본 정책:
-
-- UI는 `@pixi/layout`과 semantic primitive를 우선한다.
-- gameplay/world/effect 오브젝트는 명시 좌표 배치를 허용한다.
-- 버튼, 라벨, 패널, 뱃지, 메뉴, 모달, HUD 그룹처럼 의미가 있는 UI는 scene-local `Graphics + Text` 조합보다 primitive로 승격한다.
-- 좌표 기반 UI가 필요한 경우 이유를 남기고, viewport/safe-area/overlap/alignment E2E를 추가한다.
-- 컴포넌트별 정렬 계약을 둔다. 예를 들어 button text는 기본적으로 수평/수직 중앙이고, HUD title이나 caption은 컴포넌트 의도에 따라 좌정렬을 허용한다.
-- design system scene의 주요 영역은 layout node로 구성해 layout debug overlay에서 경계를 확인할 수 있어야 한다.
-
-현재 구현 기준:
-
-- `createGame()`은 `1080 x 1920` reference resolution을 기준으로 `adaptive-expand` layout context를 만든다.
-- Pixi `stage` 아래에 framework-owned `surface-root`를 만들고, scale은 `surface-root`에 적용한다.
-- 씬 코드는 `stage.children[0]` 같은 Pixi tree 위치에 의존하지 않고 `ctx.layers`를 사용한다.
-- HUD, panel, row/column 같은 UI 배치는 `@pixi/layout`을 우선 사용한다.
-- `src/ui`는 semantic primitive 계층이다. 현재 button, label, panel primitive가 있고 design system scene은 이 primitive와 layout node로 주요 샘플 영역을 구성한다.
-- 직접 anchor helper는 현재 vertical slice에서 제거했다. 다시 필요해지면 scene-local 계산이 아니라 surface runtime 또는 UI primitive 계층에 추가한다.
-
-#### Safe area
-
-모바일 웹과 PWA 대응을 위해 edge-to-edge viewport를 쓰되, 중요한 UI는 safe area 밖으로 나가지 않는다.
-
-- HTML viewport meta는 `viewport-fit=cover`를 포함한다.
-- CSS `env(safe-area-inset-*)` 값을 수집한다.
-- 런타임 layout context에 safe area를 design-space 단위로 제공한다.
-- bottom/top anchored UI는 safe area inset을 기본 offset에 포함한다.
-
-#### Surface layers
-
-runtime은 모든 scene에 표준 레이어를 제공한다.
-
-```text
-app.stage
-└─ stage
-   └─ surface-root        # adaptive-expand scale 적용 대상
-      ├─ world-layer      # gameplay objects
-      ├─ ui-layer         # HUD / safe-area-aware UI
-      └─ debug-layer      # future Pixi debug visuals
-```
-
-규칙:
-
-- `ctx.layers.root`는 surface 전체의 design-space root다.
-- `ctx.layers.world`에는 gameplay 오브젝트를 배치한다.
-- `ctx.layers.ui`에는 HUD, menu, overlay 같은 플레이어가 읽고 조작하는 UI를 배치한다.
-- `ctx.layers.debug`는 Pixi 내부 debug visual을 위한 자리로 예약한다.
-- DOM 기반 개발 도구는 Pixi tree에 넣지 않고 별도 DOM overlay로 격리한다.
-- scene은 layer label이나 child index에 의존하지 않는다. 테스트와 디버그 노출만 label을 검사한다.
-
-#### Build and debug policy
+### Build and debug policy
 
 현재 GitHub Pages는 서비스 릴리즈가 아니라 공유 가능한 개발 데모다.
 
@@ -144,22 +59,7 @@ layout debug panel:
 - `DS` 버튼은 Storybook 대체용 runtime design system scene으로 이동한다.
 - Debug/E2E 관측 상태는 `window.__pixiDebug` bridge에 모은다. 현재 bridge는 `boot`, `demo`, `designSystem`, `runtime`, `layout` 상태를 노출하며 `VITE_DEMO_DEBUG=false` release build에서는 no-op이다.
 
-#### Current validation
-
-Playwright는 desktop portrait와 mobile portrait를 모두 검증한다.
-
-검증 기준:
-
-- canvas가 viewport 원점 `(0, 0)`에서 viewport 전체를 채운다.
-- visible design bounds가 최소 `1080 x 1920` 이상이다.
-- player, marker, title의 screen-space size가 최소 가독성/터치 기준을 만족한다.
-- HUD title과 marker가 겹치지 않는다.
-- `surface-root` 아래 레이어 순서가 `world-layer`, `ui-layer`, `debug-layer`다.
-- layout debug panel이 표시되고, `All / UI / World` 필터와 토글이 작동한다.
-- design system scene이 표시되고 color/type/component 샘플이 렌더링된다.
-- release build 산출물에는 debug overlay 식별 문자열이 포함되지 않는다.
-
-#### 입력과 모바일 기본 동작
+### 입력과 모바일 기본 동작
 
 게임 surface에서는 브라우저 기본 제스처가 게임 입력을 방해하지 않아야 한다.
 
@@ -168,24 +68,14 @@ Playwright는 desktop portrait와 mobile portrait를 모두 검증한다.
 - 필요 시 `contextmenu` 차단
 - long press text selection 방지
 - pointer/touch 입력은 keyboard 입력과 별도 런타임 모듈로 제공한다.
-- 현재 pointer runtime은 primary pointer 1개를 추적하고, canvas CSS 픽셀 좌표를 `adaptive-expand` design-space 좌표로 변환한다.
+- pointer runtime은 browser coordinate를 surface design-space coordinate로 변환해 scene에 제공한다.
 - scene은 viewport 픽셀을 직접 읽지 않고 `ctx.pointer`의 `isDown()`, `wasPressed()`, `wasReleased()`, `position()`을 사용한다.
-- 첫 모바일 조작 vertical slice는 `vertical-slice` scene에서 tap/click/drag 위치로 player를 이동시키는 방식으로 검증한다.
 
-#### 명시적으로 기본값에서 제외
+### 명시적으로 기본값에서 제외
 
 - `cover/crop`: 화면은 채우지만 중요한 콘텐츠가 잘릴 수 있으므로 기본 정책으로 쓰지 않는다.
 - `stretch`: 비율 왜곡이 발생하므로 쓰지 않는다.
 - `contain/fit` 단독: 중요한 콘텐츠는 보존하지만 레터박스가 생기므로 기본 정책으로 쓰지 않는다.
-
-#### Next surface work
-
-현재 vertical slice는 surface policy와 debug workflow를 검증한다. 다음 surface 작업은 실제 UI primitive가 늘어날 때 진행한다.
-
-- `@pixi/ui` 도입 여부 판단: button, slider, checkbox 같은 조작 UI가 필요해질 때 검토한다.
-- scene-independent UI primitive 계층: HUD title, button, panel 등 반복 패턴이 생길 때 추가한다.
-- pointer/touch input runtime 확장: 멀티터치, gesture, virtual stick 같은 실제 게임 입력 패턴이 필요해질 때 현재 primary pointer API 위에 추가한다.
-- visual regression: 레이아웃 회귀가 잦아지면 Playwright screenshot/pixel 기준을 강화한다.
 
 ---
 
@@ -241,24 +131,7 @@ LÖVE는 비동기 문제가 없는 게 아니라 발생할 수 없는 구조다
 
 **PixiJS 대응 전략**: 프레임워크가 `await PIXI.Assets.loadBundle()`을 내부에서 소비한 뒤 `load(ctx)`를 호출한다. 게임 코드의 `load()`는 `async`가 아니며, 이 시점에 `assets.get()`은 항상 동기로 접근 가능하다.
 
-현재 vertical slice 구현:
-
-- `Scene.assets`는 정적 배열 또는 `(ctx) => 배열`을 받는다.
-- `SceneManager.switch()`는 기존 씬을 정리한 뒤 scene asset 목록을 평가하고 `ctx.assets.load()`를 await한다.
-- 앱은 loading overlay 없이 즉시 표시되는 `boot` scene에서 시작하며, `Tap to start` 버튼 또는 Enter/Space 입력 후 `vertical-slice` scene으로 전환한다. debug panel의 `Scene`/`DS` 버튼은 boot scene에서도 동작한다.
-- scene 전환 시 기존 화면 위로 runtime-owned transition overlay가 화면 밖에서 들어오는 사선 패널과 슬래시 패턴으로 덮이고, 새 scene load 완료 후 패널이 빠져나가며 로드된 화면을 드러낸다.
-- scene 전환 요청은 `src/runtime/commandRuntime.ts`의 app command gate를 통과한다. 현재 정책은 scene switch 실행 중 추가 요청을 drop하고 accepted/ignored/request count를 runtime state에 기록한다.
-- debug panel의 `DS` 버튼은 Storybook 대신 Pixi runtime 안에서 토큰, 타입, 컴포넌트, 모션 샘플을 확인하는 design system scene으로 전환한다. 이 씬은 실제 adaptive-expand surface, safe area, Pixi layout, E2E 환경에서 검증하며 주요 영역은 `@pixi/layout` 노드로 구성해 layout debug overlay에서 경계를 확인할 수 있어야 한다.
-- button 같은 semantic UI는 scene-local `Graphics + Text` 조합보다 `src/ui` primitive를 우선한다. 버튼 primitive의 기본 계약은 text horizontal/vertical center 정렬이며, design system E2E가 center delta를 검증한다.
-- layout debug panel은 기본 folded 상태로 시작한다. fold/filter/drag position은 `localStorage`에 저장하고, header drag로 위치를 조정할 수 있으며, 패널에는 현재 scene 이름을 표시한다.
-- loading overlay는 progress bar와 GSAP/PixiPlugin 기반 원형 loop animation을 포함하고, 연출 확인을 위해 500-1000ms 사이의 랜덤 최소 유지 시간을 갖는다.
-- motion library는 `src/runtime/motion.ts` 어댑터에 격리한다. 현재 transition은 PixiPlugin으로 degree rotation, scale, skew, tint를 실험 적용한다. filter 연출은 PixiJS filter 인스턴스를 직접 만든 뒤 GSAP core로 tween한다. PixiPlugin의 filter 편의 경로는 Pixi v8 조합에서 안정성이 확인되지 않았으므로 사용하지 않는다.
-- 데모 빌드는 코드 스플리팅 골격을 사용한다. 현재 chunk 경계는 entry `index`, `pixi-vendor`, `motion-vendor`, `vendor`, debug-only dynamic chunk다.
-- Vite `chunkSizeWarningLimit`은 1100kB로 명시한다. `bun run check:bundle`은 total JS 1250kB, total gzip 390kB, max chunk 1050kB, entry 120kB 예산을 검증한다.
-- `window.__pixiDebug.runtime`은 E2E용으로 app mode, command counts, loading 상태, loading phase, scene switch 수, loading overlay 표시 수, 샘플링된 최소 loading 시간, 마지막 loading duration, progress, overlay alpha와 최대 alpha, 현재/최대 transition panel 수를 노출한다.
-- scene `load(ctx)`는 async가 아니며, 이 시점부터 `ctx.assets.get(source)`로 동기 접근한다.
-- `AssetRuntime`은 Pixi `Assets`를 감싸며, 준비되지 않은 asset을 `get()`하면 명시적으로 에러를 낸다.
-- 첫 검증 asset은 Vite import URL을 사용한다. Pages의 하위 경로 배포를 피하려고 `public` 절대 경로 대신 번들러가 관리하는 `src/assets/*` import를 쓴다.
+현재 구현 상태와 검증 기준은 `docs/pixi-status.md`에 둔다. 이 문서는 async 흡수, scene lifecycle, asset contract의 장기 설계 근거만 소유한다.
 
 ### LÖVE의 레벨 로드 패턴
 

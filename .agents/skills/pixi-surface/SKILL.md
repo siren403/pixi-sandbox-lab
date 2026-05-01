@@ -9,44 +9,31 @@ Use this skill for PixiJS browser game surface work: rendering policy, responsiv
 
 ## Baseline
 
-The current project policy is in `docs/pixi-stack.md`.
-
-Default surface policy:
-
-- Reference resolution: `1080 x 1920`
-- Orientation: portrait-first
-- Scale mode: `adaptive-expand`
-- Canvas: fills the viewport, no letterbox
-- Crop: gameplay-critical content and UI must not be cropped
-- Layout: anchor-based, safe-area aware
-- Validation: desktop portrait and mobile portrait Playwright coverage
-
-`adaptive-expand`:
-
-```text
-scale = min(viewportWidth / 1080, viewportHeight / 1920)
-visibleDesignWidth = viewportWidth / scale
-visibleDesignHeight = viewportHeight / scale
-```
+The current Pixi surface contract is in the root `DESIGN.md`. Read it before planning or reviewing surface work. Use `docs/pixi-stack.md` for runtime architecture rationale, and `docs/pixi-status.md` for current implementation and validation status.
 
 ## Responsibility Split
 
-Build or preserve these project-owned parts:
+Build or preserve these project-owned runtime parts:
 
-- surface policy and reference resolution
 - viewport resize and renderer resize
 - safe-area collection and design-space conversion
 - visible bounds calculation
-- design token schema
 - game-specific layout context
 - viewport E2E expectations
+
+Keep these contract changes in `DESIGN.md`:
+
+- surface policy and reference resolution
+- design token schema
+- component sizing, alignment, and visual states
+- safe-area and layout placement rules
 
 Prefer Pixi ecosystem packages for these parts when they fit:
 
 - `@pixi/layout`: flex-like UI layout, padding, gap, percentage sizing, panels, rows, columns
 - `@pixi/ui`: buttons, sliders, checkboxes, progress, scroll/list, inputs
 
-Do not assume `@pixi/layout` replaces the surface policy. It should operate inside the project-owned visible bounds and safe-area layout context.
+Do not assume `@pixi/layout` replaces the surface contract. It should operate inside the project-owned visible bounds and safe-area layout context.
 
 ## Design System Shape
 

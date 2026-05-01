@@ -19,11 +19,13 @@ The current demonstration project is a PixiJS-based rapid game prototyping stack
 - `.codex/agents/pixi-surface-architect.toml` - Codex custom agent for PixiJS app surface architecture
 - `.mise/tasks/checkpoint` - checkpoint state manager for context-boundary continuity
 - `.mise/tasks/validate-skills` - project-scoped Codex skill validation task
+- `DESIGN.md` - canonical PixiJS surface design-system contract
 - `docs/harness-task-boundary.md` - task planning, start, end, audit follow-up, and dirty-hook workflow
 - `docs/harness.md` - current PromptOps/yolobox agent harness notes
 - `docs/harness-inventory.md` - registry of current harness components and discovery paths
 - `docs/harness-change-protocol.md` - required process for adding or changing harness specs
 - `docs/pixi-stack.md` - PixiJS prototype framework research and design notes
+- `docs/pixi-status.md` - current PixiJS demo implementation and validation status
 
 ## Current Focus
 
@@ -32,16 +34,16 @@ The current demonstration project is a PixiJS-based rapid game prototyping stack
 3. Add harness, skill, and MCP support only when real project work creates the need.
 4. Split transitional notes into clearer domain documents as the workflow matures.
 
-## First Milestone
+## Current Demo Status
 
-Create a runnable browser demo inside the sandbox:
+The first runnable browser demo exists and now serves as the active validation target:
 
-- TypeScript, Vite, and PixiJS scaffold
-- small `createGame()` / `scene()` API sketch
-- boot scene with a rendered object
-- per-frame `update(dt)`
-- keyboard-controlled movement
-- notes on any sandbox networking or setup details discovered
+- TypeScript, Vite, Bun, and PixiJS scaffold
+- `createGame()` / scene runtime sketch
+- boot scene, vertical slice scene, and runtime design-system scene
+- pointer and keyboard input coverage
+- adaptive Pixi surface, semantic UI primitives, and layout debug tooling
+- headless Playwright validation for desktop and mobile portrait viewports
 
 ## PixiJS Demo
 
@@ -76,4 +78,4 @@ https://siren403.github.io/pixi-sandbox-lab/
 
 The repository must have Pages configured to deploy from GitHub Actions. Pushing to `main` runs `.github/workflows/pages.yml`, builds with Bun, and deploys `dist/`.
 
-Before expanding runtime features, define and implement the PixiJS app surface policy from `docs/pixi-stack.md`: `1080x1920` portrait-first `adaptive-expand`, safe-area aware anchor layout, and desktop/mobile viewport E2E coverage.
+Use `DESIGN.md` for the PixiJS app surface contract, `docs/pixi-stack.md` for runtime architecture rationale, and `docs/pixi-status.md` for the current implementation and validation state.

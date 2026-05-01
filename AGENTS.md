@@ -26,6 +26,7 @@ The current demonstration domain is a fast PixiJS-based game prototyping stack i
 - `docs/harness-change-protocol.md` defines the required process for adding or changing harness specs.
 - `DESIGN.md` is the project design-system source of truth for PixiJS surface tokens, layout policy, component contracts, and agent-readable visual rules.
 - `docs/pixi-stack.md` captures the current PixiJS prototype framework research and design direction.
+- `docs/pixi-status.md` tracks the current PixiJS demo implementation and validation state.
 - These documents came from different phases. Treat them as source material that will keep being refined as the project direction settles.
 - Do not assume the repository is only infrastructure or only a game framework. The project intentionally combines both:
   - cloud sandbox usage and agent harness development
@@ -58,8 +59,8 @@ The PixiJS prototype framework should aim for:
 - a small scene manager, input layer, asset cache, and optional lightweight ECS
 - incremental implementation through runnable vertical slices
 
-Follow `docs/pixi-stack.md` for existing framework design intent, but validate choices through implementation.
-For PixiJS UI or surface work, read `DESIGN.md` first and keep token, layout, safe-area, and component contract changes synchronized with it.
+Follow `docs/pixi-stack.md` for framework architecture and design rationale, but validate choices through implementation.
+For PixiJS UI or surface work, read `DESIGN.md` first. Keep token, layout, safe-area, and component contract changes synchronized there, and keep current implementation/validation status in `docs/pixi-status.md`.
 
 ## Documentation Direction
 
@@ -72,11 +73,12 @@ When documentation is updated:
 - record sandbox lessons only after they are observed or implemented
 - avoid rewriting history into certainty before the workflow has been tested
 
-Good future documents might include:
+Current domain documents:
 
 - `docs/sandbox.md` for cloud sandbox operation notes
 - `docs/harness.md` for agent, skill, and MCP setup
 - `docs/pixi-stack.md` for the prototype framework design
+- `docs/pixi-status.md` for current demo implementation and validation status
 - `docs/decisions/` for important tradeoffs and decisions
 
 ## Implementation Principles
@@ -91,16 +93,16 @@ Good future documents might include:
 - Keep changes scoped and document why new operational assumptions are introduced.
 - Do not overwrite unrelated user changes or generated state.
 
-## First Milestone
+## Current Demo Status
 
-Create a runnable browser demo that proves the PixiJS stack inside the cloud sandbox:
+The first runnable browser demo exists and is now used as the active sandbox validation target:
 
-- TypeScript/Vite/PixiJS project scaffold
-- `createGame()` and `scene()` API sketch
-- boot scene with a rendered object
-- per-frame `scene.update(dt)`
-- keyboard input moving an object
-- local dev server reachable from the sandbox environment
-- notes on any sandbox-specific setup or networking behavior discovered
+- TypeScript, Vite, Bun, and PixiJS scaffold
+- `createGame()` / scene runtime sketch
+- boot scene, vertical slice scene, and runtime design-system scene
+- per-frame scene update and pointer/keyboard input coverage
+- adaptive Pixi surface, semantic UI primitives, and layout debug tooling
+- headless Playwright validation for desktop and mobile portrait viewports
+- GitHub Pages-oriented demo build path
 
-This milestone should produce both working code and a short documentation update that captures what was learned about using the cloud sandbox for this kind of project.
+Use `docs/pixi-status.md` for the latest implementation and validation details.

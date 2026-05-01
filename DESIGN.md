@@ -90,6 +90,8 @@ components:
 
 This design system describes a PixiJS canvas game surface, not a DOM website. It exists so agents can preserve the current visual and layout rules without guessing. The product feeling is clean, readable, and prototype-friendly: high-contrast UI, direct touch targets, visible motion feedback, and minimal ornament.
 
+This file is the canonical source of truth for Pixi surface tokens, layout policy, safe-area behavior, component contracts, and agent-readable visual rules. Other repository documents may summarize or link to these contracts, but should not redefine their formulas, thresholds, or placement rules.
+
 The surface is portrait-first with a `1080 x 1920` reference resolution. Canvas fills the browser viewport. The runtime uses `adaptive-expand` scaling: it scales the reference design by the smaller viewport ratio, then expands the visible design bounds in the other axis. Gameplay-critical content and UI must not be cropped.
 
 ## Colors

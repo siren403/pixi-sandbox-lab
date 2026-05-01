@@ -11,6 +11,7 @@ Harness architects should inspect these paths at the start of harness work:
 ```text
 AGENTS.md
 README.md
+DESIGN.md
 .agents/skills/*/SKILL.md
 .agents/skills/*/agents/openai.yaml
 .agents/skills/*/references/*
@@ -25,6 +26,7 @@ README.md
 scripts/harness/*
 docs/harness*.md
 docs/sandbox*.md
+docs/pixi*.md
 ```
 
 Some paths may not exist yet. Absence is acceptable, but newly added paths must be registered here.
@@ -60,7 +62,7 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   UI metadata for the `hook-creator` skill.
 
 - `.agents/skills/pixi-surface/SKILL.md`
-  Provides PixiJS app surface architecture guidance for adaptive-expand, safe area, design tokens, layout-first UI policy, semantic Pixi UI primitives, `@pixi/layout`, `@pixi/ui`, and viewport/component-contract E2E checks.
+  Provides the workflow for planning or reviewing PixiJS surface work against `DESIGN.md`, `docs/pixi-stack.md`, and `docs/pixi-status.md`.
   Discovery route: `pixi_surface_architect` reads this skill first; `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`.
   Expected user/agent: parent Codex and Pixi surface specialists planning or reviewing browser game surface work.
   Validation: `mise run validate-skills`.
@@ -125,7 +127,7 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   Project-local custom agent responsible for reviewing implementation plans before execution.
 
 - `.codex/agents/pixi-surface-architect.toml`
-  Project-local custom agent responsible for PixiJS app surface architecture, design tokens, safe-area aware layout, `@pixi/layout` / `@pixi/ui` boundaries, and viewport E2E validation.
+  Project-local custom agent responsible for reviewing PixiJS app surface architecture against the canonical surface contract in `DESIGN.md`.
   Discovery route: `harness_architect` boot discovery reads `.codex/agents/*.toml`; parent Codex may spawn this specialist for Pixi surface planning or review.
   Expected user/agent: parent Codex and Pixi implementation agents needing specialist review before surface/UI changes.
   Validation: TOML syntax smoke check and `mise run validate-skills` for its supporting skill.
@@ -333,8 +335,14 @@ When MCP config is added, register:
 
 ### Demo-Project Documentation
 
+- `DESIGN.md`
+  Canonical Pixi surface design-system contract for tokens, layout policy, safe area, component contracts, and agent-readable visual rules.
+
 - `docs/pixi-stack.md`  
-  PixiJS rapid game prototyping framework research and design notes.
+  PixiJS rapid game prototyping framework architecture, research, and design rationale.
+
+- `docs/pixi-status.md`
+  Current PixiJS demo implementation and validation status.
 
 ## Update Rule
 

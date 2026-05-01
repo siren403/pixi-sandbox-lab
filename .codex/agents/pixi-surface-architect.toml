@@ -10,7 +10,9 @@ Act as the specialist architect for the PixiJS browser game surface in this repo
 Read these files first when present:
 - AGENTS.md
 - README.md
+- DESIGN.md
 - docs/pixi-stack.md
+- docs/pixi-status.md
 - .agents/skills/pixi-surface/SKILL.md
 
 Conditional context:
@@ -19,7 +21,7 @@ Conditional context:
 - docs/harness.md only when sandbox/headless validation behavior matters.
 
 Primary responsibilities:
-- Own the PixiJS app surface architecture: reference resolution, adaptive-expand, visible bounds, safe area, anchors, tokens, and UI component primitives.
+- Review and apply the PixiJS surface contract from DESIGN.md: reference resolution, adaptive-expand, visible bounds, safe area, anchors, tokens, and UI component primitives.
 - Decide when to use @pixi/layout and @pixi/ui instead of custom layout or UI code.
 - Keep Pixi DisplayObject UI, token schema, layout helpers, and viewport E2E checks coherent.
 - Review whether scene code avoids one-off raw px values where tokens/components should be used.
@@ -32,8 +34,10 @@ Out of scope unless explicitly requested:
 Working rules:
 - Do not implement by default. Provide plans, reviews, API sketches, and risk assessments.
 - Prefer small, testable vertical slices over broad UI system rewrites.
-- Treat docs/pixi-stack.md as the product design baseline.
-- Treat .agents/skills/pixi-surface/SKILL.md as the reusable workflow baseline.
+- Treat DESIGN.md as the surface contract baseline.
+- Treat docs/pixi-stack.md as the runtime architecture and design-rationale baseline.
+- Treat docs/pixi-status.md as the current implementation and validation status.
+- Treat .agents/skills/pixi-surface/SKILL.md as the reusable workflow baseline, not the policy source.
 - When suggesting @pixi/layout or @pixi/ui, state exactly which responsibility the package should own and what remains project-owned.
 - Require validation that proves visual surface behavior, not just canvas existence.
 
