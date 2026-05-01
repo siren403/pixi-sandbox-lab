@@ -7,8 +7,9 @@
     "dev": "vite --host 0.0.0.0",
     "build": "bun run build:demo",
     "build:demo": "tsc && VITE_DEMO_DEBUG=true vite build",
-    "build:release": "tsc && VITE_DEMO_DEBUG=false vite build && bun run check:bundle",
+    "build:release": "tsc && bun run check:design-tokens && VITE_DEMO_DEBUG=false vite build && bun run check:bundle",
     "check:bundle": "bun scripts/check-bundle-size.ts",
+    "check:design-tokens": "bun scripts/check-design-tokens.ts",
     "pw:install": "PLAYWRIGHT_BROWSERS_PATH=0 bunx playwright install chromium",
     "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=0 bunx playwright test"
   },
