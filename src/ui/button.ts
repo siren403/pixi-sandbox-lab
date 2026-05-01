@@ -1,5 +1,6 @@
 import { Container, Graphics, Text } from "pixi.js";
-import { surfaceTheme, tokenValue } from "../runtime/surface";
+import { tokenValue } from "../runtime/surface";
+import { surfaceTheme } from "./tokens";
 import type { SurfaceLayout } from "../runtime/scene";
 
 type TokenSize = { design: number; minScreenPx?: number; maxScreenPx?: number };

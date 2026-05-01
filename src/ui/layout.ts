@@ -1,6 +1,7 @@
 import type { Container } from "pixi.js";
 import type { SurfaceLayout } from "../runtime/scene";
-import { surfaceTheme, tokenValue } from "../runtime/surface";
+import { tokenValue } from "../runtime/surface";
+import { surfaceTheme } from "./tokens";
 
 export type SafeAreaFrame = {
   x: number;

@@ -9,7 +9,8 @@ import {
   stopMotion,
   type MotionAnimation,
 } from "./motion";
-import { surfaceTheme, tokenValue } from "./surface";
+import { tokenValue } from "./surface";
+import { surfaceTheme } from "../ui/tokens";
 import type { SceneContext } from "./scene";
 import { setRuntimeDebugState } from "../debug/stateBridge";
 

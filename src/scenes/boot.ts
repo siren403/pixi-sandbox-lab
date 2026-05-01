@@ -1,6 +1,7 @@
 import { Container, Graphics, Sprite, type Texture } from "pixi.js";
 import demoOrbUrl from "../assets/demo-orb.svg";
-import { screenValue, surfaceTheme, tokenValue } from "../runtime/surface";
+import { screenValue, tokenValue } from "../runtime/surface";
+import { surfaceTheme } from "../ui/tokens";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
 import { createButton } from "../ui/button";

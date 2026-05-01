@@ -12,6 +12,7 @@ This document tracks the current implementation and validation state for the Pix
 - Scene switch commands go through `src/runtime/commandRuntime.ts`; duplicate scene switch requests are dropped while a switch is active and counts are exposed through runtime debug state.
 - The design-system scene renders tokens, type, components, and motion samples inside the Pixi runtime. Major sample regions use `@pixi/layout` nodes so layout debug bounds can inspect them.
 - Semantic UI uses `src/ui` primitives for repeated components such as button, label, and panel. Button text is horizontally and vertically centered and covered by E2E checks.
+- Runtime UI code imports the shared token object from `src/ui/tokens.ts`; `src/runtime/surface.ts` owns only token scaling helpers.
 - The layout debug panel starts folded, stores fold/filter/drag position in `localStorage`, can be dragged by its header, and shows the current scene name.
 - The loading overlay includes a progress bar and GSAP/PixiPlugin-based loop animation with a randomized minimum display time between 500ms and 1000ms.
 - Motion code is isolated behind `src/runtime/motion.ts`. PixiPlugin is used for supported display-object properties, while filter animation uses Pixi filter instances plus GSAP core.
