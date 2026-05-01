@@ -9,6 +9,7 @@ import {
   stopMotion,
   type MotionAnimation,
 } from "./motion";
+import { surfaceTheme, tokenValue } from "./surface";
 import type { SceneContext } from "./scene";
 import { setRuntimeDebugState } from "../debug/stateBridge";
 
@@ -113,39 +114,39 @@ function createTransitionRoot(ctx: SceneContext): Container {
     root.addChild(panel);
   });
 
-  const slashA = createSlash(width * 0.82, 7 / ctx.layout.scale, "#67e8f9");
+  const slashA = createSlash(width * 0.82, tokenValue(ctx.layout, surfaceTheme.components.playerStroke.size), surfaceTheme.color.actionAccent);
   slashA.label = "transition-slash-a";
   slashA.rotation = angle;
   slashA.position.set(-width * 0.55, height * 0.32);
 
-  const slashB = createSlash(width * 0.62, 5 / ctx.layout.scale, "#facc15");
+  const slashB = createSlash(width * 0.62, tokenValue(ctx.layout, surfaceTheme.components.loadingAccent.size), surfaceTheme.color.warning);
   slashB.label = "transition-slash-b";
   slashB.rotation = angle;
   slashB.position.set(-width * 0.72, height * 0.67);
 
-  const loopRadius = Math.max(54, 92 / ctx.layout.scale);
+  const loopRadius = tokenValue(ctx.layout, surfaceTheme.components.inputTarget.size);
   const loop = new Graphics()
     .arc(0, 0, loopRadius / 2, -Math.PI * 0.15, Math.PI * 1.28)
-    .stroke({ color: "#38bdf8", width: Math.max(4, 7 / ctx.layout.scale), alpha: 0.96 });
+    .stroke({ color: surfaceTheme.color.motion, width: tokenValue(ctx.layout, surfaceTheme.components.playerStroke.size), alpha: 0.96 });
   loop.label = "loading-loop";
   loop.position.set(width / 2, height * 0.43);
 
   const loopInner = new Graphics()
     .arc(0, 0, loopRadius / 3, Math.PI * 0.25, Math.PI * 1.7)
-    .stroke({ color: "#facc15", width: Math.max(3, 5 / ctx.layout.scale), alpha: 0.9 });
+    .stroke({ color: surfaceTheme.color.warning, width: tokenValue(ctx.layout, surfaceTheme.components.actionHighlight.size), alpha: 0.9 });
   loopInner.label = "loading-loop-inner";
   loopInner.position.copyFrom(loop.position);
 
   const dotOrbitRadius = loopRadius * 0.34;
   const loopDot = new Container({ label: "loading-loop-dot" });
   const dot = new Graphics()
-    .circle(dotOrbitRadius, 0, Math.max(4, 7 / ctx.layout.scale))
+    .circle(dotOrbitRadius, 0, tokenValue(ctx.layout, surfaceTheme.components.loadingAccent.size) / 2)
     .fill("#f8fafc");
   loopDot.addChild(dot);
   loopDot.position.copyFrom(loop.position);
 
   const trackWidth = Math.min(width * 0.54, 520 / ctx.layout.scale);
-  const trackHeight = Math.max(10 / ctx.layout.scale, 18);
+  const trackHeight = tokenValue(ctx.layout, surfaceTheme.components.loadingAccent.size);
   const track = new Graphics()
     .roundRect(-trackWidth / 2, -trackHeight / 2, trackWidth, trackHeight, trackHeight / 2)
     .fill({ color: 0x334155, alpha: 0.9 });

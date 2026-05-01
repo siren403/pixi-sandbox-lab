@@ -1,5 +1,5 @@
 import { Container, Graphics, Text } from "pixi.js";
-import { tokenValue } from "../runtime/surface";
+import { surfaceTheme, tokenValue } from "../runtime/surface";
 import type { SurfaceLayout } from "../runtime/scene";
 
 type TokenSize = { design: number; minScreenPx?: number; maxScreenPx?: number };
@@ -35,14 +35,14 @@ export function createButton({
   layout,
   fontSize,
   fill = 0x0f766e,
-  stroke = "#67e8f9",
-  textColor = "#eef2f6",
+  stroke = surfaceTheme.color.actionAccent,
+  textColor = surfaceTheme.color.text,
 }: ButtonOptions): ButtonPrimitive {
   const button = new Container({ label: "button" }) as ButtonPrimitive;
   const background = new Graphics()
-    .roundRect(0, 0, width, height, 8 / layout.scale)
+    .roundRect(0, 0, width, height, tokenValue(layout, surfaceTheme.components.buttonPrimary.rounded))
     .fill({ color: fill, alpha: 0.94 })
-    .stroke({ color: stroke, width: Math.max(2, 3 / layout.scale) });
+    .stroke({ color: stroke, width: tokenValue(layout, surfaceTheme.components.actionHighlight.size) });
   background.label = "button-background";
 
   const labelText = new Text({

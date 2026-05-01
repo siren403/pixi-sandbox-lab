@@ -36,6 +36,7 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(boot?.scene).toBe("boot");
   expect(boot?.promptBounds.width).toBeGreaterThan(0);
   expect(boot?.buttonBounds.width).toBeGreaterThan(boot?.promptBounds.width ?? 0);
+  expect(boot?.buttonBounds.height).toBeGreaterThanOrEqual(48);
   expect(boot?.layoutPolicy).toBe("safe-area-frame");
   expect(boot?.layoutNodes).toBeGreaterThanOrEqual(3);
   expect(boot?.buttonCenterDeltaY).toBeLessThanOrEqual(1.5);
@@ -217,6 +218,9 @@ test("renders the PixiJS demo with assets and input", async ({
   expect(designSystemState?.typeSamples).toBeGreaterThanOrEqual(3);
   expect(designSystemState?.componentSamples).toBeGreaterThanOrEqual(2);
   expect(designSystemState?.safeAreaSamples).toBeGreaterThanOrEqual(2);
+  expect(designSystemState?.buttonScreenHeight).toBeGreaterThanOrEqual(48);
+  expect(designSystemState?.inputTargetScreenSize).toBeGreaterThanOrEqual(44);
+  expect(designSystemState?.markerScreenSize).toBeGreaterThanOrEqual(20);
   expect(designSystemState?.buttonCenterDeltaY).toBeLessThanOrEqual(1.5);
   expect(designSystemState?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
   await expect

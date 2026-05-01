@@ -13,13 +13,13 @@ export type SafeAreaFrame = {
 export type UiLayoutPolicy = "safe-area-frame" | "world-coordinate";
 
 export function getSafeAreaFrame(layout: SurfaceLayout, margin = tokenValue(layout, surfaceTheme.spacing.screen)): SafeAreaFrame {
-  const x = layout.referenceX + layout.safeArea.left + margin;
-  const y = layout.referenceY + layout.safeArea.top + margin;
+  const x = layout.safeArea.left + margin;
+  const y = layout.safeArea.top + margin;
   return {
     x,
     y,
-    width: layout.referenceWidth - layout.safeArea.left - layout.safeArea.right - margin * 2,
-    height: layout.referenceHeight - layout.safeArea.top - layout.safeArea.bottom - margin * 2,
+    width: layout.visibleWidth - layout.safeArea.left - layout.safeArea.right - margin * 2,
+    height: layout.visibleHeight - layout.safeArea.top - layout.safeArea.bottom - margin * 2,
     margin,
   };
 }

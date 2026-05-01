@@ -36,6 +36,7 @@ Current checks include:
 - layout debug panel appears and its bounds/filter toggles work
 - design-system scene renders color, type, and component samples
 - button label center delta stays within contract
+- button, input-target, and marker component sizes meet their screen-space token contracts
 - release build output does not contain debug overlay identifiers
 
 ## Near-Term Surface Work

@@ -398,11 +398,11 @@ function createAssetOrb(texture: Texture, layout: SurfaceLayout, xRatio: number,
 }
 
 function createInputTarget(layout: SurfaceLayout): Graphics {
-  const radius = tokenValue(layout, surfaceTheme.size.player) * 0.58;
-  const stroke = Math.max(3, tokenValue(layout, surfaceTheme.size.playerStroke) * 0.75);
+  const radius = tokenValue(layout, surfaceTheme.components.inputTarget.size) / 2;
+  const stroke = tokenValue(layout, surfaceTheme.components.actionHighlight.size);
   const target = new Graphics()
     .circle(0, 0, radius)
-    .stroke({ color: "#38bdf8", width: stroke, alpha: 0.84 })
+    .stroke({ color: surfaceTheme.color.motion, width: stroke, alpha: 0.84 })
     .moveTo(-radius * 1.35, 0)
     .lineTo(-radius * 0.72, 0)
     .moveTo(radius * 0.72, 0)
@@ -411,7 +411,7 @@ function createInputTarget(layout: SurfaceLayout): Graphics {
     .lineTo(0, -radius * 0.72)
     .moveTo(0, radius * 0.72)
     .lineTo(0, radius * 1.35)
-    .stroke({ color: "#facc15", width: stroke * 0.55, alpha: 0.78 });
+    .stroke({ color: surfaceTheme.color.warning, width: Math.max(1, stroke * 0.55), alpha: 0.78 });
   target.label = "input-target";
   target.alpha = 0;
   return target;
@@ -530,8 +530,8 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
     surfaceTheme.color.playerStroke,
     surfaceTheme.color.marker,
     surfaceTheme.color.text,
-    "#38bdf8",
-    "#facc15",
+    surfaceTheme.color.motion,
+    surfaceTheme.color.warning,
   ];
   const swatchSize = tokenValue(layout, { design: 104, minScreenPx: 44, maxScreenPx: 70 });
   const swatchGap = margin * 0.42;
@@ -605,9 +605,9 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
   root.addChild(typeSection);
 
   const buttonWidth = panelWidth * 0.38;
-  const buttonHeight = tokenValue(layout, { design: 92, minScreenPx: 48, maxScreenPx: 64 });
+  const buttonHeight = tokenValue(layout, surfaceTheme.components.buttonPrimary.height);
   const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
-  const motionSize = tokenValue(layout, surfaceTheme.size.player) * 1.6;
+  const motionSize = tokenValue(layout, surfaceTheme.components.inputTarget.size);
   const componentGap = margin;
   const componentSection = createPanel({
     layout,
@@ -639,7 +639,7 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
     width: buttonWidth,
     height: buttonHeight,
     layout,
-    fontSize: { design: 34, minScreenPx: 18, maxScreenPx: 26 },
+    fontSize: surfaceTheme.components.buttonPrimary.typography,
     textColor: surfaceTheme.color.text,
   });
   button.label = "ds-component-sample";
@@ -724,6 +724,9 @@ function syncDesignSystemState(layout: SurfaceLayout, stage: Container): void {
     typeSamples: countChildrenByLabel(stage, "ds-type-sample"),
     componentSamples: countChildrenByLabel(stage, "ds-component-sample"),
     safeAreaSamples: countChildrenByLabel(stage, "ds-safe-area-control"),
+    buttonScreenHeight: screenValue(layout, surfaceTheme.components.buttonPrimary.height),
+    inputTargetScreenSize: screenValue(layout, surfaceTheme.components.inputTarget.size),
+    markerScreenSize: screenValue(layout, surfaceTheme.components.marker.size),
     buttonCenterDeltaY: measureButtonCenterDeltaY(stage),
     layerLabels: stage.children.map((child) => child.label ?? ""),
     rendered: layout.visibleWidth > 0,

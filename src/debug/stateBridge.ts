@@ -43,6 +43,9 @@ export type PixiDesignSystemDebugState = {
   typeSamples: number;
   componentSamples: number;
   safeAreaSamples: number;
+  buttonScreenHeight: number;
+  inputTargetScreenSize: number;
+  markerScreenSize: number;
   buttonCenterDeltaY: number;
   layerLabels: string[];
   rendered: boolean;

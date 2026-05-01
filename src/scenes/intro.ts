@@ -67,7 +67,7 @@ function renderIntro(app: { renderer: { layout: { update: (container: Container)
   backdrop.label = "intro-backdrop";
 
   const menu = new Container({ label: "intro-menu" });
-  const gap = tokenValue(layout, { design: 36, minScreenPx: 18, maxScreenPx: 32 });
+  const gap = tokenValue(layout, surfaceTheme.spacing.md);
   configureSafeAreaColumn(menu, layout, {
     gap,
     alignItems: "center",
@@ -77,7 +77,7 @@ function renderIntro(app: { renderer: { layout: { update: (container: Container)
   const title = createLabel({
     text: "Pixi Sandbox",
     layout,
-    fontSize: { design: 92, minScreenPx: 34, maxScreenPx: 60 },
+    fontSize: surfaceTheme.typography.display,
     color: surfaceTheme.color.text,
     weight: "700",
     label: "intro-title",
@@ -89,16 +89,16 @@ function renderIntro(app: { renderer: { layout: { update: (container: Container)
   };
 
   const buttonWidth = Math.min(layout.visibleWidth * 0.58, 520 / layout.scale);
-  const buttonHeight = Math.max(86, 48 / layout.scale);
+  const buttonHeight = tokenValue(layout, surfaceTheme.components.buttonPrimary.height);
   const button = createButton({
     text: "Tap to start",
     width: buttonWidth,
     height: buttonHeight,
     layout,
-    fontSize: { design: 54, minScreenPx: 24, maxScreenPx: 40 },
+    fontSize: surfaceTheme.components.buttonPrimary.typography,
     fill: 0x0f766e,
-    stroke: "#67e8f9",
-    textColor: "#7dd3fc",
+    stroke: surfaceTheme.color.actionAccent,
+    textColor: surfaceTheme.color.text,
   });
   button.label = "tap-start-button";
   button.labelText.label = "intro-prompt";
