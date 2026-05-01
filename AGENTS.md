@@ -23,6 +23,7 @@ The current demonstration domain is a fast PixiJS-based game prototyping stack i
 - `docs/harness.md` documents the current PromptOps/yolobox agent harness and sandbox launch workflow.
 - `docs/harness-inventory.md` registers harness components and discovery paths.
 - `docs/harness-change-protocol.md` defines the required process for adding or changing harness specs.
+- `DESIGN.md` is the project design-system source of truth for PixiJS surface tokens, layout policy, component contracts, and agent-readable visual rules.
 - `docs/pixi-stack.md` captures the current PixiJS prototype framework research and design direction.
 - These documents came from different phases. Treat them as source material that will keep being refined as the project direction settles.
 - Do not assume the repository is only infrastructure or only a game framework. The project intentionally combines both:
@@ -57,6 +58,7 @@ The PixiJS prototype framework should aim for:
 - incremental implementation through runnable vertical slices
 
 Follow `docs/pixi-stack.md` for existing framework design intent, but validate choices through implementation.
+For PixiJS UI or surface work, read `DESIGN.md` first and keep token, layout, safe-area, and component contract changes synchronized with it.
 
 ## Documentation Direction
 
