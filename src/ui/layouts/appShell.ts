@@ -3,7 +3,6 @@ import type { SurfaceLayout } from "../../runtime/scene";
 import { tokenValue } from "../../runtime/surface";
 import { createButton, type ButtonPrimitive } from "../button";
 import { createLabel } from "../label";
-import { getSafeAreaFrame } from "../layout";
 import { surfaceTheme } from "../tokens";
 
 export type AppShellSheet = "none" | "controls" | "debug";
@@ -53,7 +52,7 @@ export function createAppShell(
   layout: SurfaceLayout,
   options: AppShellOptions,
 ): AppShell {
-  const safeFrame = getSafeAreaFrame(layout);
+  const safeFrame = getScaffoldFrame(layout);
   const gap = tokenValue(layout, surfaceTheme.spacing.sm);
   const topBarHeight = tokenValue(layout, { design: 96, minScreenPx: 52 });
   const bottomBarHeight = tokenValue(layout, { design: 104, minScreenPx: 56 });
@@ -127,6 +126,15 @@ export function createAppShell(
   return shell;
 }
 
+function getScaffoldFrame(layout: SurfaceLayout): RectFrame {
+  return {
+    x: layout.safeArea.left,
+    y: layout.safeArea.top,
+    width: layout.visibleWidth - layout.safeArea.left - layout.safeArea.right,
+    height: layout.visibleHeight - layout.safeArea.top - layout.safeArea.bottom,
+  };
+}
+
 function createTopBar(
   layout: SurfaceLayout,
   frame: RectFrame,
@@ -147,8 +155,8 @@ function createTopBar(
   };
 
   const background = new Graphics()
-    .roundRect(0, 0, frame.width, frame.height, tokenValue(layout, surfaceTheme.rounded.md))
-    .fill({ color: 0x0b1220, alpha: 0.78 })
+    .rect(0, 0, frame.width, frame.height)
+    .fill({ color: 0x0b1220, alpha: 1 })
     .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.24 });
   background.label = "top-bar-background";
 
@@ -212,8 +220,8 @@ function createBottomBar(layout: SurfaceLayout, frame: RectFrame, buttons: AppSh
     gap,
   };
   const background = new Graphics()
-    .roundRect(0, 0, frame.width, frame.height, tokenValue(layout, surfaceTheme.rounded.md))
-    .fill({ color: 0x0b1220, alpha: 0.86 })
+    .rect(0, 0, frame.width, frame.height)
+    .fill({ color: 0x0b1220, alpha: 1 })
     .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.24 });
   background.label = "bottom-bar-background";
 
@@ -257,8 +265,8 @@ function createBottomSheetHost(
   const sidePadding = tokenValue(layout, surfaceTheme.spacing.sm);
   const sectionGap = tokenValue(layout, surfaceTheme.spacing.xs);
   const background = new Graphics()
-    .roundRect(0, 0, frame.width, frame.height, tokenValue(layout, surfaceTheme.rounded.md))
-    .fill({ color: 0x0b1220, alpha: 0.96 })
+    .roundRect(0, 0, frame.width, frame.height, tokenValue(layout, { design: 32, minScreenPx: 18 }))
+    .fill({ color: 0x0b1220, alpha: 1 })
     .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.5 });
   background.label = "bottom-sheet-background";
 
