@@ -8,6 +8,7 @@ This document tracks the current implementation and validation state for the Pix
 - `SceneManager.switch()` cleans up the previous scene, evaluates scene assets, awaits `ctx.assets.load()`, then runs sync scene loading.
 - The app starts in the `boot` scene with `Tap to start`; Enter/Space or the boot button opens a Pixi-native Scene Index with vertical slice, design-system, and planned sample entries.
 - `src/ui/layouts/appShell.ts` provides the first AppShell, TopBar, ContentHost, BottomBar, and BottomSheetHost skeleton for the Scene Index.
+- Scene switches accept either the legacy source string or `{ source, args }`; active scene metadata is exposed as `ctx.scene` so target scenes can read one-shot transition args.
 - The vertical slice scene contains a larger explorable world with dense demo objects; drag pans the camera and wheel/pinch zoom adjusts the view while taps still move the player.
 - `SceneContext.surface` exposes the current surface layout plus token, screen-size, safe-frame, anchor, center, and layout update helpers. Existing `ctx.layout` remains available during migration.
 - `src/runtime/world.ts` owns world bounds, center point, object clamp, target clamp, and camera creation against a world layer.

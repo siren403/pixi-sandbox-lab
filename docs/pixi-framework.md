@@ -146,8 +146,9 @@ type SceneContext = {
   pointer: Pointer;
   layout: SurfaceLayout;
   surface: SurfaceContext;
+  scene: SceneMetadata;
   runtime: RuntimeApi;
-  switchScene: (scene: Scene, source?: CommandSource) => boolean;
+  switchScene: (scene: Scene, options?: SceneOpenOptions) => boolean;
 };
 ```
 
@@ -155,12 +156,28 @@ type SceneContext = {
 
 ```ts
 ctx.runtime.scene.open(nextScene);
+ctx.switchScene(nextScene, { source: "scene", args: { selectedSample: "design-system" } });
 await ctx.runtime.scene.whenReady({ scene: "scene-index", interactive: true });
 ```
 
 일반 scene code에서는 전환 요청용 `ctx.switchScene()`을 기본으로 사용한다. `ctx.runtime.scene.whenReady()`는 framework/debug/E2E처럼 완료 시점이 중요한 곳에서 제한적으로 사용한다.
 
 현재는 migration 중이라 `ctx.layout`, `ctx.keyboard`, `ctx.pointer`를 계속 노출한다. 새 코드에서는 가능한 한 `ctx.surface`를 우선 사용한다.
+
+### Scene Args
+
+Scene args는 한 번의 scene 전환 요청에 붙는 가벼운 payload다. 기존 `ctx.switchScene(nextScene, "debug")` 호출은 계속 지원하고, 새 코드에서 source와 args를 함께 넘길 때는 options object를 쓴다.
+
+```ts
+ctx.switchScene(detailsScene, {
+  source: "scene",
+  args: { itemId: "orb-01" },
+});
+
+const args = ctx.scene.args as { itemId?: string } | undefined;
+```
+
+`ctx.scene`은 현재 active scene의 metadata이며 `name`, `source`, `args`를 포함한다. Args는 runtime이 소유하거나 merge하는 전역 store가 아니다. 전환 순간의 선택값, initial tab, optional sheet 같은 작은 입력에만 쓰고, inventory/progression/shop state처럼 오래 살아야 하는 값은 별도 game state/store로 둔다.
 
 ### Runtime Readiness
 

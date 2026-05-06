@@ -2,7 +2,7 @@ import { Container, Graphics, Sprite, type Texture } from "pixi.js";
 import demoOrbUrl from "../assets/demo-orb.svg";
 import { screenValue, tokenValue } from "../runtime/surface";
 import { surfaceTheme } from "../ui/tokens";
-import type { Scene, SurfaceLayout } from "../runtime/scene";
+import type { Scene, SceneOpenOptions, SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
 import { navigateToSceneIndex } from "../runtime/navigation";
 import { createWorld, type World } from "../runtime/world";
@@ -39,6 +39,9 @@ type SampleShellState = {
     close?: RectState;
     actions: Record<string, RectState>;
   };
+};
+type SampleSceneArgs = {
+  openSheet?: AppShellSheet;
 };
 
 type DemoState = {
@@ -105,8 +108,8 @@ export const verticalSliceScene = scene({
   name: "vertical-slice",
   assets: [demoOrbUrl],
 
-  load({ assets, layers, layout, surface, switchScene }) {
-    sampleShellState["vertical-slice"].sheet = "none";
+  load({ assets, layers, layout, surface, scene, switchScene }) {
+    sampleShellState["vertical-slice"].sheet = readSampleSceneArgs(scene.args).openSheet ?? "none";
     const playerSize = surface.token(surfaceTheme.size.player);
     const playerRadius = surface.token(surfaceTheme.radius.player);
     const playerStroke = surface.token(surfaceTheme.size.playerStroke);
@@ -276,8 +279,8 @@ export const alternateScene = scene({
   name: "alternate",
   assets: () => [demoOrbUrl],
 
-  load({ assets, layers, layout, surface, switchScene }) {
-    sampleShellState.alternate.sheet = "none";
+  load({ assets, layers, layout, surface, scene, switchScene }) {
+    sampleShellState.alternate.sheet = readSampleSceneArgs(scene.args).openSheet ?? "none";
     const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius) * 1.35;
 
     const playerSize = tokenValue(layout, surfaceTheme.size.player);
@@ -364,8 +367,8 @@ export const designSystemScene = scene({
   name: "design-system",
   transition: { enabled: true, minimumMs: 0 },
 
-  load({ layers, layout, surface, switchScene }) {
-    sampleShellState["design-system"].sheet = "none";
+  load({ layers, layout, surface, scene, switchScene }) {
+    sampleShellState["design-system"].sheet = readSampleSceneArgs(scene.args).openSheet ?? "none";
     renderDesignSystem(layers.ui, layout);
     renderSampleShell(layers.ui, layout, {
       sceneId: "design-system",
@@ -575,7 +578,7 @@ function handleSampleShellPointer(
   layer: Container,
   layout: SurfaceLayout,
   position: { x: number; y: number },
-  switchScene: (scene: Scene, source?: "scene" | "intro" | "debug") => boolean,
+  switchScene: (scene: Scene, options?: SceneOpenOptions) => boolean,
   updateLayout: () => void,
 ): boolean {
   const state = sampleShellState[sceneId];
@@ -623,6 +626,14 @@ function handleSampleShellPointer(
     return true;
   }
   return false;
+}
+
+function readSampleSceneArgs(args: unknown): SampleSceneArgs {
+  if (!args || typeof args !== "object") return {};
+  const value = args as { openSheet?: unknown };
+  return {
+    openSheet: value.openSheet === "controls" || value.openSheet === "debug" ? value.openSheet : undefined,
+  };
 }
 
 function rerenderShellForScene(sceneId: SampleSceneId, layer: Container, layout: SurfaceLayout): void {

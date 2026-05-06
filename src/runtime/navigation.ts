@@ -1,6 +1,6 @@
-import type { Scene } from "./scene";
+import type { Scene, SceneOpenOptions } from "./scene";
 
-type SceneNavigator = (scene: Scene, source?: "scene" | "intro" | "debug") => boolean;
+type SceneNavigator = (scene: Scene, options?: SceneOpenOptions) => boolean;
 
 let switchScene: SceneNavigator | undefined;
 let sceneIndex: Scene | undefined;
@@ -15,5 +15,5 @@ export function setSceneIndexScene(scene: Scene): void {
 
 export function navigateToSceneIndex(): boolean {
   if (!switchScene || !sceneIndex) return false;
-  return switchScene(sceneIndex, "scene");
+  return switchScene(sceneIndex, { source: "scene", args: { from: "sample-shell" } });
 }

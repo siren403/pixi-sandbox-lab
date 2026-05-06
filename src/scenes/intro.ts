@@ -64,7 +64,7 @@ export const bootScene = scene({
     const startByPointer = pointer.wasPressed() && containsPoint(startButtonBounds, pointerPosition.x, pointerPosition.y);
     const startByKeyboard = keyboard.wasPressed("enter") || keyboard.wasPressed(" ");
     if (startByPointer || startByKeyboard) {
-      switchScene(sceneIndexScene, "intro");
+      switchScene(sceneIndexScene, { source: "intro", args: { from: "boot" } });
     }
   },
 
@@ -103,11 +103,11 @@ export const sceneIndexScene = scene({
     if (pointer.wasPressed()) {
       const item = sceneIndexItems.find((candidate) => containsPoint(candidate.bounds, position.x, position.y));
       if (item?.id === "vertical-slice") {
-        switchScene(verticalSliceScene, "scene");
+        switchScene(verticalSliceScene, { source: "scene", args: { from: "scene-index", selectedSample: "vertical-slice" } });
         return;
       }
       if (item?.id === "design-system") {
-        switchScene(designSystemScene, "scene");
+        switchScene(designSystemScene, { source: "scene", args: { from: "scene-index", selectedSample: "design-system" } });
         return;
       }
       if (sceneIndexButtons.controls && containsPoint(sceneIndexButtons.controls, position.x, position.y)) {

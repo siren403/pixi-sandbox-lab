@@ -60,9 +60,27 @@ export type RuntimeInternalState = {
 
 export type RuntimeApi = {
   scene: {
-    open: (scene: Scene, source?: CommandSource) => boolean;
+    open: (scene: Scene, options?: SceneOpenOptions) => boolean;
     whenReady: (criteria: RuntimeReadyCriteria) => Promise<RuntimeReadySnapshot>;
   };
+};
+
+export type SceneOpenOptions =
+  | CommandSource
+  | {
+      source?: CommandSource;
+      args?: unknown;
+    };
+
+export type ResolvedSceneOpenOptions = {
+  source: CommandSource;
+  args: unknown;
+};
+
+export type SceneMetadata = {
+  name: string;
+  source: CommandSource;
+  args: unknown;
 };
 
 export type SceneContext = {
@@ -74,8 +92,9 @@ export type SceneContext = {
   pointer: Pointer;
   layout: SurfaceLayout;
   surface: SurfaceContext;
+  scene: SceneMetadata;
   runtime: RuntimeApi;
-  switchScene: (scene: Scene, source?: CommandSource) => boolean;
+  switchScene: (scene: Scene, options?: SceneOpenOptions) => boolean;
 };
 
 export type RuntimeContext = SceneContext & {
@@ -103,4 +122,12 @@ export type Scene = {
 
 export function scene(definition: Scene): Scene {
   return definition;
+}
+
+export function resolveSceneOpenOptions(options: SceneOpenOptions | undefined): ResolvedSceneOpenOptions {
+  if (typeof options === "string") return { source: options, args: undefined };
+  return {
+    source: options?.source ?? "scene",
+    args: options?.args,
+  };
 }

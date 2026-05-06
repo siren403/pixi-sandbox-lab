@@ -1,4 +1,4 @@
-import type { RuntimeContext, Scene } from "./scene";
+import type { ResolvedSceneOpenOptions, RuntimeContext, Scene } from "./scene";
 import { createTransition, minimumLoadingMsRange, syncTransitionState } from "./transition";
 import { setActiveDebugScene } from "../debug/stateBridge";
 
@@ -7,14 +7,17 @@ export class SceneManager {
   private switchId = 0;
 
   async start(scene: Scene, ctx: RuntimeContext): Promise<void> {
-    await this.switch(scene, ctx);
+    await this.switch(scene, ctx, { source: "scene", args: undefined });
   }
 
-  async switch(scene: Scene, ctx: RuntimeContext): Promise<void> {
+  async switch(scene: Scene, ctx: RuntimeContext, options: ResolvedSceneOpenOptions): Promise<void> {
     const switchId = ++this.switchId;
     const previous = this.current;
     ctx.runtimeState.sceneSwitches += 1;
     ctx.runtimeState.activeScene = scene.name;
+    ctx.scene.name = scene.name;
+    ctx.scene.source = options.source;
+    ctx.scene.args = options.args;
     ctx.runtimeState.sceneLifecycle = "unloading";
     setActiveDebugScene(scene.name);
     syncTransitionState(ctx);
