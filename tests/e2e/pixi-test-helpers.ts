@@ -1,9 +1,10 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import type { PixiDebugState } from "../../src/debug/stateBridge";
+import type { PixiDebugState, PixiDebugWindow } from "../../src/debug/stateBridge";
+import type { DebugCommand, DebugCommandResult } from "../../src/debug/commands";
 
 declare global {
   interface Window {
-    __pixiDebug?: PixiDebugState;
+    __pixiDebug?: PixiDebugWindow;
   }
 }
 
@@ -19,7 +20,7 @@ export async function gotoBoot(page: Page): Promise<Locator> {
   await page.goto("/");
   const canvas = page.locator("canvas");
   await expect(canvas).toBeVisible();
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.boot?.rendered)).toBe(true);
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.boot?.rendered)).toBe(true);
   return canvas;
 }
 
@@ -34,13 +35,14 @@ export async function expectCanvasFillsViewport(page: Page, canvas: Locator): Pr
 }
 
 export async function startDemoFromBoot(page: Page, canvas: Locator): Promise<void> {
-  const bootLoadingShows = await page.evaluate(() => window.__pixiDebug?.runtime?.loadingOverlayShows ?? 0);
+  const bootLoadingShows = (await readDebugSnapshot(page))?.runtime?.loadingOverlayShows ?? 0;
   await clickBootStart(page, canvas);
+  await clickSceneIndexItem(page, canvas, "Vertical Slice");
   await expect
-    .poll(() => page.evaluate(() => window.__pixiDebug?.runtime?.loadingOverlayShows ?? 0))
+    .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.runtime?.loadingOverlayShows ?? 0))
     .toBeGreaterThan(bootLoadingShows);
   await expect
-    .poll(() => page.evaluate(() => window.__pixiDebug?.demo?.rendered), { timeout: 15000 })
+    .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.demo?.rendered), { timeout: 15000 })
     .toBe(true);
 }
 
@@ -79,14 +81,48 @@ export async function hasVisibleCanvasPixels(page: Page): Promise<boolean> {
 }
 
 export async function clickBootStart(page: Page, canvas: Locator): Promise<void> {
-  const bounds = await page.evaluate(() => window.__pixiDebug?.boot?.buttonBounds);
+  const bounds = (await readDebugSnapshot(page))?.boot?.buttonBounds;
   expect(bounds).toBeDefined();
-  await canvas.click({
-    position: {
-      x: Math.round((bounds?.x ?? 0) + (bounds?.width ?? 0) / 2),
-      y: Math.round((bounds?.y ?? 0) + (bounds?.height ?? 0) / 2),
-    },
-  });
+  await clickCanvasAt(page, canvas, (bounds?.x ?? 0) + (bounds?.width ?? 0) / 2, (bounds?.y ?? 0) + (bounds?.height ?? 0) / 2);
+}
+
+export async function clickSceneIndexItem(page: Page, canvas: Locator, label: string): Promise<void> {
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.sceneIndex?.rendered)).toBe(true);
+  const item = (await readDebugSnapshot(page))?.sceneIndex?.items.find((candidate) => candidate.label === label);
+  expect(item).toBeDefined();
+  await clickCanvasAt(
+    page,
+    canvas,
+    (item?.bounds.x ?? 0) + (item?.bounds.width ?? 0) / 2,
+    (item?.bounds.y ?? 0) + (item?.bounds.height ?? 0) / 2,
+    { designSpace: true },
+  );
+}
+
+export async function readDebugSnapshot(page: Page): Promise<PixiDebugState | undefined> {
+  return page.evaluate(() => window.__pixiDebug?.getSnapshot?.() ?? window.__pixiDebug);
+}
+
+export async function dispatchDebugCommand(page: Page, command: DebugCommand): Promise<DebugCommandResult | undefined> {
+  return page.evaluate((nextCommand) => window.__pixiDebug?.dispatch?.(nextCommand), command);
+}
+
+export async function clickCanvasAt(
+  page: Page,
+  canvas: Locator,
+  x: number,
+  y: number,
+  options: { designSpace?: boolean } = {},
+): Promise<void> {
+  const box = await canvas.boundingBox();
+  const viewport = page.viewportSize();
+  const scale = Math.min((viewport?.width ?? 1080) / 1080, (viewport?.height ?? 1920) / 1920);
+  const needsDesignScale = options.designSpace === true || x > (box?.width ?? 0) || y > (box?.height ?? 0);
+  expect(box).not.toBeNull();
+  await page.mouse.click(
+    Math.round((box?.x ?? 0) + x * (needsDesignScale ? scale : 1)),
+    Math.round((box?.y ?? 0) + y * (needsDesignScale ? scale : 1)),
+  );
 }
 
 export function rectsOverlap(

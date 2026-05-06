@@ -231,6 +231,37 @@ app.stage
 - design-system scene에 추가하는 주요 샘플은 layout node여야 debug bounds로 확인할 수 있다.
 - `@pixi/ui`는 아직 도입하지 않았다. slider, checkbox, scroll/list, text input 같은 반복 상호작용이 실제 필요해질 때 평가한다.
 
+## Scene Index And App Shell
+
+The boot action now opens a Pixi-native Scene Index instead of jumping directly into the vertical slice. The Scene Index is the sandbox sample browser for implemented and planned scenes.
+
+Current entries:
+
+- `Vertical Slice`
+- `Design System`
+- `Camera Sample - planned`
+- `Layout Sample - planned`
+- `Motion Sample - planned`
+
+The first common layout shell lives in `src/ui/layouts/appShell.ts`.
+
+```text
+AppShell
+├─ top-bar
+├─ content-host
+├─ bottom-bar
+└─ bottom-sheet-host
+```
+
+The first implementation is intentionally small:
+
+- `TopBar` shows the current surface title.
+- `ContentHost` contains the scene list.
+- `BottomBar` exposes `Controls` and `Debug` triggers.
+- `BottomSheetHost` opens scene controls or debug placeholder content.
+
+Scene switching and sample registry decisions stay outside `AppShell`. The shell owns placement slots and button bounds only.
+
 ## World And Camera
 
 월드 좌표와 카메라는 `src/runtime/world.ts`, `src/runtime/worldCamera.ts`가 담당한다.
@@ -303,6 +334,32 @@ export const sceneWithAsset = scene({
 
 debug build는 DOM 기반 layout debug panel과 `window.__pixiDebug` bridge를 포함한다.
 
+Debug state now flows through a typed runtime store before reaching the window adapter:
+
+```text
+src/debug/store.ts
+  -> getSnapshot / patch / subscribe
+
+src/debug/commands.ts
+  -> typed command dispatch
+
+src/debug/stateBridge.ts
+  -> legacy stateBridge setters
+  -> window.__pixiDebug adapter
+```
+
+The public E2E-facing adapter shape is:
+
+```ts
+window.__pixiDebug = {
+  version: 1,
+  getSnapshot(): PixiDebugState,
+  dispatch(command): DebugCommandResult | Promise<DebugCommandResult>,
+}
+```
+
+The legacy direct fields such as `window.__pixiDebug.runtime` and `window.__pixiDebug.demo` remain mirrored during migration. New Playwright helpers should prefer `getSnapshot()`.
+
 주요 기능:
 
 - 현재 scene 이름 표시
@@ -342,6 +399,9 @@ bun run build:release
 - adaptive surface layout
 - keyboard/pointer input
 - world bounds and world camera
+- Scene Index sample browser
+- AppShell and BottomSheet skeleton
+- typed debug store and thin E2E window adapter
 - UI primitives and design-system scene
 - debug panel and Playwright E2E
 
@@ -353,6 +413,7 @@ bun run build:release
 - generalized scene-local state manager
 - generic entity/component authoring API
 - `@pixi/ui` controls
+- fully migrated Debug bottom sheet
 - production deployment policy
 
 연구 문서에 있는 장기 방향을 구현된 API처럼 사용하지 않는다. 새 기능은 vertical slice에서 검증한 뒤 이 문서와 `docs/pixi-status.md`를 함께 갱신한다.

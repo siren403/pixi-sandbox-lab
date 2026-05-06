@@ -6,7 +6,8 @@ This document tracks the current implementation and validation state for the Pix
 
 - `Scene.assets` accepts a static array or `(ctx) => array`.
 - `SceneManager.switch()` cleans up the previous scene, evaluates scene assets, awaits `ctx.assets.load()`, then runs sync scene loading.
-- The app starts in the `boot` scene with `Tap to start`; Enter/Space or the boot button switches to `vertical-slice`.
+- The app starts in the `boot` scene with `Tap to start`; Enter/Space or the boot button opens a Pixi-native Scene Index with vertical slice, design-system, and planned sample entries.
+- `src/ui/layouts/appShell.ts` provides the first AppShell, TopBar, ContentHost, BottomBar, and BottomSheetHost skeleton for the Scene Index.
 - The vertical slice scene contains a larger explorable world with dense demo objects; drag pans the camera and wheel/pinch zoom adjusts the view while taps still move the player.
 - `SceneContext.surface` exposes the current surface layout plus token, screen-size, safe-frame, anchor, center, and layout update helpers. Existing `ctx.layout` remains available during migration.
 - `src/runtime/world.ts` owns world bounds, center point, object clamp, target clamp, and camera creation against a world layer.
@@ -26,6 +27,7 @@ This document tracks the current implementation and validation state for the Pix
 - GitHub Pages deployment runs `bun run check` before uploading the demo build artifact.
 - Vite `chunkSizeWarningLimit` is set to 1100kB. `bun run check:bundle` enforces total JS, gzip, max chunk, and entry budgets.
 - `window.__pixiDebug.runtime` exposes E2E-only app mode, command counts, loading state, transition state, sampled timing, progress, overlay alpha, and transition panel counts.
+- `window.__pixiDebug` now mirrors a typed debug store and also exposes `version`, `getSnapshot()`, and `dispatch(command)` for Playwright migration.
 - `scene.load(ctx)` is sync; assets are already available through `ctx.assets.get(source)` at that point.
 - `AssetRuntime` wraps Pixi `Assets` and throws if `get()` is called for an asset that is not ready.
 - The first validation asset uses a Vite import URL so GitHub Pages subpath deployment does not depend on `public` absolute paths.
@@ -38,6 +40,7 @@ Current checks include:
 
 - canvas starts at viewport origin and fills the viewport
 - visible design bounds meet the reference surface contract from `DESIGN.md`
+- Scene Index renders AppShell regions and opens the Debug bottom sheet skeleton on desktop and mobile portrait
 - player, marker, and title have readable/touchable screen-space sizes
 - vertical slice world size, object count, camera pan, and zoom behavior are observable through E2E debug state
 - HUD title and marker do not overlap
@@ -50,10 +53,9 @@ Current checks include:
 
 ## Near-Term Surface Work
 
-- Add a Pixi-native Scene Index after boot so shared sandbox demos browse samples without relying on the DOM debug panel.
-- Add an accepted-but-not-implemented Pixi layout component system around AppShell, TopBar, ContentHost, BottomBar, BottomSheetHost, SceneIndexLayout, DebugSheetContent, and scene-specific controls.
-- Move debug/navigation controls from the floating DOM panel into Pixi bottom sheet content while keeping DOM layout inspection as development tooling until replaced or retired.
-- Replace direct `window.__pixiDebug` state growth with a typed debug runtime store, command API, and thin Playwright window adapter.
+- Continue moving debug/navigation controls from the floating DOM panel into Pixi bottom sheet content while keeping DOM layout inspection as development tooling until replaced or retired.
+- Migrate Playwright specs from direct `window.__pixiDebug.runtime/demo/...` reads to `window.__pixiDebug.getSnapshot()`.
+- Expand AppShell from the Scene Index into sample scenes where top navigation, back, controls, or debug sheets are useful.
 - Evaluate `@pixi/ui` when controls such as slider, checkbox, progress, scroll/list, or text input become real product needs.
 - Expand scene-independent UI primitives as HUD, menu, modal, badge, list, and panel patterns repeat.
 - Extend pointer/touch runtime when multi-touch, gesture, virtual stick, or other game input patterns are needed.

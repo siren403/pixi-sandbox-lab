@@ -1,3 +1,6 @@
+import { dispatchDebugCommand, type DebugCommand, type DebugCommandResult } from "./commands";
+import { createDebugStore } from "./store";
+
 type RectState = { x: number; y: number; width: number; height: number };
 
 export type PixiBootDebugState = {
@@ -57,6 +60,27 @@ export type PixiDesignSystemDebugState = {
   rendered: boolean;
 };
 
+export type PixiSceneIndexDebugState = {
+  scene: "scene-index";
+  rendered: boolean;
+  items: Array<{
+    id: string;
+    label: string;
+    bounds: RectState;
+  }>;
+  appShell: {
+    topBarBounds: RectState;
+    contentBounds: RectState;
+    bottomBarBounds: RectState;
+    sheetBounds: RectState;
+    controlsButtonBounds: RectState;
+    debugButtonBounds: RectState;
+    closeButtonBounds?: RectState;
+    activeSheet: "none" | "controls" | "debug";
+  };
+  layoutNodes: number;
+};
+
 export type PixiRuntimeDebugState = {
   appMode: "interactive" | "transitioning" | "loading" | "destroyed";
   loading: boolean;
@@ -97,85 +121,170 @@ export type PixiLayoutDebugState = {
 };
 
 export type PixiDebugState = {
+  schemaVersion: 1;
+  revision: number;
+  lastCommand?: DebugCommandResult;
   activeScene?: string;
   scene?: PixiBootDebugState | PixiDemoDebugState | PixiDesignSystemDebugState;
   boot?: PixiBootDebugState;
+  sceneIndex?: PixiSceneIndexDebugState;
   demo?: PixiDemoDebugState;
   designSystem?: PixiDesignSystemDebugState;
   runtime?: PixiRuntimeDebugState;
   layout?: PixiLayoutDebugState;
 };
 
+export type PixiDebugWindow = PixiDebugState & {
+  version: 1;
+  getSnapshot: () => PixiDebugState;
+  dispatch: (command: DebugCommand) => DebugCommandResult | Promise<DebugCommandResult>;
+};
+
 declare global {
   interface Window {
-    __pixiDebug?: PixiDebugState;
+    __pixiDebug?: PixiDebugWindow;
   }
 }
 
 const debugEnabled = import.meta.env.VITE_DEMO_DEBUG !== "false";
+const debugStore = createDebugStore<PixiDebugState>({
+  schemaVersion: 1,
+  revision: 0,
+});
 
 export function setBootDebugState(state: PixiBootDebugState): void {
   if (!debugEnabled) return;
-  const debug = ensureDebugState();
-  debug.boot = state;
-  debug.scene = state;
+  patchDebugState({
+    boot: state,
+    scene: state,
+  });
 }
 
 export function clearBootDebugState(): void {
   if (!debugEnabled) return;
-  const debug = ensureDebugState();
-  debug.boot = undefined;
-  if (debug.scene?.scene === "boot") debug.scene = undefined;
+  const snapshot = debugStore.getSnapshot();
+  patchDebugState({
+    boot: undefined,
+    scene: snapshot.scene?.scene === "boot" ? undefined : snapshot.scene,
+  });
 }
 
 export function setDemoDebugState(state: PixiDemoDebugState): void {
   if (!debugEnabled) return;
-  const debug = ensureDebugState();
-  debug.demo = state;
-  debug.scene = state;
+  patchDebugState({
+    demo: state,
+    scene: state,
+  });
 }
 
 export function clearDemoDebugState(): void {
   if (!debugEnabled) return;
-  const debug = ensureDebugState();
-  debug.demo = undefined;
-  if (debug.scene && debug.scene.scene !== "boot" && debug.scene.scene !== "design-system") debug.scene = undefined;
+  const snapshot = debugStore.getSnapshot();
+  const scene = snapshot.scene?.scene !== "boot" && snapshot.scene?.scene !== "design-system" ? undefined : snapshot.scene;
+  patchDebugState({
+    demo: undefined,
+    scene,
+  });
 }
 
 export function setDesignSystemDebugState(state: PixiDesignSystemDebugState): void {
   if (!debugEnabled) return;
-  const debug = ensureDebugState();
-  debug.designSystem = state;
-  debug.scene = state;
+  patchDebugState({
+    designSystem: state,
+    scene: state,
+  });
+}
+
+export function setSceneIndexDebugState(state: PixiSceneIndexDebugState): void {
+  if (!debugEnabled) return;
+  patchDebugState({
+    sceneIndex: state,
+    activeScene: state.scene,
+  });
+}
+
+export function clearSceneIndexDebugState(): void {
+  if (!debugEnabled) return;
+  patchDebugState({ sceneIndex: undefined });
 }
 
 export function clearDesignSystemDebugState(): void {
   if (!debugEnabled) return;
-  const debug = ensureDebugState();
-  debug.designSystem = undefined;
-  if (debug.scene?.scene === "design-system") debug.scene = undefined;
+  const snapshot = debugStore.getSnapshot();
+  patchDebugState({
+    designSystem: undefined,
+    scene: snapshot.scene?.scene === "design-system" ? undefined : snapshot.scene,
+  });
 }
 
 export function setRuntimeDebugState(state: PixiRuntimeDebugState): void {
   if (!debugEnabled) return;
-  ensureDebugState().runtime = state;
+  patchDebugState({ runtime: state });
 }
 
 export function setLayoutDebugState(state: PixiLayoutDebugState): void {
   if (!debugEnabled) return;
-  ensureDebugState().layout = state;
+  patchDebugState({ layout: state });
 }
 
 export function setActiveDebugScene(scene: string): void {
   if (!debugEnabled) return;
-  ensureDebugState().activeScene = scene;
+  patchDebugState({ activeScene: scene });
 }
 
 export function readCurrentDebugScene(): string {
-  return window.__pixiDebug?.scene?.scene ?? window.__pixiDebug?.activeScene ?? "unknown";
+  const snapshot = debugStore.getSnapshot();
+  return snapshot.scene?.scene ?? snapshot.activeScene ?? "unknown";
 }
 
-function ensureDebugState(): PixiDebugState {
-  window.__pixiDebug ??= {};
+export function getDebugSnapshot(): PixiDebugState {
+  return debugStore.getSnapshot();
+}
+
+export function subscribeDebugState(listener: (snapshot: PixiDebugState) => void): () => void {
+  return debugStore.subscribe(listener);
+}
+
+function ensureDebugState(): PixiDebugWindow {
+  if (!window.__pixiDebug) {
+    window.__pixiDebug = createDebugWindow();
+  }
   return window.__pixiDebug;
+}
+
+function patchDebugState(patch: Partial<PixiDebugState>): PixiDebugWindow {
+  const debug = ensureDebugState();
+  const nextRevision = debugStore.getSnapshot().revision + 1;
+  const snapshot = debugStore.patch({
+    ...patch,
+    revision: nextRevision,
+  });
+  syncDebugWindow(debug, snapshot);
+  return debug;
+}
+
+function createDebugWindow(): PixiDebugWindow {
+  const debug = {
+    version: 1,
+    getSnapshot: () => getDebugSnapshot(),
+    dispatch: async (command: DebugCommand) => {
+      const result = await dispatchDebugCommand(command);
+      patchDebugState({ lastCommand: result });
+      return result;
+    },
+  } as PixiDebugWindow;
+  syncDebugWindow(debug, debugStore.getSnapshot());
+  return debug;
+}
+
+function syncDebugWindow(debug: PixiDebugWindow, snapshot: PixiDebugState): void {
+  Object.assign(debug, snapshot, {
+    version: 1,
+    getSnapshot: () => getDebugSnapshot(),
+    dispatch: async (command: DebugCommand) => {
+      const result = await dispatchDebugCommand(command);
+      patchDebugState({ lastCommand: result });
+      return result;
+    },
+  });
 }

@@ -36,7 +36,6 @@ test("persists debug panel position across reload", async ({ page }) => {
 
   await page.reload();
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.boot?.rendered)).toBe(true);
-  await startDemoFromBoot(page, canvas);
   await expect(layoutDebugFold).toHaveAttribute("aria-expanded", "true");
   const panelAfterReload = await layoutDebugPanel.boundingBox();
   expect(Math.abs((panelAfterReload?.x ?? 0) - (panelAfterDrag?.x ?? 0))).toBeLessThanOrEqual(2);

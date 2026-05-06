@@ -175,10 +175,10 @@ Safe-area containers:
 - Use `configureSafeAreaRow()` for top HUD/control rows.
 - Keep safe-area frame logic in `src/ui/layout.ts` or a future surface-level primitive, not scattered scene math.
 
-Accepted direction, not implemented:
+Accepted direction and first implementation:
 
 - The sandbox demo should move from floating DOM debug controls toward Pixi-native navigation and controls.
-- After the boot action, a Scene Index should act as the sample browser for vertical slice, design-system, and future camera/input/layout/motion samples.
+- After the boot action, a Scene Index acts as the sample browser for vertical slice, design-system, and future camera/input/layout/motion samples.
 - Shared Pixi layout components should support repeated surfaces whose content changes, such as sample indexes, popups, settings, shops, and scene-specific controls.
 - `AppShell` is one layout component in that system, not the whole system.
 - App UI must not read `window.__pixiDebug`; debug and E2E bridge state stays behind runtime/store adapters.

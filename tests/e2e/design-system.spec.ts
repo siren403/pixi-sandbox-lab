@@ -31,6 +31,7 @@ test("renders design-system scene with inspectable layout contracts", async ({ p
     .poll(() => page.evaluate(() => window.__pixiDebug?.layout?.layoutNodes ?? 0))
     .toBeGreaterThanOrEqual(16);
   await expect(currentScene).toContainText("design-system");
+  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.runtime?.appMode)).toBe("interactive");
 
   await sceneSwitch.click();
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.demo?.scene)).toBe("vertical-slice");

@@ -59,7 +59,7 @@ layout debug panel:
 - `@pixi/layout` 내장 debug renderer를 토글한다.
 - `All / World / UI` 필터로 layout debug 대상 노드를 제한한다.
 - `DS` 버튼은 Storybook 대체용 runtime design system scene으로 이동한다.
-- Debug/E2E 관측 상태는 `window.__pixiDebug` bridge에 모은다. 현재 bridge는 `boot`, `demo`, `designSystem`, `runtime`, `layout` 상태를 노출하며 `VITE_DEMO_DEBUG=false` release build에서는 no-op이다.
+- Debug/E2E 관측 상태는 typed debug store에 모으고 `window.__pixiDebug`가 Playwright용 adapter로 미러링한다. 현재 bridge는 `boot`, `sceneIndex`, `demo`, `designSystem`, `runtime`, `layout` 상태와 `version`, `getSnapshot()`, `dispatch(command)`를 노출하며 `VITE_DEMO_DEBUG=false` release build에서는 no-op이다.
 
 ### Debug and navigation direction
 
