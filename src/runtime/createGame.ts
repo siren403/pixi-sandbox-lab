@@ -6,6 +6,7 @@ import { createKeyboard } from "./keyboard";
 import { createPointer } from "./pointer";
 import type { Scene, SceneContext, SurfaceLayers, SurfaceLayout } from "./scene";
 import { SceneManager } from "./sceneManager";
+import { createSurfaceContext } from "./surface";
 import { syncTransitionState } from "./transition";
 
 export type GameOptions = {
@@ -59,6 +60,9 @@ export async function createGame(options: GameOptions): Promise<Application> {
     transitionPanelMaxCount: 0,
   };
   const layout = createSurfaceLayout(options.width, options.height, app.screen.width, app.screen.height);
+  const surface = createSurfaceContext(layout, (container = layers.root) => {
+    app.renderer.layout.update(container);
+  });
   const pointer = createPointer(app.canvas, () => layout);
   const sceneManager = new SceneManager();
   const commands = createCommandRuntime({
@@ -73,6 +77,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
     keyboard,
     pointer,
     layout,
+    surface,
     runtime,
     switchScene: (scene, source = "scene") => {
       return commands.requestSceneSwitch(scene, source, () => sceneManager.switch(scene, ctx));

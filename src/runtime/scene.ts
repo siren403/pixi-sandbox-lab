@@ -3,6 +3,7 @@ import type { AssetList, AssetRuntime } from "./assets";
 import type { AppMode, CommandSource } from "./commandRuntime";
 import type { Keyboard } from "./keyboard";
 import type { Pointer } from "./pointer";
+import type { SurfaceContext } from "./surface";
 
 export type SurfaceLayout = {
   referenceWidth: number;
@@ -56,6 +57,7 @@ export type SceneContext = {
   keyboard: Keyboard;
   pointer: Pointer;
   layout: SurfaceLayout;
+  surface: SurfaceContext;
   runtime: RuntimeState;
   switchScene: (scene: Scene, source?: CommandSource) => boolean;
 };

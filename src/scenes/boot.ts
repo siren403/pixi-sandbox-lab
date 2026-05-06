@@ -85,12 +85,12 @@ export const verticalSliceScene = scene({
   name: "vertical-slice",
   assets: [demoOrbUrl],
 
-  load({ app, assets, layers, layout, switchScene }) {
-    const playerSize = tokenValue(layout, surfaceTheme.size.player);
-    const playerRadius = tokenValue(layout, surfaceTheme.radius.player);
-    const playerStroke = tokenValue(layout, surfaceTheme.size.playerStroke);
-    const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius);
-    const titleFontSize = tokenValue(layout, surfaceTheme.font.title);
+  load({ assets, layers, layout, surface, switchScene }) {
+    const playerSize = surface.token(surfaceTheme.size.player);
+    const playerRadius = surface.token(surfaceTheme.radius.player);
+    const playerStroke = surface.token(surfaceTheme.size.playerStroke);
+    const markerRadius = surface.token(surfaceTheme.size.markerRadius);
+    const titleFontSize = surface.token(surfaceTheme.font.title);
 
     const hud = new Container();
     hud.label = "hud";
@@ -146,7 +146,7 @@ export const verticalSliceScene = scene({
     layers.world.addChild(field, assetOrb, inputTarget, player);
     camera.centerOn(player.x, player.y, layout);
     camera.apply(layout);
-    app.renderer.layout.update(layers.root);
+    surface.updateLayout();
     removeDebugListeners = installDebugSceneListeners({
       onScene: () => {
         if (switchScene(alternateScene, "debug")) sceneSwitches += 1;
@@ -159,20 +159,20 @@ export const verticalSliceScene = scene({
     syncDemoState("vertical-slice", player.x, player.y, layout, layers.root, undefined, assets.isReady(demoOrbUrl));
   },
 
-  resize({ app, layers, layout }) {
+  resize({ layers, layout, surface }) {
     const player = layers.world.getChildByLabel("player") as Graphics | null;
     const hud = layers.ui.getChildByLabel("hud") as Container | null;
     const world = readWorld(layers.world);
     const camera = readCamera(layers.world, layout);
     if (!player) return;
 
-    const playerPadding = tokenValue(layout, surfaceTheme.size.player) / 2;
+    const playerPadding = surface.token(surfaceTheme.size.player) / 2;
     world.clampObject(player, playerPadding);
     camera.clamp(layout);
     camera.apply(layout);
 
     if (hud) configureHudLayout(hud, layout);
-    app.renderer.layout.update(layers.root);
+    surface.updateLayout();
 
     syncDemoState("vertical-slice", player.x, player.y, layout, layers.root, undefined, true);
   },
@@ -263,7 +263,7 @@ export const alternateScene = scene({
   name: "alternate",
   assets: () => [demoOrbUrl],
 
-  load({ app, assets, layers, layout, switchScene }) {
+  load({ assets, layers, layout, surface, switchScene }) {
     const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius) * 1.35;
     const titleFontSize = tokenValue(layout, surfaceTheme.font.title);
 
@@ -309,7 +309,7 @@ export const alternateScene = scene({
     hud.addChild(title, spacer, marker);
     layers.ui.addChild(hud);
     layers.world.addChild(assetOrb, player);
-    app.renderer.layout.update(layers.root);
+    surface.updateLayout();
     removeDebugListeners = installDebugSceneListeners({
       onScene: () => {
         if (switchScene(verticalSliceScene, "debug")) sceneSwitches += 1;
@@ -322,14 +322,14 @@ export const alternateScene = scene({
     syncDemoState("alternate", player.x, player.y, layout, layers.root, undefined, assets.isReady(demoOrbUrl));
   },
 
-  resize({ app, layers, layout }) {
+  resize({ layers, layout, surface }) {
     const player = layers.world.getChildByLabel("player") as Graphics | null;
     const hud = layers.ui.getChildByLabel("hud") as Container | null;
     if (!player) return;
 
     player.position.set(layout.visibleWidth / 2, layout.visibleHeight / 2);
     if (hud) configureHudLayout(hud, layout);
-    app.renderer.layout.update(layers.root);
+    surface.updateLayout();
 
     syncDemoState("alternate", player.x, player.y, layout, layers.root, undefined, true);
   },
@@ -358,9 +358,9 @@ export const designSystemScene = scene({
   name: "design-system",
   loading: { minimumMs: 0 },
 
-  load({ app, layers, layout, switchScene }) {
+  load({ layers, layout, surface, switchScene }) {
     renderDesignSystem(layers.ui, layout);
-    app.renderer.layout.update(layers.root);
+    surface.updateLayout();
     removeDebugListeners = installDebugSceneListeners({
       onScene: () => {
         if (switchScene(verticalSliceScene, "debug")) sceneSwitches += 1;
@@ -370,10 +370,10 @@ export const designSystemScene = scene({
     syncDesignSystemState(layout, layers.root);
   },
 
-  resize({ app, layers, layout }) {
+  resize({ layers, layout, surface }) {
     clearSceneLayers(layers.ui);
     renderDesignSystem(layers.ui, layout);
-    app.renderer.layout.update(layers.root);
+    surface.updateLayout();
     syncDesignSystemState(layout, layers.root);
   },
 
