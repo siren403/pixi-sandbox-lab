@@ -10,6 +10,9 @@ export type AppShellSheet = "none" | "controls" | "debug";
 
 export type AppShell = Container & {
   topBar: Container;
+  topBarLeft: Container;
+  topBarCenter: Container;
+  topBarRight: Container;
   contentHost: Container;
   bottomBar: Container;
   bottomSheetHost: Container;
@@ -36,17 +39,19 @@ export type RectFrame = {
   height: number;
 };
 
+type AppShellOptions = {
+  title: string;
+  titleLabel?: string;
+  showBack?: boolean;
+  activeSheet?: AppShellSheet;
+  sheetTitle?: string;
+  sheetLines?: string[];
+  sheetActions?: Array<{ id: string; label: string }>;
+};
+
 export function createAppShell(
   layout: SurfaceLayout,
-  options: {
-    title: string;
-    titleLabel?: string;
-    showBack?: boolean;
-    activeSheet?: AppShellSheet;
-    sheetTitle?: string;
-    sheetLines?: string[];
-    sheetActions?: Array<{ id: string; label: string }>;
-  },
+  options: AppShellOptions,
 ): AppShell {
   const safeFrame = getSafeAreaFrame(layout);
   const gap = tokenValue(layout, surfaceTheme.spacing.sm);
@@ -87,54 +92,13 @@ export function createAppShell(
     sheet: sheetFrame,
   };
 
-  const topBar = new Container({ label: "top-bar" });
-  topBar.position.set(topBarFrame.x, topBarFrame.y);
-  topBar.layout = {
-    width: topBarFrame.width,
-    height: topBarFrame.height,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap,
-  };
-  const topBarBackground = new Graphics()
-    .roundRect(0, 0, topBarFrame.width, topBarFrame.height, tokenValue(layout, surfaceTheme.rounded.md))
-    .fill({ color: 0x0b1220, alpha: 0.78 })
-    .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.24 });
-  topBarBackground.label = "top-bar-background";
-
-  const title = createLabel({
-    text: options.title,
-    layout,
-    fontSize: surfaceTheme.typography.title,
-    color: surfaceTheme.color.text,
-    label: options.titleLabel ?? "top-bar-title",
-  });
-  title.layout = {
-    height: topBarHeight,
-    flexGrow: 1,
-  };
-
   const buttons: AppShell["buttons"] = {
     controls: createShellButton("Controls", layout),
     debug: createShellButton("Debug", layout),
     sheetActions: {},
   };
 
-  if (options.showBack) {
-    buttons.back = createShellButton("Back", layout);
-    buttons.back.layout = {
-      width: buttons.back.width,
-      height: buttons.back.height,
-    };
-    topBar.addChild(buttons.back);
-  }
-  const trailingSpacer = new Container({ label: "top-bar-spacer" });
-  trailingSpacer.layout = {
-    width: buttons.back?.width ?? tokenValue(layout, { design: 188, minScreenPx: 96 }),
-    height: topBarHeight,
-  };
-  topBar.addChild(title, trailingSpacer);
+  const topBar = createTopBar(layout, topBarFrame, options, buttons);
 
   const contentHost = new Container({ label: "content-host" });
   contentHost.position.set(contentFrame.x, contentFrame.y);
@@ -145,36 +109,135 @@ export function createAppShell(
     gap,
   };
 
-  const bottomBar = new Container({ label: "bottom-bar" });
-  bottomBar.position.set(bottomBarFrame.x, bottomBarFrame.y);
-  bottomBar.layout = {
-    width: bottomBarFrame.width,
-    height: bottomBarFrame.height,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap,
-  };
-  const bottomBarBackground = new Graphics()
-    .roundRect(0, 0, bottomBarFrame.width, bottomBarFrame.height, tokenValue(layout, surfaceTheme.rounded.md))
-    .fill({ color: 0x0b1220, alpha: 0.86 })
-    .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.24 });
-  bottomBarBackground.label = "bottom-bar-background";
-  bottomBar.addChild(buttons.controls, buttons.debug);
+  const bottomBar = createBottomBar(layout, bottomBarFrame, buttons);
 
   const bottomSheetHost = createBottomSheetHost(layout, sheetFrame, options);
   if (bottomSheetHost.closeButton) buttons.closeSheet = bottomSheetHost.closeButton;
   buttons.sheetActions = bottomSheetHost.actions;
 
   shell.topBar = topBar;
+  shell.topBarLeft = topBar.getChildByLabel("top-bar-left") as Container;
+  shell.topBarCenter = topBar.getChildByLabel("top-bar-center") as Container;
+  shell.topBarRight = topBar.getChildByLabel("top-bar-right") as Container;
   shell.contentHost = contentHost;
   shell.bottomBar = bottomBar;
   shell.bottomSheetHost = bottomSheetHost.host;
   shell.buttons = buttons;
   shell.addChild(topBar, contentHost, bottomBar, bottomSheetHost.host);
-  topBar.addChildAt(topBarBackground, 0);
-  bottomBar.addChildAt(bottomBarBackground, 0);
   return shell;
+}
+
+function createTopBar(
+  layout: SurfaceLayout,
+  frame: RectFrame,
+  options: AppShellOptions,
+  buttons: AppShell["buttons"],
+): Container {
+  const gap = tokenValue(layout, surfaceTheme.spacing.sm);
+  const slotWidth = tokenValue(layout, { design: 188, minScreenPx: 96 });
+  const bar = new Container({ label: "top-bar" });
+  bar.position.set(frame.x, frame.y);
+  bar.layout = {
+    width: frame.width,
+    height: frame.height,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap,
+  };
+
+  const background = new Graphics()
+    .roundRect(0, 0, frame.width, frame.height, tokenValue(layout, surfaceTheme.rounded.md))
+    .fill({ color: 0x0b1220, alpha: 0.78 })
+    .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.24 });
+  background.label = "top-bar-background";
+
+  const left = new Container({ label: "top-bar-left" });
+  left.layout = {
+    width: slotWidth,
+    height: frame.height,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+  };
+  if (options.showBack) {
+    buttons.back = createShellButton("Back", layout);
+    left.addChild(buttons.back);
+  }
+
+  const center = new Container({ label: "top-bar-center" });
+  center.layout = {
+    height: frame.height,
+    flexGrow: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+  const title = createLabel({
+    text: options.title,
+    layout,
+    fontSize: surfaceTheme.typography.title,
+    color: surfaceTheme.color.text,
+    label: options.titleLabel ?? "top-bar-title",
+  });
+  title.layout = {
+    height: frame.height,
+  };
+  center.addChild(title);
+
+  const right = new Container({ label: "top-bar-right" });
+  right.layout = {
+    width: slotWidth,
+    height: frame.height,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  };
+
+  bar.addChild(background, left, center, right);
+  return bar;
+}
+
+function createBottomBar(layout: SurfaceLayout, frame: RectFrame, buttons: AppShell["buttons"]): Container {
+  const gap = tokenValue(layout, surfaceTheme.spacing.sm);
+  const sidePadding = tokenValue(layout, surfaceTheme.spacing.sm);
+  const bar = new Container({ label: "bottom-bar" });
+  bar.position.set(frame.x, frame.y);
+  bar.layout = {
+    width: frame.width,
+    height: frame.height,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap,
+  };
+  const background = new Graphics()
+    .roundRect(0, 0, frame.width, frame.height, tokenValue(layout, surfaceTheme.rounded.md))
+    .fill({ color: 0x0b1220, alpha: 0.86 })
+    .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.24 });
+  background.label = "bottom-bar-background";
+
+  const left = new Container({ label: "bottom-bar-left" });
+  left.layout = {
+    width: (frame.width - sidePadding * 2 - gap) / 2,
+    height: frame.height,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+  const right = new Container({ label: "bottom-bar-right" });
+  right.layout = {
+    width: (frame.width - sidePadding * 2 - gap) / 2,
+    height: frame.height,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+
+  left.addChild(buttons.controls);
+  right.addChild(buttons.debug);
+  bar.addChild(background, left, right);
+  return bar;
 }
 
 function createBottomSheetHost(

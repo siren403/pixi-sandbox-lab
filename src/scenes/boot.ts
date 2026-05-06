@@ -509,7 +509,7 @@ function renderSampleShell(
       width: options.markerRadius * 2,
       height: options.markerRadius * 2,
     };
-    shell.topBar.addChild(marker);
+    shell.topBarRight.addChild(marker);
   }
 
   layer.addChild(shell);
