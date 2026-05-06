@@ -123,6 +123,13 @@ export async function dispatchDebugCommand(page: Page, command: DebugCommand): P
   return page.evaluate((nextCommand) => window.__pixiDebug?.dispatch?.(nextCommand), command);
 }
 
+export async function dispatchDebugCommands(page: Page, commands: DebugCommand[]): Promise<Array<DebugCommandResult | undefined>> {
+  return page.evaluate(
+    (nextCommands) => Promise.all(nextCommands.map((nextCommand) => window.__pixiDebug?.dispatch?.(nextCommand))),
+    commands,
+  );
+}
+
 export async function clickCanvasAt(
   page: Page,
   canvas: Locator,

@@ -11,6 +11,7 @@ import {
   setBootDebugState,
   setSceneIndexDebugState,
 } from "../debug/stateBridge";
+import { setDebugCommandHandler, type DebugCommandResult } from "../debug/commands";
 import { createButton } from "../ui/button";
 import { createLabel } from "../ui/label";
 import { configureSafeAreaColumn } from "../ui/layout";
@@ -374,12 +375,50 @@ function countLayoutNodes(container: Container): number {
 function installDebugSceneListeners(handlers: { onScene: () => void; onDesignSystem: () => void }): () => void {
   const sceneListener = () => handlers.onScene();
   const designSystemListener = () => handlers.onDesignSystem();
+  const restoreDebugCommandHandler = setDebugCommandHandler((command) => {
+    if (command.type === "app.reload") {
+      window.location.reload();
+      return acceptedCommand(command.type);
+    }
+    if (command.type === "scene.open") {
+      if (!["vertical-slice", "design-system"].includes(command.sceneId)) {
+        return ignoredCommand(command.type, `Unsupported scene id: ${command.sceneId}`);
+      }
+      if (command.sceneId === "vertical-slice") {
+        handlers.onScene();
+        return acceptedCommand(command.type);
+      }
+      if (command.sceneId === "design-system") {
+        handlers.onDesignSystem();
+        return acceptedCommand(command.type);
+      }
+      return ignoredCommand(command.type, `Unsupported scene id: ${command.sceneId}`);
+    }
+    if (command.type === "layout.set") {
+      window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: command }));
+      return acceptedCommand(command.type);
+    }
+    return unsupportedCommand(command.type);
+  });
   window.addEventListener("pixi:scene-switch", sceneListener);
   window.addEventListener("pixi:design-system", designSystemListener);
   return () => {
+    restoreDebugCommandHandler();
     window.removeEventListener("pixi:scene-switch", sceneListener);
     window.removeEventListener("pixi:design-system", designSystemListener);
   };
+}
+
+function acceptedCommand(type: DebugCommandResult["type"]): DebugCommandResult {
+  return { accepted: true, status: "accepted", type };
+}
+
+function ignoredCommand(type: DebugCommandResult["type"], reason: string): DebugCommandResult {
+  return { accepted: false, status: "ignored", type, reason };
+}
+
+function unsupportedCommand(type: DebugCommandResult["type"]): DebugCommandResult {
+  return { accepted: false, status: "unsupported", type, reason: "Command is not supported in this scene." };
 }
 
 function containsPoint(bounds: { x: number; y: number; width: number; height: number }, x: number, y: number): boolean {

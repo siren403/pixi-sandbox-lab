@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { collectConsoleErrors, gotoBoot, readDebugSnapshot, startDemoFromBoot } from "./pixi-test-helpers";
+import {
+  collectConsoleErrors,
+  dispatchDebugCommand,
+  dispatchDebugCommands,
+  gotoBoot,
+  readDebugSnapshot,
+  startDemoFromBoot,
+} from "./pixi-test-helpers";
 
 test("keeps legacy DOM debug panel hidden while preserving debug state", async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
@@ -34,11 +41,11 @@ test("guards duplicate debug scene switch commands", async ({ page }) => {
   const acceptedCommands = runtimeBefore?.acceptedCommands ?? 0;
   const ignoredCommands = runtimeBefore?.ignoredCommands ?? 0;
 
-  await page.evaluate(() => {
-    for (let index = 0; index < 5; index += 1) {
-      window.dispatchEvent(new CustomEvent("pixi:scene-switch"));
-    }
-  });
+  const commandResults = await dispatchDebugCommands(
+    page,
+    Array.from({ length: 5 }, () => ({ type: "scene.open", sceneId: "alternate" })),
+  );
+  expect(commandResults.filter((result) => result?.accepted).length).toBeGreaterThanOrEqual(1);
   await expect
     .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.runtime?.sceneSwitches ?? 0))
     .toBeGreaterThan(runtimeSwitches);
@@ -66,7 +73,7 @@ test("guards duplicate debug scene switch commands", async ({ page }) => {
   expect(alternate?.assetReady).toBe(true);
   expect(alternate?.assetBounds.width).toBeGreaterThan(0);
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:scene-switch")));
+  await dispatchDebugCommand(page, { type: "scene.open", sceneId: "vertical-slice" });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.demo?.scene)).toBe("vertical-slice");
   expect((await readDebugSnapshot(page))?.demo?.sceneSwitches).toBe(2);
 
@@ -83,23 +90,23 @@ test("shows layout and semantic bounds debug information by filter", async ({ pa
   expect((await readDebugSnapshot(page))?.layout?.mode).toBe("layout");
   expect((await readDebugSnapshot(page))?.layout?.filter).toBe("all");
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { enabled: true } })));
+  await dispatchDebugCommand(page, { type: "layout.set", enabled: true });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.enabled)).toBe(true);
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.debuggedNodes)).toBeGreaterThan(0);
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { filter: "ui" } })));
+  await dispatchDebugCommand(page, { type: "layout.set", filter: "ui" });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.filter)).toBe("ui");
   const uiDebuggedNodes = (await readDebugSnapshot(page))?.layout?.debuggedNodes ?? 0;
   expect(uiDebuggedNodes).toBeGreaterThan(0);
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { filter: "world" } })));
+  await dispatchDebugCommand(page, { type: "layout.set", filter: "world" });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.filter)).toBe("world");
   expect((await readDebugSnapshot(page))?.layout?.debuggedNodes ?? 0).toBeLessThan(uiDebuggedNodes);
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { filter: "all" } })));
+  await dispatchDebugCommand(page, { type: "layout.set", filter: "all" });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.filter)).toBe("all");
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { mode: "bounds" } })));
+  await dispatchDebugCommand(page, { type: "layout.set", mode: "bounds" });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.mode)).toBe("bounds");
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.semanticBoxes ?? 0)).toBeGreaterThan(0);
   await expect
@@ -107,28 +114,28 @@ test("shows layout and semantic bounds debug information by filter", async ({ pa
     .toEqual(expect.arrayContaining(["title", "player", "marker"]));
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.debuggedNodes ?? -1)).toBe(0);
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { filter: "ui" } })));
+  await dispatchDebugCommand(page, { type: "layout.set", filter: "ui" });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.filter)).toBe("ui");
   await expect
     .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.semanticLabels ?? []))
     .toEqual(expect.arrayContaining(["app-shell", "title", "marker"]));
   expect((await readDebugSnapshot(page))?.layout?.semanticLabels ?? []).not.toContain("player");
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { filter: "world" } })));
+  await dispatchDebugCommand(page, { type: "layout.set", filter: "world" });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.filter)).toBe("world");
   await expect
     .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.semanticLabels ?? []))
     .toEqual(expect.arrayContaining(["player"]));
   expect((await readDebugSnapshot(page))?.layout?.semanticLabels ?? []).not.toContain("title");
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { filter: "all" } })));
+  await dispatchDebugCommand(page, { type: "layout.set", filter: "all" });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.filter)).toBe("all");
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { mode: "layout" } })));
+  await dispatchDebugCommand(page, { type: "layout.set", mode: "layout" });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.mode)).toBe("layout");
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.debuggedNodes ?? 0)).toBeGreaterThan(0);
 
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { enabled: false } })));
+  await dispatchDebugCommand(page, { type: "layout.set", enabled: false });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.enabled)).toBe(false);
 
   expect(consoleErrors).toEqual([]);

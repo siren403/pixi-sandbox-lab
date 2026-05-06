@@ -392,6 +392,8 @@ window.__pixiDebug = {
 
 Legacy direct fields such as `window.__pixiDebug.runtime` and `window.__pixiDebug.demo` remain mirrored for compatibility, but Playwright specs should read state through `getSnapshot()` and wait through `whenReady()`. Direct field reads belong inside the bridge implementation or in narrowly documented legacy checks.
 
+Playwright input should use `dispatch(command)` rather than firing `pixi:*` DOM events directly. The current command surface covers `app.reload`, `scene.open`, and `layout.set`; legacy DOM events remain only for internal debug overlay compatibility.
+
 주요 기능:
 
 - 현재 scene 이름 표시
