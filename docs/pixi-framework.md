@@ -150,6 +150,12 @@ type SceneContext = {
   runtime: RuntimeApi;
   switchScene: (scene: Scene, options?: SceneOpenOptions) => boolean;
 };
+
+type SceneMetadata = {
+  name: string;
+  source: CommandSource;
+  args: <T = unknown>() => T | undefined;
+};
 ```
 
 `ctx.runtime`은 scene authoring용 runtime facade다. 현재 공개된 범위는 scene readiness 대기와 scene 전환 요청이며, loading/app mode/counter 같은 mutable runtime state는 internal `runtimeState`로 격리한다.
@@ -174,10 +180,10 @@ ctx.switchScene(detailsScene, {
   args: { itemId: "orb-01" },
 });
 
-const args = ctx.scene.args as { itemId?: string } | undefined;
+const args = ctx.scene.args<{ itemId?: string }>();
 ```
 
-`ctx.scene`은 현재 active scene의 metadata이며 `name`, `source`, `args`를 포함한다. Args는 runtime이 소유하거나 merge하는 전역 store가 아니다. 전환 순간의 선택값, initial tab, optional sheet 같은 작은 입력에만 쓰고, inventory/progression/shop state처럼 오래 살아야 하는 값은 별도 game state/store로 둔다.
+`ctx.scene`은 현재 active scene의 metadata이며 `name`, `source`, `args<T>()`를 포함한다. `args<T>()`는 runtime validation이 아니라 TypeScript 편의용 assertion이다. Args는 runtime이 소유하거나 merge하는 전역 store가 아니다. 전환 순간의 선택값, initial tab, optional sheet 같은 작은 입력에만 쓰고, inventory/progression/shop state처럼 오래 살아야 하는 값은 별도 game state/store로 둔다.
 
 ### Runtime Readiness
 

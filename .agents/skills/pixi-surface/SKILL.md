@@ -71,6 +71,17 @@ ui.button({
 });
 ```
 
+## API Surface Heuristics
+
+Use these checks when planning or reviewing Pixi framework API shape, especially scene, layout, UI primitive, and runtime facade changes:
+
+- Prefer namespace symmetry: when the write/call API is namespaced, the read API should usually live in the same namespace. For example, scene transition payloads passed through `ctx.switchScene(scene, { args })` should be read through `ctx.scene.args<T>()`, not an unrelated top-level helper.
+- Prefer clear concept boundaries over the shortest possible call. A short top-level API is acceptable only when it does not blur ownership such as scene metadata, surface layout, runtime commands, or long-lived game state.
+- Do not expose a raw public value and a typed helper for the same concept at the same time. Pick one public surface and keep raw storage internal.
+- Treat generic helpers without runtime validation as TypeScript assertions. Document that they do not validate shape.
+- Keep one-shot transition payloads separate from long-lived state. Use scene args for initial tab, selected sample, or optional sheet state; use a future game state/store for inventory, progression, shop state, or cross-scene domain data.
+- Preserve legacy compatibility only at the API boundary. Normalize old forms such as `ctx.switchScene(scene, "debug")` into the new internal shape before runtime logic consumes them.
+
 ## Review Checklist
 
 Before implementation:
@@ -85,6 +96,7 @@ Before implementation:
 - Define E2E checks that prove canvas fill, no offset, no crop of critical UI, and interaction.
 - For layout/debuggable UI, include a check that layout nodes exist and relevant component bounds are inspectable.
 - For semantic components, include contract checks such as button label center delta, touch target minimum size, or no-overlap assertions.
+- For Pixi framework API surface changes, check namespace symmetry, public/raw separation, one-shot args versus store boundaries, and legacy normalization.
 
 After implementation:
 

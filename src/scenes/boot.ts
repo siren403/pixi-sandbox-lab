@@ -109,7 +109,7 @@ export const verticalSliceScene = scene({
   assets: [demoOrbUrl],
 
   load({ assets, layers, layout, surface, scene, switchScene }) {
-    sampleShellState["vertical-slice"].sheet = readSampleSceneArgs(scene.args).openSheet ?? "none";
+    sampleShellState["vertical-slice"].sheet = readSampleSceneArgs(scene.args<SampleSceneArgs>()).openSheet ?? "none";
     const playerSize = surface.token(surfaceTheme.size.player);
     const playerRadius = surface.token(surfaceTheme.radius.player);
     const playerStroke = surface.token(surfaceTheme.size.playerStroke);
@@ -280,7 +280,7 @@ export const alternateScene = scene({
   assets: () => [demoOrbUrl],
 
   load({ assets, layers, layout, surface, scene, switchScene }) {
-    sampleShellState.alternate.sheet = readSampleSceneArgs(scene.args).openSheet ?? "none";
+    sampleShellState.alternate.sheet = readSampleSceneArgs(scene.args<SampleSceneArgs>()).openSheet ?? "none";
     const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius) * 1.35;
 
     const playerSize = tokenValue(layout, surfaceTheme.size.player);
@@ -368,7 +368,7 @@ export const designSystemScene = scene({
   transition: { enabled: true, minimumMs: 0 },
 
   load({ layers, layout, surface, scene, switchScene }) {
-    sampleShellState["design-system"].sheet = readSampleSceneArgs(scene.args).openSheet ?? "none";
+    sampleShellState["design-system"].sheet = readSampleSceneArgs(scene.args<SampleSceneArgs>()).openSheet ?? "none";
     renderDesignSystem(layers.ui, layout);
     renderSampleShell(layers.ui, layout, {
       sceneId: "design-system",
@@ -628,11 +628,10 @@ function handleSampleShellPointer(
   return false;
 }
 
-function readSampleSceneArgs(args: unknown): SampleSceneArgs {
+function readSampleSceneArgs(args: SampleSceneArgs | undefined): SampleSceneArgs {
   if (!args || typeof args !== "object") return {};
-  const value = args as { openSheet?: unknown };
   return {
-    openSheet: value.openSheet === "controls" || value.openSheet === "debug" ? value.openSheet : undefined,
+    openSheet: args.openSheet === "controls" || args.openSheet === "debug" ? args.openSheet : undefined,
   };
 }
 

@@ -6,8 +6,8 @@ import { createKeyboard } from "./keyboard";
 import { createPointer } from "./pointer";
 import { waitForRuntimeReady } from "./readiness";
 import { setSceneNavigator } from "./navigation";
-import type { RuntimeApi, RuntimeContext, Scene, SceneMetadata, SurfaceLayers, SurfaceLayout } from "./scene";
-import { resolveSceneOpenOptions } from "./scene";
+import type { RuntimeApi, RuntimeContext, Scene, SurfaceLayers, SurfaceLayout } from "./scene";
+import { createSceneMetadata, resolveSceneOpenOptions } from "./scene";
 import { SceneManager } from "./sceneManager";
 import { createSurfaceContext } from "./surface";
 import { syncTransitionState } from "./transition";
@@ -72,7 +72,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
     transitionPanelMaxCount: 0,
   };
   const layout = createSurfaceLayout(options.width, options.height, app.screen.width, app.screen.height);
-  const sceneMetadata: SceneMetadata = { name: "none", source: "scene", args: undefined };
+  const sceneMetadata = createSceneMetadata();
   const surface = createSurfaceContext(layout, (container = layers.root) => {
     app.renderer.layout.update(container);
   });
@@ -97,9 +97,10 @@ export async function createGame(options: GameOptions): Promise<Application> {
     pointer,
     layout,
     surface,
-    scene: sceneMetadata,
+    scene: sceneMetadata.metadata,
     runtime,
     runtimeState,
+    setSceneMetadata: sceneMetadata.setActiveScene,
     switchScene: (scene, openOptions) => {
       const resolvedOptions = resolveSceneOpenOptions(openOptions);
       return commands.requestSceneSwitch(scene, resolvedOptions.source, () => sceneManager.switch(scene, ctx, resolvedOptions));

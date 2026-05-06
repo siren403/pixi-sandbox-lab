@@ -15,9 +15,7 @@ export class SceneManager {
     const previous = this.current;
     ctx.runtimeState.sceneSwitches += 1;
     ctx.runtimeState.activeScene = scene.name;
-    ctx.scene.name = scene.name;
-    ctx.scene.source = options.source;
-    ctx.scene.args = options.args;
+    ctx.setSceneMetadata({ name: scene.name, source: options.source, args: options.args });
     ctx.runtimeState.sceneLifecycle = "unloading";
     setActiveDebugScene(scene.name);
     syncTransitionState(ctx);

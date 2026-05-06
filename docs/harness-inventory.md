@@ -62,7 +62,7 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   UI metadata for the `hook-creator` skill.
 
 - `.agents/skills/pixi-surface/SKILL.md`
-  Provides the workflow for planning or reviewing PixiJS surface work against `DESIGN.md`, `docs/pixi-stack.md`, and `docs/pixi-status.md`.
+  Provides the workflow for planning or reviewing PixiJS surface work against `DESIGN.md`, `docs/pixi-stack.md`, and `docs/pixi-status.md`; includes Pixi API surface heuristics such as namespace symmetry, public/raw separation, and one-shot scene args versus long-lived store boundaries.
   Discovery route: `pixi_surface_architect` reads this skill first; `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`.
   Expected user/agent: parent Codex and Pixi surface specialists planning or reviewing browser game surface work.
   Validation: `mise run validate-skills`.
@@ -127,7 +127,7 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   Project-local custom agent responsible for reviewing implementation plans before execution.
 
 - `.codex/agents/pixi-surface-architect.toml`
-  Project-local custom agent responsible for reviewing PixiJS app surface architecture against the canonical surface contract in `DESIGN.md`.
+  Project-local custom agent responsible for reviewing PixiJS app surface architecture and related scene-authoring API surface against the canonical surface contract in `DESIGN.md`.
   Discovery route: `harness_architect` boot discovery reads `.codex/agents/*.toml`; parent Codex may spawn this specialist for Pixi surface planning or review.
   Expected user/agent: parent Codex and Pixi implementation agents needing specialist review before surface/UI changes.
   Validation: TOML syntax smoke check and `mise run validate-skills` for its supporting skill.

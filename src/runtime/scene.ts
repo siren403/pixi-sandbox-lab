@@ -80,7 +80,12 @@ export type ResolvedSceneOpenOptions = {
 export type SceneMetadata = {
   name: string;
   source: CommandSource;
-  args: unknown;
+  args: <T = unknown>() => T | undefined;
+};
+
+export type SceneMetadataController = {
+  metadata: SceneMetadata;
+  setActiveScene: (scene: { name: string; source: CommandSource; args: unknown }) => void;
 };
 
 export type SceneContext = {
@@ -99,6 +104,7 @@ export type SceneContext = {
 
 export type RuntimeContext = SceneContext & {
   runtimeState: RuntimeInternalState;
+  setSceneMetadata: SceneMetadataController["setActiveScene"];
 };
 
 export type Scene = {
@@ -129,5 +135,23 @@ export function resolveSceneOpenOptions(options: SceneOpenOptions | undefined): 
   return {
     source: options?.source ?? "scene",
     args: options?.args,
+  };
+}
+
+export function createSceneMetadata(): SceneMetadataController {
+  let rawArgs: unknown;
+  const metadata: SceneMetadata = {
+    name: "none",
+    source: "scene",
+    args: <T = unknown>() => rawArgs as T | undefined,
+  };
+
+  return {
+    metadata,
+    setActiveScene(scene) {
+      metadata.name = scene.name;
+      metadata.source = scene.source;
+      rawArgs = scene.args;
+    },
   };
 }
