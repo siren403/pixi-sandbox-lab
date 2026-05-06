@@ -1,4 +1,4 @@
-import type { RuntimeState } from "./scene";
+import type { RuntimeInternalState } from "./scene";
 
 export type RuntimeReadyCriteria = {
   scene?: string;
@@ -10,7 +10,7 @@ export type RuntimeReadyCriteria = {
 };
 
 export type RuntimeReadySnapshot = Pick<
-  RuntimeState,
+  RuntimeInternalState,
   | "activeScene"
   | "sceneLifecycle"
   | "transitionLifecycle"
@@ -29,9 +29,9 @@ type RuntimeWaiter = {
   timeout: number;
 };
 
-const waitersByRuntime = new WeakMap<RuntimeState, Set<RuntimeWaiter>>();
+const waitersByRuntime = new WeakMap<RuntimeInternalState, Set<RuntimeWaiter>>();
 
-export function syncRuntimeReadiness(runtime: RuntimeState): RuntimeReadySnapshot {
+export function syncRuntimeReadiness(runtime: RuntimeInternalState): RuntimeReadySnapshot {
   runtime.sceneReady = runtime.sceneLifecycle === "ready";
   runtime.transitionIdle = runtime.transitionLifecycle === "idle" && runtime.loadingPhase === "idle" && !runtime.loading;
   runtime.commandIdle = runtime.runningCommands.length === 0;
@@ -44,7 +44,7 @@ export function syncRuntimeReadiness(runtime: RuntimeState): RuntimeReadySnapsho
 }
 
 export function waitForRuntimeReady(
-  runtime: RuntimeState,
+  runtime: RuntimeInternalState,
   criteria: RuntimeReadyCriteria,
 ): Promise<RuntimeReadySnapshot> {
   const snapshot = readRuntimeReadySnapshot(runtime);
@@ -66,7 +66,7 @@ export function waitForRuntimeReady(
   });
 }
 
-export function readRuntimeReadySnapshot(runtime: RuntimeState): RuntimeReadySnapshot {
+export function readRuntimeReadySnapshot(runtime: RuntimeInternalState): RuntimeReadySnapshot {
   return {
     activeScene: runtime.activeScene,
     sceneLifecycle: runtime.sceneLifecycle,
@@ -80,7 +80,7 @@ export function readRuntimeReadySnapshot(runtime: RuntimeState): RuntimeReadySna
   };
 }
 
-function notifyRuntimeWaiters(runtime: RuntimeState, snapshot: RuntimeReadySnapshot): void {
+function notifyRuntimeWaiters(runtime: RuntimeInternalState, snapshot: RuntimeReadySnapshot): void {
   const waiters = waitersByRuntime.get(runtime);
   if (!waiters) return;
 
@@ -101,7 +101,7 @@ function matchesReadyCriteria(snapshot: RuntimeReadySnapshot, criteria: RuntimeR
   return true;
 }
 
-function readRuntimeWaiters(runtime: RuntimeState): Set<RuntimeWaiter> {
+function readRuntimeWaiters(runtime: RuntimeInternalState): Set<RuntimeWaiter> {
   const existing = waitersByRuntime.get(runtime);
   if (existing) return existing;
 

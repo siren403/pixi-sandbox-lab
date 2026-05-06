@@ -146,10 +146,19 @@ type SceneContext = {
   pointer: Pointer;
   layout: SurfaceLayout;
   surface: SurfaceContext;
-  runtime: RuntimeState;
+  runtime: RuntimeApi;
   switchScene: (scene: Scene, source?: CommandSource) => boolean;
 };
 ```
+
+`ctx.runtime`은 scene authoring용 runtime facade다. 현재 공개된 범위는 scene readiness 대기와 scene 전환 요청이며, loading/app mode/counter 같은 mutable runtime state는 internal `runtimeState`로 격리한다.
+
+```ts
+ctx.runtime.scene.open(nextScene);
+await ctx.runtime.scene.whenReady({ scene: "scene-index", interactive: true });
+```
+
+일반 scene code에서는 전환 요청용 `ctx.switchScene()`을 기본으로 사용한다. `ctx.runtime.scene.whenReady()`는 framework/debug/E2E처럼 완료 시점이 중요한 곳에서 제한적으로 사용한다.
 
 현재는 migration 중이라 `ctx.layout`, `ctx.keyboard`, `ctx.pointer`를 계속 노출한다. 새 코드에서는 가능한 한 `ctx.surface`를 우선 사용한다.
 

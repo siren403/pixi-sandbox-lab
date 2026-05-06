@@ -11,7 +11,7 @@ import {
 } from "./motion";
 import { tokenValue } from "./surface";
 import { surfaceTheme } from "../ui/tokens";
-import type { SceneContext } from "./scene";
+import type { RuntimeContext } from "./scene";
 import { setRuntimeDebugState } from "../debug/stateBridge";
 import { syncRuntimeReadiness } from "./readiness";
 
@@ -28,14 +28,14 @@ export type TransitionController = {
   destroy: () => void;
 };
 
-export function createTransition(ctx: SceneContext): TransitionController {
-  ctx.runtime.loading = true;
-  ctx.runtime.loadingPhase = "in";
-  ctx.runtime.transitionLifecycle = "in";
-  ctx.runtime.loadingProgress = 0;
-  ctx.runtime.loadingOverlayAlpha = 0;
-  ctx.runtime.loadingOverlayMaxAlpha = 0;
-  ctx.runtime.loadingOverlayShows += 1;
+export function createTransition(ctx: RuntimeContext): TransitionController {
+  ctx.runtimeState.loading = true;
+  ctx.runtimeState.loadingPhase = "in";
+  ctx.runtimeState.transitionLifecycle = "in";
+  ctx.runtimeState.loadingProgress = 0;
+  ctx.runtimeState.loadingOverlayAlpha = 0;
+  ctx.runtimeState.loadingOverlayMaxAlpha = 0;
+  ctx.runtimeState.loadingOverlayShows += 1;
 
   const root = createTransitionRoot(ctx);
   ctx.layers.debug.addChild(root);
@@ -48,7 +48,7 @@ export function createTransition(ctx: SceneContext): TransitionController {
     animateIn: () => animateTransition(ctx, root, "in", transitionInMs),
     animateOut: () => animateTransition(ctx, root, "out", transitionOutMs),
     updateProgress(progress) {
-      ctx.runtime.loadingProgress = progress;
+      ctx.runtimeState.loadingProgress = progress;
       updateLoadingProgress(ctx, root, progress);
       syncTransitionState(ctx);
     },
@@ -59,47 +59,47 @@ export function createTransition(ctx: SceneContext): TransitionController {
       stopMotion(loopMotion);
       loopBlurMotion?.cleanup();
       root.destroy({ children: true });
-      ctx.runtime.transitionPanels = 0;
+      ctx.runtimeState.transitionPanels = 0;
       syncTransitionState(ctx);
     },
   };
 }
 
-export function syncTransitionState(ctx: SceneContext): void {
-  syncRuntimeReadiness(ctx.runtime);
+export function syncTransitionState(ctx: RuntimeContext): void {
+  syncRuntimeReadiness(ctx.runtimeState);
   setRuntimeDebugState({
-    appMode: ctx.runtime.appMode,
-    activeScene: ctx.runtime.activeScene,
-    sceneLifecycle: ctx.runtime.sceneLifecycle,
-    transitionLifecycle: ctx.runtime.transitionLifecycle,
-    sceneReady: ctx.runtime.sceneReady,
-    transitionIdle: ctx.runtime.transitionIdle,
-    commandIdle: ctx.runtime.commandIdle,
-    interactiveReady: ctx.runtime.interactiveReady,
-    readinessRevision: ctx.runtime.readinessRevision,
-    loading: ctx.runtime.loading,
-    loadingPhase: ctx.runtime.loadingPhase,
-    sceneSwitches: ctx.runtime.sceneSwitches,
-    sceneSwitchRequests: ctx.runtime.sceneSwitchRequests,
-    acceptedCommands: ctx.runtime.acceptedCommands,
-    ignoredCommands: ctx.runtime.ignoredCommands,
-    runningCommands: ctx.runtime.runningCommands,
-    loadingOverlayShows: ctx.runtime.loadingOverlayShows,
-    loadingMinimumMs: ctx.runtime.loadingMinimumMs,
-    lastLoadingDurationMs: ctx.runtime.lastLoadingDurationMs,
-    loadingProgress: ctx.runtime.loadingProgress,
-    loadingOverlayAlpha: ctx.runtime.loadingOverlayAlpha,
-    loadingOverlayMaxAlpha: ctx.runtime.loadingOverlayMaxAlpha,
+    appMode: ctx.runtimeState.appMode,
+    activeScene: ctx.runtimeState.activeScene,
+    sceneLifecycle: ctx.runtimeState.sceneLifecycle,
+    transitionLifecycle: ctx.runtimeState.transitionLifecycle,
+    sceneReady: ctx.runtimeState.sceneReady,
+    transitionIdle: ctx.runtimeState.transitionIdle,
+    commandIdle: ctx.runtimeState.commandIdle,
+    interactiveReady: ctx.runtimeState.interactiveReady,
+    readinessRevision: ctx.runtimeState.readinessRevision,
+    loading: ctx.runtimeState.loading,
+    loadingPhase: ctx.runtimeState.loadingPhase,
+    sceneSwitches: ctx.runtimeState.sceneSwitches,
+    sceneSwitchRequests: ctx.runtimeState.sceneSwitchRequests,
+    acceptedCommands: ctx.runtimeState.acceptedCommands,
+    ignoredCommands: ctx.runtimeState.ignoredCommands,
+    runningCommands: ctx.runtimeState.runningCommands,
+    loadingOverlayShows: ctx.runtimeState.loadingOverlayShows,
+    loadingMinimumMs: ctx.runtimeState.loadingMinimumMs,
+    lastLoadingDurationMs: ctx.runtimeState.lastLoadingDurationMs,
+    loadingProgress: ctx.runtimeState.loadingProgress,
+    loadingOverlayAlpha: ctx.runtimeState.loadingOverlayAlpha,
+    loadingOverlayMaxAlpha: ctx.runtimeState.loadingOverlayMaxAlpha,
     loadingOverlayVisible: ctx.layers.debug.getChildByLabel("loading-overlay")?.visible === true,
     transitionPanels: countTransitionPanels(ctx),
-    transitionPanelMaxCount: ctx.runtime.transitionPanelMaxCount,
+    transitionPanelMaxCount: ctx.runtimeState.transitionPanelMaxCount,
   });
 }
 
-function createTransitionRoot(ctx: SceneContext): Container {
+function createTransitionRoot(ctx: RuntimeContext): Container {
   const root = new Container({ label: "loading-overlay" });
-  ctx.runtime.transitionPanels = 4;
-  ctx.runtime.transitionPanelMaxCount = Math.max(ctx.runtime.transitionPanelMaxCount, 4);
+  ctx.runtimeState.transitionPanels = 4;
+  ctx.runtimeState.transitionPanelMaxCount = Math.max(ctx.runtimeState.transitionPanelMaxCount, 4);
   const width = ctx.layout.visibleWidth;
   const height = ctx.layout.visibleHeight;
   const diagonalSpan = Math.hypot(width, height);
@@ -230,7 +230,7 @@ function createLoadingLoopBlur(root: Container): { cleanup: () => void } | null 
 }
 
 function animateTransition(
-  ctx: SceneContext,
+  ctx: RuntimeContext,
   root: Container,
   direction: "in" | "out",
   durationMs: number,
@@ -273,14 +273,14 @@ function animateTransition(
         : lerp(width * 0.42, width * 1.22, easeInCubic(raw)) + slashOffsetB * raw;
 
       setUiAlpha(root, uiAlpha);
-      ctx.runtime.loadingOverlayAlpha = panelProgress;
-      ctx.runtime.loadingOverlayMaxAlpha = Math.max(ctx.runtime.loadingOverlayMaxAlpha, panelProgress);
+      ctx.runtimeState.loadingOverlayAlpha = panelProgress;
+      ctx.runtimeState.loadingOverlayMaxAlpha = Math.max(ctx.runtimeState.loadingOverlayMaxAlpha, panelProgress);
       syncTransitionState(ctx);
     },
   }).then(() => undefined);
 }
 
-function updateLoadingProgress(ctx: SceneContext, root: Container, progress: number): void {
+function updateLoadingProgress(ctx: RuntimeContext, root: Container, progress: number): void {
   const fill = root.getChildByLabel("loading-progress-fill", true) as Graphics | null;
   if (!fill) return;
 
@@ -303,7 +303,7 @@ function getTransitionPanels(root: Container): Container[] {
   return root.children.filter((child) => child.label?.startsWith("transition-panel-")) as Container[];
 }
 
-function countTransitionPanels(ctx: SceneContext): number {
+function countTransitionPanels(ctx: RuntimeContext): number {
   const root = ctx.layers.debug.getChildByLabel("loading-overlay");
   return root instanceof Container ? getTransitionPanels(root).length : 0;
 }

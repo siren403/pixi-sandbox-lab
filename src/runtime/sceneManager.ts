@@ -1,4 +1,4 @@
-import type { Scene, SceneContext } from "./scene";
+import type { RuntimeContext, Scene } from "./scene";
 import { createTransition, minimumLoadingMsRange, syncTransitionState } from "./transition";
 import { setActiveDebugScene } from "../debug/stateBridge";
 
@@ -6,22 +6,22 @@ export class SceneManager {
   private current: Scene | null = null;
   private switchId = 0;
 
-  async start(scene: Scene, ctx: SceneContext): Promise<void> {
+  async start(scene: Scene, ctx: RuntimeContext): Promise<void> {
     await this.switch(scene, ctx);
   }
 
-  async switch(scene: Scene, ctx: SceneContext): Promise<void> {
+  async switch(scene: Scene, ctx: RuntimeContext): Promise<void> {
     const switchId = ++this.switchId;
     const previous = this.current;
-    ctx.runtime.sceneSwitches += 1;
-    ctx.runtime.activeScene = scene.name;
-    ctx.runtime.sceneLifecycle = "unloading";
+    ctx.runtimeState.sceneSwitches += 1;
+    ctx.runtimeState.activeScene = scene.name;
+    ctx.runtimeState.sceneLifecycle = "unloading";
     setActiveDebugScene(scene.name);
     syncTransitionState(ctx);
 
     const transitionOptions = resolveTransitionOptions(scene);
     const minimumLoadingMs = transitionOptions.minimumMs ?? sampleMinimumLoadingMs();
-    ctx.runtime.loadingMinimumMs = transitionOptions.enabled ? minimumLoadingMs : 0;
+    ctx.runtimeState.loadingMinimumMs = transitionOptions.enabled ? minimumLoadingMs : 0;
     const loadingStartedAt = performance.now();
     const transition = transitionOptions.enabled ? createTransition(ctx) : null;
     const assets = typeof scene.assets === "function" ? scene.assets(ctx) : (scene.assets ?? []);
@@ -34,13 +34,13 @@ export class SceneManager {
 
       previous?.unload?.(ctx);
       this.current = null;
-      ctx.runtime.sceneLifecycle = "loading-assets";
+      ctx.runtimeState.sceneLifecycle = "loading-assets";
       syncTransitionState(ctx);
 
       if (transition) {
-        ctx.runtime.loadingPhase = "loading";
-        ctx.runtime.transitionLifecycle = "loading";
-        ctx.runtime.appMode = "loading";
+        ctx.runtimeState.loadingPhase = "loading";
+        ctx.runtimeState.transitionLifecycle = "loading";
+        ctx.runtimeState.appMode = "loading";
         syncTransitionState(ctx);
       }
 
@@ -52,57 +52,57 @@ export class SceneManager {
 
       this.current = scene;
       setActiveDebugScene(scene.name);
-      ctx.runtime.sceneLifecycle = "loading-scene";
+      ctx.runtimeState.sceneLifecycle = "loading-scene";
       syncTransitionState(ctx);
       this.current.load?.(ctx);
-      ctx.runtime.sceneLifecycle = "render-pending";
+      ctx.runtimeState.sceneLifecycle = "render-pending";
       syncTransitionState(ctx);
 
       if (transition) {
         transition.updateProgress(1);
-        ctx.runtime.loadingPhase = "out";
-        ctx.runtime.transitionLifecycle = "out";
-        ctx.runtime.appMode = "transitioning";
+        ctx.runtimeState.loadingPhase = "out";
+        ctx.runtimeState.transitionLifecycle = "out";
+        ctx.runtimeState.appMode = "transitioning";
         syncTransitionState(ctx);
         await transition.animateOut();
       }
     } finally {
       if (switchId === this.switchId) {
         if (transition) {
-          ctx.runtime.lastLoadingDurationMs = performance.now() - loadingStartedAt;
-          ctx.runtime.loadingProgress = 1;
-          ctx.runtime.loadingOverlayAlpha = 0;
-          ctx.runtime.loadingPhase = "idle";
-          ctx.runtime.transitionLifecycle = "idle";
-          ctx.runtime.loading = false;
+          ctx.runtimeState.lastLoadingDurationMs = performance.now() - loadingStartedAt;
+          ctx.runtimeState.loadingProgress = 1;
+          ctx.runtimeState.loadingOverlayAlpha = 0;
+          ctx.runtimeState.loadingPhase = "idle";
+          ctx.runtimeState.transitionLifecycle = "idle";
+          ctx.runtimeState.loading = false;
           transition.destroy();
         }
-        if (this.current === scene && ctx.runtime.sceneLifecycle === "render-pending") {
+        if (this.current === scene && ctx.runtimeState.sceneLifecycle === "render-pending") {
           await waitForRenderFrame();
-          ctx.runtime.sceneLifecycle = "ready";
+          ctx.runtimeState.sceneLifecycle = "ready";
         }
         syncTransitionState(ctx);
       }
     }
   }
 
-  update(dt: number, ctx: SceneContext): void {
+  update(dt: number, ctx: RuntimeContext): void {
     this.current?.update?.(dt, ctx);
   }
 
-  resize(ctx: SceneContext): void {
+  resize(ctx: RuntimeContext): void {
     this.current?.resize?.(ctx);
   }
 
-  destroy(ctx: SceneContext): void {
+  destroy(ctx: RuntimeContext): void {
     this.switchId += 1;
-    ctx.runtime.loading = false;
-    ctx.runtime.appMode = "destroyed";
-    ctx.runtime.activeScene = "destroyed";
-    ctx.runtime.sceneLifecycle = "none";
-    ctx.runtime.transitionLifecycle = "idle";
-    ctx.runtime.loadingPhase = "idle";
-    ctx.runtime.loadingOverlayAlpha = 0;
+    ctx.runtimeState.loading = false;
+    ctx.runtimeState.appMode = "destroyed";
+    ctx.runtimeState.activeScene = "destroyed";
+    ctx.runtimeState.sceneLifecycle = "none";
+    ctx.runtimeState.transitionLifecycle = "idle";
+    ctx.runtimeState.loadingPhase = "idle";
+    ctx.runtimeState.loadingOverlayAlpha = 0;
     setActiveDebugScene("destroyed");
     this.current?.unload?.(ctx);
     this.current = null;
@@ -124,7 +124,7 @@ function resolveTransitionOptions(scene: Scene): { enabled: boolean; minimumMs?:
 }
 
 function startProgressLoop(
-  ctx: SceneContext,
+  ctx: RuntimeContext,
   transition: { updateProgress: (progress: number) => void },
   startedAt: number,
   minimumMs: number,

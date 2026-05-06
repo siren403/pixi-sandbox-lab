@@ -6,7 +6,7 @@ import { createKeyboard } from "./keyboard";
 import { createPointer } from "./pointer";
 import { waitForRuntimeReady } from "./readiness";
 import { setSceneNavigator } from "./navigation";
-import type { Scene, SceneContext, SurfaceLayers, SurfaceLayout } from "./scene";
+import type { RuntimeApi, RuntimeContext, Scene, SurfaceLayers, SurfaceLayout } from "./scene";
 import { SceneManager } from "./sceneManager";
 import { createSurfaceContext } from "./surface";
 import { syncTransitionState } from "./transition";
@@ -44,7 +44,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
 
   const keyboard = createKeyboard();
   const assets = createAssetRuntime();
-  const runtime = {
+  const runtimeState = {
     appMode: "interactive" as const,
     activeScene: "none",
     sceneLifecycle: "none" as const,
@@ -77,10 +77,16 @@ export async function createGame(options: GameOptions): Promise<Application> {
   const pointer = createPointer(app.canvas, () => layout);
   const sceneManager = new SceneManager();
   const commands = createCommandRuntime({
-    runtime,
+    runtimeState,
     onChange: () => syncTransitionState(ctx),
   });
-  const ctx: SceneContext = {
+  const runtime: RuntimeApi = {
+    scene: {
+      open: (scene, source = "scene") => ctx.switchScene(scene, source),
+      whenReady: (criteria) => waitForRuntimeReady(runtimeState, criteria),
+    },
+  };
+  const ctx: RuntimeContext = {
     app,
     stage,
     layers,
@@ -90,12 +96,13 @@ export async function createGame(options: GameOptions): Promise<Application> {
     layout,
     surface,
     runtime,
+    runtimeState,
     switchScene: (scene, source = "scene") => {
       return commands.requestSceneSwitch(scene, source, () => sceneManager.switch(scene, ctx));
     },
   };
   setSceneNavigator(ctx.switchScene);
-  const restoreDebugReadyHandler = setDebugReadyHandler((criteria) => waitForRuntimeReady(runtime, criteria));
+  const restoreDebugReadyHandler = setDebugReadyHandler((criteria) => runtime.scene.whenReady(criteria));
   updateSurfaceLayout(ctx, options.width, options.height);
   const destroyLayoutDebug = await maybeInstallLayoutDebug(app, layers.root);
   await sceneManager.start(options.boot, ctx);
@@ -165,7 +172,7 @@ function createSurfaceLayout(
 }
 
 function updateSurfaceLayout(
-  ctx: SceneContext,
+  ctx: RuntimeContext,
   referenceWidth: number,
   referenceHeight: number,
 ): void {

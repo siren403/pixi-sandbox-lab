@@ -3,6 +3,7 @@ import type { AssetList, AssetRuntime } from "./assets";
 import type { AppMode, CommandSource } from "./commandRuntime";
 import type { Keyboard } from "./keyboard";
 import type { Pointer } from "./pointer";
+import type { RuntimeReadyCriteria, RuntimeReadySnapshot } from "./readiness";
 import type { SurfaceContext } from "./surface";
 
 export type SurfaceLayout = {
@@ -30,7 +31,7 @@ export type SurfaceLayers = {
   debug: Container;
 };
 
-export type RuntimeState = {
+export type RuntimeInternalState = {
   appMode: AppMode;
   activeScene: string;
   sceneLifecycle: "none" | "unloading" | "loading-assets" | "loading-scene" | "render-pending" | "ready" | "failed";
@@ -57,6 +58,13 @@ export type RuntimeState = {
   transitionPanelMaxCount: number;
 };
 
+export type RuntimeApi = {
+  scene: {
+    open: (scene: Scene, source?: CommandSource) => boolean;
+    whenReady: (criteria: RuntimeReadyCriteria) => Promise<RuntimeReadySnapshot>;
+  };
+};
+
 export type SceneContext = {
   app: Application;
   stage: Container;
@@ -66,8 +74,12 @@ export type SceneContext = {
   pointer: Pointer;
   layout: SurfaceLayout;
   surface: SurfaceContext;
-  runtime: RuntimeState;
+  runtime: RuntimeApi;
   switchScene: (scene: Scene, source?: CommandSource) => boolean;
+};
+
+export type RuntimeContext = SceneContext & {
+  runtimeState: RuntimeInternalState;
 };
 
 export type Scene = {

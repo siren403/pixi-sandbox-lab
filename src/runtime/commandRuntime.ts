@@ -1,4 +1,5 @@
 import type { Scene } from "./scene";
+import type { RuntimeInternalState } from "./scene";
 
 export type AppMode = "interactive" | "transitioning" | "loading" | "destroyed";
 export type CommandSource = "scene" | "intro" | "debug";
@@ -11,13 +12,10 @@ export type CommandRuntime = {
 };
 
 type CommandRuntimeOptions = {
-  runtime: {
-    appMode: AppMode;
-    sceneSwitchRequests: number;
-    acceptedCommands: number;
-    ignoredCommands: number;
-    runningCommands: string[];
-  };
+  runtimeState: Pick<
+    RuntimeInternalState,
+    "appMode" | "sceneSwitchRequests" | "acceptedCommands" | "ignoredCommands" | "runningCommands"
+  >;
   onChange?: () => void;
   onError?: (error: unknown) => void;
 };
@@ -25,29 +23,29 @@ type CommandRuntimeOptions = {
 const sceneSwitchCommand = "switchScene";
 
 export function createCommandRuntime({
-  runtime,
+  runtimeState,
   onChange = () => {},
   onError = console.error,
 }: CommandRuntimeOptions): CommandRuntime {
   const running = new Set<string>();
 
   const syncRunningCommands = () => {
-    runtime.runningCommands = Array.from(running);
+    runtimeState.runningCommands = Array.from(running);
     onChange();
   };
 
   return {
     requestSceneSwitch(_scene, _source, task) {
-      runtime.sceneSwitchRequests += 1;
+      runtimeState.sceneSwitchRequests += 1;
 
-      if (runtime.appMode !== "interactive" || running.has(sceneSwitchCommand)) {
-        runtime.ignoredCommands += 1;
+      if (runtimeState.appMode !== "interactive" || running.has(sceneSwitchCommand)) {
+        runtimeState.ignoredCommands += 1;
         onChange();
         return false;
       }
 
-      runtime.acceptedCommands += 1;
-      runtime.appMode = "transitioning";
+      runtimeState.acceptedCommands += 1;
+      runtimeState.appMode = "transitioning";
       running.add(sceneSwitchCommand);
       syncRunningCommands();
 
@@ -55,7 +53,7 @@ export function createCommandRuntime({
         .catch(onError)
         .finally(() => {
           running.delete(sceneSwitchCommand);
-          if (runtime.appMode !== "destroyed") runtime.appMode = "interactive";
+          if (runtimeState.appMode !== "destroyed") runtimeState.appMode = "interactive";
           syncRunningCommands();
         });
 
@@ -68,7 +66,7 @@ export function createCommandRuntime({
 
     destroy() {
       running.clear();
-      runtime.appMode = "destroyed";
+      runtimeState.appMode = "destroyed";
       syncRunningCommands();
     },
   };
