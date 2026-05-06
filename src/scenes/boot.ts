@@ -1056,6 +1056,7 @@ function syncDemoState(
     pointerDown: pointer?.isDown() ?? false,
     pointerX: pointerPosition.x,
     pointerY: pointerPosition.y,
+    appShell: readSampleAppShellDebugState(sceneName),
     rendered: true,
   });
 }
@@ -1074,8 +1075,22 @@ function syncDesignSystemState(layout: SurfaceLayout, stage: Container): void {
     markerScreenSize: screenValue(layout, surfaceTheme.components.marker.size),
     buttonCenterDeltaY: measureButtonCenterDeltaY(stage),
     layerLabels: stage.children.map((child) => child.label ?? ""),
+    appShell: readSampleAppShellDebugState("design-system"),
     rendered: layout.visibleWidth > 0,
   });
+}
+
+function readSampleAppShellDebugState(sceneName: string) {
+  if (sceneName !== "vertical-slice" && sceneName !== "alternate" && sceneName !== "design-system") return undefined;
+  const state = sampleShellState[sceneName];
+  return {
+    activeSheet: state.sheet,
+    backButtonBounds: state.buttons.back,
+    controlsButtonBounds: state.buttons.controls,
+    debugButtonBounds: state.buttons.debug,
+    closeButtonBounds: state.buttons.close,
+    actionButtonBounds: state.buttons.actions,
+  };
 }
 
 function measureButtonCenterDeltaY(stage: Container): number {

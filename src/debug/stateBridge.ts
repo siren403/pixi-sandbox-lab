@@ -4,6 +4,15 @@ import type { RuntimeReadyCriteria, RuntimeReadySnapshot } from "../runtime/read
 
 type RectState = { x: number; y: number; width: number; height: number };
 
+export type PixiSampleAppShellDebugState = {
+  activeSheet: "none" | "controls" | "debug";
+  backButtonBounds?: RectState;
+  controlsButtonBounds?: RectState;
+  debugButtonBounds?: RectState;
+  closeButtonBounds?: RectState;
+  actionButtonBounds: Record<string, RectState>;
+};
+
 export type PixiBootDebugState = {
   scene: "boot";
   promptBounds: RectState;
@@ -42,6 +51,7 @@ export type PixiDemoDebugState = {
   pointerDown: boolean;
   pointerX: number;
   pointerY: number;
+  appShell?: PixiSampleAppShellDebugState;
   rendered: boolean;
 };
 
@@ -58,6 +68,7 @@ export type PixiDesignSystemDebugState = {
   markerScreenSize: number;
   buttonCenterDeltaY: number;
   layerLabels: string[];
+  appShell?: PixiSampleAppShellDebugState;
   rendered: boolean;
 };
 

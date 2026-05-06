@@ -36,15 +36,29 @@ test("renders design-system scene with inspectable layout contracts", async ({ p
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.currentScene), { timeout: 15000 }).toBe("design-system");
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.runtime?.appMode), { timeout: 15000 }).toBe("interactive");
 
+  const debugButtonBounds = (await readDebugSnapshot(page))?.designSystem?.appShell?.debugButtonBounds;
+  expect(debugButtonBounds).toBeDefined();
   await clickCanvasAt(
     page,
     canvas,
-    1080 * 0.74,
-    1920 * 0.96,
+    (debugButtonBounds?.x ?? 0) + (debugButtonBounds?.width ?? 0) / 2,
+    (debugButtonBounds?.y ?? 0) + (debugButtonBounds?.height ?? 0) / 2,
     { designSpace: true },
   );
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.designSystem?.appShell?.activeSheet), { timeout: 15000 }).toBe("debug");
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.designSystem?.sections), { timeout: 15000 }).toBe(initialSections);
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.layoutNodes ?? 0)).toBeGreaterThanOrEqual(16);
+  const layoutToggleBounds = (await readDebugSnapshot(page))?.designSystem?.appShell?.actionButtonBounds["layout-toggle"];
+  expect(layoutToggleBounds).toBeDefined();
+  await clickCanvasAt(
+    page,
+    canvas,
+    (layoutToggleBounds?.x ?? 0) + (layoutToggleBounds?.width ?? 0) / 2,
+    (layoutToggleBounds?.y ?? 0) + (layoutToggleBounds?.height ?? 0) / 2,
+    { designSpace: true },
+  );
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.enabled), { timeout: 15000 }).toBe(true);
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.mode), { timeout: 15000 }).toBe("bounds");
 
   expect(consoleErrors).toEqual([]);
 });

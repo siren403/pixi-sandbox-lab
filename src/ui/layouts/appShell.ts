@@ -344,11 +344,10 @@ function createBottomSheetHost(
 
   host.addChild(background, handleRow, header, body);
   host.alpha = 0.88;
-  host.y = frame.y + Math.min(frame.height * 0.16, tokenValue(layout, { design: 96, minScreenPx: 42 }));
   pixiTo(host, {
-    pixi: { y: frame.y, alpha: 1 },
-    duration: 0.24,
-    ease: "power3.out",
+    pixi: { alpha: 1 },
+    duration: 0.16,
+    ease: "sine.out",
   });
   const actions: Record<string, ButtonPrimitive> = {};
   for (const child of body.children) {
