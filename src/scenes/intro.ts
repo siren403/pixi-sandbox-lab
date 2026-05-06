@@ -12,7 +12,7 @@ import {
   setSceneIndexDebugState,
 } from "../debug/stateBridge";
 import { setDebugCommandHandler, type DebugCommandResult } from "../debug/commands";
-import { createButton } from "../ui/button";
+import { containsBounds, createButton, readButtonBounds, readUiBounds, resolveButtonHit, type UiBounds } from "../ui/button";
 import { createLabel } from "../ui/label";
 import { configureSafeAreaColumn } from "../ui/layout";
 import {
@@ -26,18 +26,18 @@ import {
 
 type BootState = {
   scene: "boot";
-  promptBounds: { x: number; y: number; width: number; height: number };
-  buttonBounds: { x: number; y: number; width: number; height: number };
+  promptBounds: UiBounds;
+  buttonBounds: UiBounds;
   layoutPolicy: "safe-area-frame";
   layoutNodes: number;
   buttonCenterDeltaY: number;
   rendered: boolean;
 };
 
-let startButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
+let startButtonBounds: UiBounds = { x: 0, y: 0, width: 0, height: 0 };
 let sceneIndexSheet: AppShellSheet = "none";
 let layoutBoundsEnabled = false;
-let sceneIndexItems: Array<{ id: string; label: string; bounds: { x: number; y: number; width: number; height: number } }> = [];
+let sceneIndexItems: Array<{ id: string; label: string; bounds: UiBounds }> = [];
 let sceneIndexButtons: AppShellButtonBounds = {
   controls: { x: 0, y: 0, width: 0, height: 0 },
   debug: { x: 0, y: 0, width: 0, height: 0 },
@@ -68,7 +68,7 @@ export const bootScene = scene({
 
   update(_dt, { keyboard, pointer, switchScene }) {
     const pointerPosition = pointer.position();
-    const startByPointer = pointer.wasPressed() && containsPoint(startButtonBounds, pointerPosition.x, pointerPosition.y);
+    const startByPointer = pointer.wasPressed() && containsBounds(startButtonBounds, pointerPosition);
     const startByKeyboard = keyboard.wasPressed("enter") || keyboard.wasPressed(" ");
     if (startByPointer || startByKeyboard) {
       switchScene(sceneIndexScene, { source: "intro", args: { from: "boot" } });
@@ -108,12 +108,12 @@ export const sceneIndexScene = scene({
   update(_dt, { app, layers, layout, pointer, keyboard, switchScene }) {
     const position = pointer.position();
     if (pointer.wasPressed()) {
-      const item = sceneIndexItems.find((candidate) => containsPoint(candidate.bounds, position.x, position.y));
-      if (item?.id === "vertical-slice") {
+      const itemId = resolveButtonHit(sceneIndexItems, position);
+      if (itemId === "vertical-slice") {
         switchScene(verticalSliceScene, { source: "scene", args: { from: "scene-index", selectedSample: "vertical-slice" } });
         return;
       }
-      if (item?.id === "design-system") {
+      if (itemId === "design-system") {
         switchScene(designSystemScene, { source: "scene", args: { from: "scene-index", selectedSample: "design-system" } });
         return;
       }
@@ -296,24 +296,13 @@ function renderSceneIndex(app: { renderer: { layout: { update: (container: Conta
 function syncIntroState(layout: SurfaceLayout, root: Container): void {
   const prompt = root.getChildByLabel("intro-prompt", true);
   const button = root.getChildByLabel("tap-start-button", true);
-  const promptBounds = prompt?.getBounds();
-  const buttonBounds = button?.getBounds();
-  startButtonBounds = buttonBounds
-    ? {
-        x: buttonBounds.x / layout.scale,
-        y: buttonBounds.y / layout.scale,
-        width: buttonBounds.width / layout.scale,
-        height: buttonBounds.height / layout.scale,
-      }
-    : { x: 0, y: 0, width: 0, height: 0 };
+  const promptBounds = readUiBounds(layout, prompt);
+  const buttonBounds = readButtonBounds(layout, button);
+  startButtonBounds = buttonBounds;
   setBootDebugState({
     scene: "boot",
-    promptBounds: promptBounds
-      ? { x: promptBounds.x, y: promptBounds.y, width: promptBounds.width, height: promptBounds.height }
-      : { x: 0, y: 0, width: 0, height: 0 },
-    buttonBounds: buttonBounds
-      ? { x: buttonBounds.x, y: buttonBounds.y, width: buttonBounds.width, height: buttonBounds.height }
-      : { x: 0, y: 0, width: 0, height: 0 },
+    promptBounds,
+    buttonBounds,
     layoutPolicy: "safe-area-frame",
     layoutNodes: countLayoutNodes(root),
     buttonCenterDeltaY: measureCenterDeltaY(button, prompt),
@@ -327,7 +316,7 @@ function syncSceneIndexState(layout: SurfaceLayout, root: Container, shell: AppS
     return {
       id: sample.id,
       label: sample.label,
-      bounds: toDesignBounds(layout, node?.getBounds()),
+      bounds: readButtonBounds(layout, node),
     };
   });
   sceneIndexButtons = readAppShellButtonBounds(layout, shell);
@@ -422,23 +411,6 @@ function ignoredCommand(type: DebugCommandResult["type"], reason: string): Debug
 
 function unsupportedCommand(type: DebugCommandResult["type"]): DebugCommandResult {
   return { accepted: false, status: "unsupported", type, reason: "Command is not supported in this scene." };
-}
-
-function containsPoint(bounds: { x: number; y: number; width: number; height: number }, x: number, y: number): boolean {
-  return x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height;
-}
-
-function toDesignBounds(
-  layout: SurfaceLayout,
-  bounds: { x: number; y: number; width: number; height: number } | undefined,
-): { x: number; y: number; width: number; height: number } {
-  if (!bounds) return { x: 0, y: 0, width: 0, height: 0 };
-  return {
-    x: bounds.x / layout.scale,
-    y: bounds.y / layout.scale,
-    width: bounds.width / layout.scale,
-    height: bounds.height / layout.scale,
-  };
 }
 
 function clearLayer(layer: Container): void {

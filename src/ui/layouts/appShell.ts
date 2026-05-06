@@ -2,7 +2,7 @@ import { Container, Graphics } from "pixi.js";
 import type { SurfaceLayout } from "../../runtime/scene";
 import { pixiTo } from "../../runtime/motion";
 import { tokenValue } from "../../runtime/surface";
-import { createButton, type ButtonPrimitive } from "../button";
+import { containsBounds, createButton, readButtonBounds, type ButtonPrimitive, type UiBounds } from "../button";
 import { createLabel } from "../label";
 import { surfaceTheme } from "../tokens";
 
@@ -32,12 +32,7 @@ export type AppShell = Container & {
   activeSheet: AppShellSheet;
 };
 
-export type RectFrame = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
+export type RectFrame = UiBounds;
 
 export type AppShellButtonBounds = {
   back?: RectFrame;
@@ -144,22 +139,22 @@ export function createAppShell(
 
 export function readAppShellButtonBounds(layout: SurfaceLayout, shell: AppShell): AppShellButtonBounds {
   return {
-    back: shell.buttons.back ? toDesignBounds(layout, shell.buttons.back.getBounds()) : undefined,
-    controls: toDesignBounds(layout, shell.buttons.controls.getBounds()),
-    debug: toDesignBounds(layout, shell.buttons.debug.getBounds()),
-    close: shell.buttons.closeSheet ? toDesignBounds(layout, shell.buttons.closeSheet.getBounds()) : undefined,
+    back: shell.buttons.back ? readButtonBounds(layout, shell.buttons.back) : undefined,
+    controls: readButtonBounds(layout, shell.buttons.controls),
+    debug: readButtonBounds(layout, shell.buttons.debug),
+    close: shell.buttons.closeSheet ? readButtonBounds(layout, shell.buttons.closeSheet) : undefined,
     actions: Object.fromEntries(
-      Object.entries(shell.buttons.sheetActions).map(([id, button]) => [id, toDesignBounds(layout, button.getBounds())]),
+      Object.entries(shell.buttons.sheetActions).map(([id, button]) => [id, readButtonBounds(layout, button)]),
     ),
   };
 }
 
 export function resolveAppShellHit(bounds: AppShellButtonBounds, position: { x: number; y: number }): AppShellHit | undefined {
-  if (bounds.back && containsPoint(bounds.back, position.x, position.y)) return { kind: "back" };
-  if (containsPoint(bounds.controls, position.x, position.y)) return { kind: "controls" };
-  if (containsPoint(bounds.debug, position.x, position.y)) return { kind: "debug" };
-  if (bounds.close && containsPoint(bounds.close, position.x, position.y)) return { kind: "close" };
-  const action = Object.entries(bounds.actions).find(([, actionBounds]) => containsPoint(actionBounds, position.x, position.y))?.[0];
+  if (bounds.back && containsBounds(bounds.back, position)) return { kind: "back" };
+  if (containsBounds(bounds.controls, position)) return { kind: "controls" };
+  if (containsBounds(bounds.debug, position)) return { kind: "debug" };
+  if (bounds.close && containsBounds(bounds.close, position)) return { kind: "close" };
+  const action = Object.entries(bounds.actions).find(([, actionBounds]) => containsBounds(actionBounds, position))?.[0];
   return action ? { kind: "action", id: action } : undefined;
 }
 
@@ -414,22 +409,6 @@ function createShellButton(text: string, layout: SurfaceLayout): ButtonPrimitive
   return button;
 }
 
-function containsPoint(bounds: RectFrame, x: number, y: number): boolean {
-  return x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height;
-}
-
-function toDesignBounds(
-  layout: SurfaceLayout,
-  bounds: { x: number; y: number; width: number; height: number } | undefined,
-): RectFrame {
-  if (!bounds) return { x: 0, y: 0, width: 0, height: 0 };
-  return {
-    x: bounds.x / layout.scale,
-    y: bounds.y / layout.scale,
-    width: bounds.width / layout.scale,
-    height: bounds.height / layout.scale,
-  };
-}
 
 function createSheetActionButton(text: string, layout: SurfaceLayout, width: number): ButtonPrimitive {
   const height = tokenValue(layout, { design: 64, minScreenPx: 42 });

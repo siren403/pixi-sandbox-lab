@@ -18,6 +18,13 @@ export type ButtonPrimitive = Container & {
   };
 };
 
+export type UiBounds = { x: number; y: number; width: number; height: number };
+
+export type UiButtonHitTarget<TId extends string = string> = {
+  id: TId;
+  bounds: UiBounds;
+};
+
 type ButtonOptions = {
   text: string;
   width: number;
@@ -71,4 +78,41 @@ export function createButton({
   };
   button.addChild(background, labelText);
   return button;
+}
+
+export function readUiBounds(layout: SurfaceLayout, node: Container | undefined | null): UiBounds {
+  return toDesignBounds(layout, node?.getBounds());
+}
+
+export function readButtonBounds(layout: SurfaceLayout, button: Container | undefined | null): UiBounds {
+  return readUiBounds(layout, button);
+}
+
+export function containsBounds(bounds: UiBounds, position: { x: number; y: number }): boolean {
+  return (
+    position.x >= bounds.x &&
+    position.x <= bounds.x + bounds.width &&
+    position.y >= bounds.y &&
+    position.y <= bounds.y + bounds.height
+  );
+}
+
+export function resolveButtonHit<TId extends string>(
+  targets: Array<UiButtonHitTarget<TId>>,
+  position: { x: number; y: number },
+): TId | undefined {
+  return targets.find((target) => containsBounds(target.bounds, position))?.id;
+}
+
+function toDesignBounds(
+  layout: SurfaceLayout,
+  bounds: { x: number; y: number; width: number; height: number } | undefined,
+): UiBounds {
+  if (!bounds) return { x: 0, y: 0, width: 0, height: 0 };
+  return {
+    x: bounds.x / layout.scale,
+    y: bounds.y / layout.scale,
+    width: bounds.width / layout.scale,
+    height: bounds.height / layout.scale,
+  };
 }
