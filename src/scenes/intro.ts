@@ -29,6 +29,7 @@ type BootState = {
 
 let startButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
 let sceneIndexSheet: AppShellSheet = "none";
+let layoutBoundsEnabled = false;
 let sceneIndexItems: Array<{ id: string; label: string; bounds: { x: number; y: number; width: number; height: number } }> = [];
 let sceneIndexButtons: {
   controls?: { x: number; y: number; width: number; height: number };
@@ -137,12 +138,15 @@ export const sceneIndexScene = scene({
         switchScene(designSystemScene, "debug");
         return;
       }
-      if (action === "layout-bounds") {
-        window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { enabled: true, mode: "bounds", filter: "all" } }));
-        return;
-      }
-      if (action === "layout-off") {
-        window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { enabled: false } }));
+      if (action === "layout-toggle") {
+        layoutBoundsEnabled = !layoutBoundsEnabled;
+        window.dispatchEvent(
+          new CustomEvent("pixi:layout-debug-set", {
+            detail: layoutBoundsEnabled ? { enabled: true, mode: "bounds", filter: "all" } : { enabled: false },
+          }),
+        );
+        clearLayer(layers.ui);
+        renderSceneIndex(app, layers.ui, layout);
         return;
       }
       if (action === "reload") {
@@ -235,15 +239,14 @@ function renderSceneIndex(app: { renderer: { layout: { update: (container: Conta
     sheetTitle: sceneIndexSheet === "debug" ? "Debug" : "Controls",
     sheetLines:
       sceneIndexSheet === "debug"
-        ? ["Debug tools run inside the app shell.", "Layout inspector state is still backed by the dev overlay."]
+        ? ["Debug tools run inside the app shell.", layoutBoundsEnabled ? "Layout bounds are visible." : "Layout bounds are hidden."]
         : ["Select a sample from the list.", "Scene-specific controls will appear here."],
     sheetActions:
       sceneIndexSheet === "debug"
         ? [
             { id: "scene-vertical", label: "Open Vertical Slice" },
             { id: "scene-design", label: "Open Design System" },
-            { id: "layout-bounds", label: "Layout Bounds" },
-            { id: "layout-off", label: "Layout Off" },
+            { id: "layout-toggle", label: layoutBoundsEnabled ? "Hide Layout Bounds" : "Show Layout Bounds" },
             { id: "reload", label: "Reload" },
           ]
         : [],

@@ -1,5 +1,6 @@
 import { Container, Graphics } from "pixi.js";
 import type { SurfaceLayout } from "../../runtime/scene";
+import { pixiTo } from "../../runtime/motion";
 import { tokenValue } from "../../runtime/surface";
 import { createButton, type ButtonPrimitive } from "../button";
 import { createLabel } from "../label";
@@ -342,6 +343,13 @@ function createBottomSheetHost(
   }
 
   host.addChild(background, handleRow, header, body);
+  host.alpha = 0.88;
+  host.y = frame.y + Math.min(frame.height * 0.16, tokenValue(layout, { design: 96, minScreenPx: 42 }));
+  pixiTo(host, {
+    pixi: { y: frame.y, alpha: 1 },
+    duration: 0.24,
+    ease: "power3.out",
+  });
   const actions: Record<string, ButtonPrimitive> = {};
   for (const child of body.children) {
     if (child.label?.startsWith("bottom-sheet-action:")) {

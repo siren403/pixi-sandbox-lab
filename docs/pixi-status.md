@@ -7,7 +7,7 @@ This document tracks the current implementation and validation state for the Pix
 - `Scene.assets` accepts a static array or `(ctx) => array`.
 - `SceneManager.switch()` cleans up the previous scene, evaluates scene assets, awaits `ctx.assets.load()`, then runs sync scene loading.
 - The app starts in the `boot` scene with `Tap to start`; Enter/Space or the boot button opens a Pixi-native Scene Index with vertical slice, design-system, and planned sample entries.
-- `src/ui/layouts/appShell.ts` provides AppShell, TopBar, ContentHost, BottomBar, and BottomSheetHost. Scene Index and Design System use ContentHost for UI/content panels; gameplay/world scenes keep world objects in `layers.world` and use AppShell for HUD/navigation/control slots.
+- `src/ui/layouts/appShell.ts` provides AppShell, TopBar, ContentHost, BottomBar, and animated BottomSheetHost. Scene Index and Design System use ContentHost for UI/content panels; gameplay/world scenes keep world objects in `layers.world` and use AppShell for HUD/navigation/control slots.
 - Scene switches accept either the legacy source string or `{ source, args }`; active scene metadata is exposed as `ctx.scene`, and target scenes read one-shot transition args through `ctx.scene.args<T>()`.
 - The vertical slice scene contains a larger explorable world with dense demo objects; drag pans the camera and wheel/pinch zoom adjusts the view while taps still move the player.
 - `SceneContext.surface` exposes the current surface layout plus token, screen-size, safe-frame, anchor, center, and layout update helpers. Existing `ctx.layout` remains available during migration.
@@ -43,6 +43,7 @@ Current checks include:
 - canvas starts at viewport origin and fills the viewport
 - visible design bounds meet the reference surface contract from `DESIGN.md`
 - Scene Index renders AppShell regions and opens the Debug bottom sheet skeleton on desktop and mobile portrait
+- Design System keeps its ContentHost panels rendered after opening the Debug bottom sheet
 - player, marker, and title have readable/touchable screen-space sizes
 - vertical slice world size, object count, camera pan, and zoom behavior are observable through E2E debug state
 - HUD title and marker do not overlap

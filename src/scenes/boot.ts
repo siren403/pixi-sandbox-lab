@@ -90,6 +90,7 @@ type DesignSystemState = {
 
 let sceneSwitches = 0;
 let removeDebugListeners: (() => void) | null = null;
+let layoutBoundsEnabled = false;
 const cameraByWorld = new WeakMap<Container, WorldCamera>();
 const worldByLayer = new WeakMap<Container, World>();
 const sampleShellState: Record<SampleSceneId, SampleShellState> = {
@@ -548,12 +549,12 @@ function rerenderSampleShell(
     markerColor?: string | number;
     markerRadius?: number;
   },
-): void {
+): AppShell {
   for (const child of layer.children.filter((candidate) => candidate.label === "app-shell")) {
     layer.removeChild(child);
     child.destroy({ children: true });
   }
-  renderSampleShell(layer, layout, options);
+  return renderSampleShell(layer, layout, options);
 }
 
 function syncSampleShellState(sceneId: SampleSceneId, layout: SurfaceLayout, shell: AppShell): void {
@@ -613,12 +614,16 @@ function handleSampleShellPointer(
   if (action === "scene-index") return navigateToSceneIndex();
   if (action === "scene-vertical") return switchScene(verticalSliceScene, "debug");
   if (action === "scene-design") return switchScene(designSystemScene, "debug");
-  if (action === "layout-bounds") {
-    window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { enabled: true, mode: "bounds", filter: "all" } }));
-    return true;
-  }
-  if (action === "layout-off") {
-    window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { enabled: false } }));
+  if (action === "layout-toggle") {
+    layoutBoundsEnabled = !layoutBoundsEnabled;
+    window.dispatchEvent(
+      new CustomEvent("pixi:layout-debug-set", {
+        detail: layoutBoundsEnabled ? { enabled: true, mode: "bounds", filter: "all" } : { enabled: false },
+      }),
+    );
+    rerenderShellForScene(sceneId, layer, layout);
+    updateLayout();
+    syncRenderedSampleShell(sceneId, layer, layout);
     return true;
   }
   if (action === "reload") {
@@ -656,10 +661,11 @@ function rerenderShellForScene(sceneId: SampleSceneId, layer: Container, layout:
     });
     return;
   }
-  rerenderSampleShell(layer, layout, {
+  const shell = rerenderSampleShell(layer, layout, {
     sceneId,
     title: "Design System",
   });
+  renderDesignSystem(shell.contentHost, layout, shell.frames.content);
 }
 
 function sampleSheetLines(sceneId: SampleSceneId, sheet: AppShellSheet): string[] {
@@ -675,8 +681,7 @@ function sampleSheetLines(sceneId: SampleSceneId, sheet: AppShellSheet): string[
 function sampleDebugActions(sceneId: SampleSceneId): Array<{ id: string; label: string }> {
   const actions = [
     { id: "scene-index", label: "Back to Samples" },
-    { id: "layout-bounds", label: "Layout Bounds" },
-    { id: "layout-off", label: "Layout Off" },
+    { id: "layout-toggle", label: layoutBoundsEnabled ? "Hide Layout Bounds" : "Show Layout Bounds" },
     { id: "reload", label: "Reload" },
   ];
   if (sceneId !== "vertical-slice") actions.splice(1, 0, { id: "scene-vertical", label: "Open Vertical Slice" });
