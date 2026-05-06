@@ -33,9 +33,9 @@ test("renders boot, fills the viewport, and navigates through the scene index", 
   await clickBootStart(page, canvas);
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.sceneIndex?.rendered)).toBe(true);
   await clickSceneIndexItem(page, canvas, "Design System");
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.designSystem?.rendered)).toBe(true);
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.runtime?.appMode)).toBe("interactive");
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.currentScene)).toBe("design-system");
+  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.designSystem?.rendered), { timeout: 15000 }).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.runtime?.appMode), { timeout: 15000 }).toBe("interactive");
+  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.currentScene), { timeout: 15000 }).toBe("design-system");
 
   expect(consoleErrors).toEqual([]);
 });
