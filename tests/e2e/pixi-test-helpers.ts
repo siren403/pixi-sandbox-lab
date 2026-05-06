@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import type { PixiDebugState, PixiDebugWindow } from "../../src/debug/stateBridge";
 import type { DebugCommand, DebugCommandResult } from "../../src/debug/commands";
+import type { RuntimeReadyCriteria, RuntimeReadySnapshot } from "../../src/runtime/readiness";
 
 declare global {
   interface Window {
@@ -20,7 +21,8 @@ export async function gotoBoot(page: Page): Promise<Locator> {
   await page.goto("/");
   const canvas = page.locator("canvas");
   await expect(canvas).toBeVisible();
-  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.boot?.rendered)).toBe(true);
+  await waitForRuntimeReady(page, { scene: "boot", interactive: true });
+  expect((await readDebugSnapshot(page))?.boot?.rendered).toBe(true);
   return canvas;
 }
 
@@ -101,19 +103,20 @@ export async function clickSceneIndexItem(page: Page, canvas: Locator, label: st
 }
 
 export async function waitForSceneIndexReady(page: Page): Promise<void> {
-  await expect
-    .poll(
-      () =>
-        readDebugSnapshot(page).then(
-          (snapshot) => snapshot?.sceneIndex?.rendered === true && snapshot.runtime?.appMode === "interactive",
-        ),
-      { timeout: 15000 },
-    )
-    .toBe(true);
+  await waitForRuntimeReady(page, { scene: "scene-index", interactive: true });
+  expect((await readDebugSnapshot(page))?.sceneIndex?.rendered).toBe(true);
 }
 
 export async function readDebugSnapshot(page: Page): Promise<PixiDebugState | undefined> {
   return page.evaluate(() => window.__pixiDebug?.getSnapshot?.() ?? window.__pixiDebug);
+}
+
+export async function waitForRuntimeReady(
+  page: Page,
+  criteria: RuntimeReadyCriteria,
+): Promise<RuntimeReadySnapshot | undefined> {
+  await page.waitForFunction(() => typeof window.__pixiDebug?.whenReady === "function");
+  return page.evaluate((nextCriteria) => window.__pixiDebug?.whenReady(nextCriteria), criteria);
 }
 
 export async function dispatchDebugCommand(page: Page, command: DebugCommand): Promise<DebugCommandResult | undefined> {

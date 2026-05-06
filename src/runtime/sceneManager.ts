@@ -14,6 +14,8 @@ export class SceneManager {
     const switchId = ++this.switchId;
     const previous = this.current;
     ctx.runtime.sceneSwitches += 1;
+    ctx.runtime.activeScene = scene.name;
+    ctx.runtime.sceneLifecycle = "unloading";
     setActiveDebugScene(scene.name);
     syncTransitionState(ctx);
 
@@ -32,9 +34,12 @@ export class SceneManager {
 
       previous?.unload?.(ctx);
       this.current = null;
+      ctx.runtime.sceneLifecycle = "loading-assets";
+      syncTransitionState(ctx);
 
       if (transition) {
         ctx.runtime.loadingPhase = "loading";
+        ctx.runtime.transitionLifecycle = "loading";
         ctx.runtime.appMode = "loading";
         syncTransitionState(ctx);
       }
@@ -47,11 +52,16 @@ export class SceneManager {
 
       this.current = scene;
       setActiveDebugScene(scene.name);
+      ctx.runtime.sceneLifecycle = "loading-scene";
+      syncTransitionState(ctx);
       this.current.load?.(ctx);
+      ctx.runtime.sceneLifecycle = "render-pending";
+      syncTransitionState(ctx);
 
       if (transition) {
         transition.updateProgress(1);
         ctx.runtime.loadingPhase = "out";
+        ctx.runtime.transitionLifecycle = "out";
         ctx.runtime.appMode = "transitioning";
         syncTransitionState(ctx);
         await transition.animateOut();
@@ -63,9 +73,15 @@ export class SceneManager {
           ctx.runtime.loadingProgress = 1;
           ctx.runtime.loadingOverlayAlpha = 0;
           ctx.runtime.loadingPhase = "idle";
+          ctx.runtime.transitionLifecycle = "idle";
           ctx.runtime.loading = false;
           transition.destroy();
         }
+        if (this.current === scene && ctx.runtime.sceneLifecycle === "render-pending") {
+          await waitForRenderFrame();
+          ctx.runtime.sceneLifecycle = "ready";
+        }
+        syncTransitionState(ctx);
       }
     }
   }
@@ -82,6 +98,9 @@ export class SceneManager {
     this.switchId += 1;
     ctx.runtime.loading = false;
     ctx.runtime.appMode = "destroyed";
+    ctx.runtime.activeScene = "destroyed";
+    ctx.runtime.sceneLifecycle = "none";
+    ctx.runtime.transitionLifecycle = "idle";
     ctx.runtime.loadingPhase = "idle";
     ctx.runtime.loadingOverlayAlpha = 0;
     setActiveDebugScene("destroyed");
@@ -127,6 +146,12 @@ function waitForMinimumLoadingTime(startedAt: number, minimumMs: number): Promis
 
   return new Promise((resolve) => {
     window.setTimeout(resolve, remaining);
+  });
+}
+
+function waitForRenderFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
   });
 }
 

@@ -375,10 +375,13 @@ window.__pixiDebug = {
   version: 1,
   getSnapshot(): PixiDebugState,
   dispatch(command): DebugCommandResult | Promise<DebugCommandResult>,
+  whenReady(criteria): Promise<RuntimeReadySnapshot>,
 }
 ```
 
-The legacy direct fields such as `window.__pixiDebug.runtime` and `window.__pixiDebug.demo` remain mirrored during migration. New Playwright helpers should prefer `getSnapshot()`.
+`whenReady()` is an E2E adapter over runtime-owned readiness. It must not infer scene readiness from debug-only rendered flags. Runtime readiness is based on the active scene, scene lifecycle, transition lifecycle, command idle state, and `appMode`.
+
+The legacy direct fields such as `window.__pixiDebug.runtime` and `window.__pixiDebug.demo` remain mirrored during migration. New Playwright helpers should prefer `getSnapshot()` and `whenReady()`.
 
 주요 기능:
 

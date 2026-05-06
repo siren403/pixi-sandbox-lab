@@ -1,5 +1,6 @@
 import { dispatchDebugCommand, type DebugCommand, type DebugCommandResult } from "./commands";
 import { createDebugStore } from "./store";
+import type { RuntimeReadyCriteria, RuntimeReadySnapshot } from "../runtime/readiness";
 
 type RectState = { x: number; y: number; width: number; height: number };
 
@@ -83,6 +84,14 @@ export type PixiSceneIndexDebugState = {
 
 export type PixiRuntimeDebugState = {
   appMode: "interactive" | "transitioning" | "loading" | "destroyed";
+  activeScene: string;
+  sceneLifecycle: "none" | "unloading" | "loading-assets" | "loading-scene" | "render-pending" | "ready" | "failed";
+  transitionLifecycle: "idle" | "in" | "loading" | "out";
+  sceneReady: boolean;
+  transitionIdle: boolean;
+  commandIdle: boolean;
+  interactiveReady: boolean;
+  readinessRevision: number;
   loading: boolean;
   loadingPhase: "idle" | "in" | "loading" | "out";
   sceneSwitches: number;
@@ -138,6 +147,7 @@ export type PixiDebugWindow = PixiDebugState & {
   version: 1;
   getSnapshot: () => PixiDebugState;
   dispatch: (command: DebugCommand) => DebugCommandResult | Promise<DebugCommandResult>;
+  whenReady: (criteria: RuntimeReadyCriteria) => Promise<RuntimeReadySnapshot>;
 };
 
 declare global {
@@ -151,6 +161,18 @@ const debugStore = createDebugStore<PixiDebugState>({
   schemaVersion: 1,
   revision: 0,
 });
+let readyHandler: (criteria: RuntimeReadyCriteria) => Promise<RuntimeReadySnapshot> = () =>
+  Promise.reject(new Error("Runtime readiness handler is not installed."));
+
+export function setDebugReadyHandler(
+  nextHandler: (criteria: RuntimeReadyCriteria) => Promise<RuntimeReadySnapshot>,
+): () => void {
+  const previous = readyHandler;
+  readyHandler = nextHandler;
+  return () => {
+    readyHandler = previous;
+  };
+}
 
 export function setBootDebugState(state: PixiBootDebugState): void {
   if (!debugEnabled) return;
@@ -272,6 +294,7 @@ function createDebugWindow(): PixiDebugWindow {
       patchDebugState({ lastCommand: result });
       return result;
     },
+    whenReady: (criteria: RuntimeReadyCriteria) => readyHandler(criteria),
   } as PixiDebugWindow;
   syncDebugWindow(debug, debugStore.getSnapshot());
   return debug;
@@ -286,5 +309,6 @@ function syncDebugWindow(debug: PixiDebugWindow, snapshot: PixiDebugState): void
       patchDebugState({ lastCommand: result });
       return result;
     },
+    whenReady: (criteria: RuntimeReadyCriteria) => readyHandler(criteria),
   });
 }

@@ -4,11 +4,13 @@ import { createAssetRuntime } from "./assets";
 import { createCommandRuntime } from "./commandRuntime";
 import { createKeyboard } from "./keyboard";
 import { createPointer } from "./pointer";
+import { waitForRuntimeReady } from "./readiness";
 import { setSceneNavigator } from "./navigation";
 import type { Scene, SceneContext, SurfaceLayers, SurfaceLayout } from "./scene";
 import { SceneManager } from "./sceneManager";
 import { createSurfaceContext } from "./surface";
 import { syncTransitionState } from "./transition";
+import { setDebugReadyHandler } from "../debug/stateBridge";
 
 export type GameOptions = {
   parent: string | HTMLElement;
@@ -44,6 +46,14 @@ export async function createGame(options: GameOptions): Promise<Application> {
   const assets = createAssetRuntime();
   const runtime = {
     appMode: "interactive" as const,
+    activeScene: "none",
+    sceneLifecycle: "none" as const,
+    transitionLifecycle: "idle" as const,
+    sceneReady: false,
+    transitionIdle: true,
+    commandIdle: true,
+    interactiveReady: false,
+    readinessRevision: 0,
     loading: false,
     loadingPhase: "idle" as const,
     sceneSwitches: 0,
@@ -85,6 +95,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
     },
   };
   setSceneNavigator(ctx.switchScene);
+  const restoreDebugReadyHandler = setDebugReadyHandler((criteria) => waitForRuntimeReady(runtime, criteria));
   updateSurfaceLayout(ctx, options.width, options.height);
   const destroyLayoutDebug = await maybeInstallLayoutDebug(app, layers.root);
   await sceneManager.start(options.boot, ctx);
@@ -103,6 +114,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
   window.addEventListener("beforeunload", () => {
     app.renderer.off("resize", onResize);
     destroyLayoutDebug();
+    restoreDebugReadyHandler();
     commands.destroy();
     sceneManager.destroy(ctx);
     keyboard.destroy();

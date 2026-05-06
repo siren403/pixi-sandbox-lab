@@ -13,6 +13,7 @@ import { tokenValue } from "./surface";
 import { surfaceTheme } from "../ui/tokens";
 import type { SceneContext } from "./scene";
 import { setRuntimeDebugState } from "../debug/stateBridge";
+import { syncRuntimeReadiness } from "./readiness";
 
 export const minimumLoadingMsRange = { min: 500, max: 1000 } as const;
 
@@ -30,6 +31,7 @@ export type TransitionController = {
 export function createTransition(ctx: SceneContext): TransitionController {
   ctx.runtime.loading = true;
   ctx.runtime.loadingPhase = "in";
+  ctx.runtime.transitionLifecycle = "in";
   ctx.runtime.loadingProgress = 0;
   ctx.runtime.loadingOverlayAlpha = 0;
   ctx.runtime.loadingOverlayMaxAlpha = 0;
@@ -64,8 +66,17 @@ export function createTransition(ctx: SceneContext): TransitionController {
 }
 
 export function syncTransitionState(ctx: SceneContext): void {
+  syncRuntimeReadiness(ctx.runtime);
   setRuntimeDebugState({
     appMode: ctx.runtime.appMode,
+    activeScene: ctx.runtime.activeScene,
+    sceneLifecycle: ctx.runtime.sceneLifecycle,
+    transitionLifecycle: ctx.runtime.transitionLifecycle,
+    sceneReady: ctx.runtime.sceneReady,
+    transitionIdle: ctx.runtime.transitionIdle,
+    commandIdle: ctx.runtime.commandIdle,
+    interactiveReady: ctx.runtime.interactiveReady,
+    readinessRevision: ctx.runtime.readinessRevision,
     loading: ctx.runtime.loading,
     loadingPhase: ctx.runtime.loadingPhase,
     sceneSwitches: ctx.runtime.sceneSwitches,

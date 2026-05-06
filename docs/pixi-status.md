@@ -26,8 +26,8 @@ This document tracks the current implementation and validation state for the Pix
 - Demo builds use code splitting across entry, Pixi vendor, motion vendor, shared vendor, and debug-only dynamic chunks.
 - GitHub Pages deployment runs `bun run check` before uploading the demo build artifact.
 - Vite `chunkSizeWarningLimit` is set to 1100kB. `bun run check:bundle` enforces total JS, gzip, max chunk, and entry budgets.
-- `window.__pixiDebug.runtime` exposes E2E-only app mode, command counts, loading state, transition state, sampled timing, progress, overlay alpha, and transition panel counts.
-- `window.__pixiDebug` now mirrors a typed debug store and also exposes `version`, `getSnapshot()`, and `dispatch(command)` for Playwright migration.
+- `window.__pixiDebug.runtime` exposes E2E-only app mode, runtime readiness, command counts, loading state, transition state, sampled timing, progress, overlay alpha, and transition panel counts.
+- `window.__pixiDebug` now mirrors a typed debug store and also exposes `version`, `getSnapshot()`, `dispatch(command)`, and runtime-backed `whenReady(criteria)` for Playwright migration.
 - `scene.load(ctx)` is sync; assets are already available through `ctx.assets.get(source)` at that point.
 - `AssetRuntime` wraps Pixi `Assets` and throws if `get()` is called for an asset that is not ready.
 - The first validation asset uses a Vite import URL so GitHub Pages subpath deployment does not depend on `public` absolute paths.

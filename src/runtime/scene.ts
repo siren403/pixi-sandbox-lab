@@ -32,6 +32,14 @@ export type SurfaceLayers = {
 
 export type RuntimeState = {
   appMode: AppMode;
+  activeScene: string;
+  sceneLifecycle: "none" | "unloading" | "loading-assets" | "loading-scene" | "render-pending" | "ready" | "failed";
+  transitionLifecycle: "idle" | "in" | "loading" | "out";
+  sceneReady: boolean;
+  transitionIdle: boolean;
+  commandIdle: boolean;
+  interactiveReady: boolean;
+  readinessRevision: number;
   loading: boolean;
   loadingPhase: "idle" | "in" | "loading" | "out";
   sceneSwitches: number;
