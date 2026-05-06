@@ -2,13 +2,15 @@ import { Container, Graphics, Sprite, type Texture } from "pixi.js";
 import demoOrbUrl from "../assets/demo-orb.svg";
 import { screenValue, tokenValue } from "../runtime/surface";
 import { surfaceTheme } from "../ui/tokens";
-import type { SurfaceLayout } from "../runtime/scene";
+import type { Scene, SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
+import { navigateToSceneIndex } from "../runtime/navigation";
 import { createWorld, type World } from "../runtime/world";
 import type { WorldCamera } from "../runtime/worldCamera";
 import { createButton } from "../ui/button";
 import { createLabel } from "../ui/label";
 import { configureSafeAreaRow } from "../ui/layout";
+import { createAppShell, type AppShell, type AppShellSheet } from "../ui/layouts/appShell";
 import { createPanel } from "../ui/panel";
 import {
   clearDemoDebugState,
@@ -25,6 +27,18 @@ const worldItemCount = 180;
 const minCameraZoom = 0.32;
 const maxCameraZoom = 2.2;
 const cameraDragThreshold = 12;
+type SampleSceneId = "vertical-slice" | "alternate" | "design-system";
+type RectState = { x: number; y: number; width: number; height: number };
+type SampleShellState = {
+  sheet: AppShellSheet;
+  buttons: {
+    back?: RectState;
+    controls?: RectState;
+    debug?: RectState;
+    close?: RectState;
+    actions: Record<string, RectState>;
+  };
+};
 
 type DemoState = {
   playerX: number;
@@ -74,6 +88,11 @@ let sceneSwitches = 0;
 let removeDebugListeners: (() => void) | null = null;
 const cameraByWorld = new WeakMap<Container, WorldCamera>();
 const worldByLayer = new WeakMap<Container, World>();
+const sampleShellState: Record<SampleSceneId, SampleShellState> = {
+  "vertical-slice": { sheet: "none", buttons: { actions: {} } },
+  alternate: { sheet: "none", buttons: { actions: {} } },
+  "design-system": { sheet: "none", buttons: { actions: {} } },
+};
 
 type MotionPlayer = Graphics & {
   targetX?: number;
@@ -86,15 +105,11 @@ export const verticalSliceScene = scene({
   assets: [demoOrbUrl],
 
   load({ assets, layers, layout, surface, switchScene }) {
+    sampleShellState["vertical-slice"].sheet = "none";
     const playerSize = surface.token(surfaceTheme.size.player);
     const playerRadius = surface.token(surfaceTheme.radius.player);
     const playerStroke = surface.token(surfaceTheme.size.playerStroke);
     const markerRadius = surface.token(surfaceTheme.size.markerRadius);
-    const titleFontSize = surface.token(surfaceTheme.font.title);
-
-    const hud = new Container();
-    hud.label = "hud";
-    configureHudLayout(hud, layout);
     const world = createDemoWorld(layers.world);
     const camera = createDemoCamera(world, layout);
     worldByLayer.set(layers.world, world);
@@ -116,37 +131,18 @@ export const verticalSliceScene = scene({
     const inputTarget = createInputTarget(layout);
     const field = createExplorationField(layout);
 
-    const marker = new Graphics()
-      .circle(markerRadius, markerRadius, markerRadius)
-      .fill(surfaceTheme.color.marker);
-    marker.label = "marker";
-    marker.layout = {
-      width: markerRadius * 2,
-      height: markerRadius * 2,
-    };
-
-    const title = createLabel({
-      text: "PixiJS vertical slice",
-      layout,
-      fontSize: surfaceTheme.font.title,
-      color: surfaceTheme.color.text,
-      label: "title",
+    renderSampleShell(layers.ui, layout, {
+      sceneId: "vertical-slice",
+      title: "PixiJS vertical slice",
+      titleLabel: "title",
+      markerColor: surfaceTheme.color.marker,
+      markerRadius,
     });
-    title.label = "title";
-    title.layout = {
-      height: titleFontSize * 1.25,
-    };
-
-    const spacer = new Container();
-    spacer.label = "hud-spacer";
-    spacer.layout = { flexGrow: 1 };
-
-    hud.addChild(title, spacer, marker);
-    layers.ui.addChild(hud);
     layers.world.addChild(field, assetOrb, inputTarget, player);
     camera.centerOn(player.x, player.y, layout);
     camera.apply(layout);
     surface.updateLayout();
+    syncRenderedSampleShell("vertical-slice", layers.ui, layout);
     removeDebugListeners = installDebugSceneListeners({
       onScene: () => {
         if (switchScene(alternateScene, "debug")) sceneSwitches += 1;
@@ -161,7 +157,6 @@ export const verticalSliceScene = scene({
 
   resize({ layers, layout, surface }) {
     const player = layers.world.getChildByLabel("player") as Graphics | null;
-    const hud = layers.ui.getChildByLabel("hud") as Container | null;
     const world = readWorld(layers.world);
     const camera = readCamera(layers.world, layout);
     if (!player) return;
@@ -171,18 +166,29 @@ export const verticalSliceScene = scene({
     camera.clamp(layout);
     camera.apply(layout);
 
-    if (hud) configureHudLayout(hud, layout);
+    rerenderSampleShell(layers.ui, layout, {
+      sceneId: "vertical-slice",
+      title: "PixiJS vertical slice",
+      titleLabel: "title",
+      markerColor: surfaceTheme.color.marker,
+      markerRadius: tokenValue(layout, surfaceTheme.size.markerRadius),
+    });
     surface.updateLayout();
+    syncRenderedSampleShell("vertical-slice", layers.ui, layout);
 
     syncDemoState("vertical-slice", player.x, player.y, layout, layers.root, undefined, true);
   },
 
-  update(dt, { layers, keyboard, pointer, layout, switchScene }) {
+  update(dt, { layers, keyboard, pointer, layout, surface, switchScene }) {
     const player = layers.world.getChildByLabel("player") as MotionPlayer | null;
     const inputTarget = layers.world.getChildByLabel("input-target") as Graphics | null;
     const world = readWorld(layers.world);
     const camera = readCamera(layers.world, layout);
     if (!player) return;
+
+    if (pointer.wasPressed() && handleSampleShellPointer("vertical-slice", layers.ui, layout, pointer.position(), switchScene, () => surface.updateLayout())) {
+      return;
+    }
 
     if (keyboard.wasPressed("x")) {
       if (switchScene(alternateScene, "scene")) sceneSwitches += 1;
@@ -264,37 +270,8 @@ export const alternateScene = scene({
   assets: () => [demoOrbUrl],
 
   load({ assets, layers, layout, surface, switchScene }) {
+    sampleShellState.alternate.sheet = "none";
     const markerRadius = tokenValue(layout, surfaceTheme.size.markerRadius) * 1.35;
-    const titleFontSize = tokenValue(layout, surfaceTheme.font.title);
-
-    const hud = new Container();
-    hud.label = "hud";
-    configureHudLayout(hud, layout);
-
-    const marker = new Graphics()
-      .circle(markerRadius, markerRadius, markerRadius)
-      .fill("#80ed99");
-    marker.label = "marker";
-    marker.layout = {
-      width: markerRadius * 2,
-      height: markerRadius * 2,
-    };
-
-    const title = createLabel({
-      text: "Alternate scene",
-      layout,
-      fontSize: surfaceTheme.font.title,
-      color: surfaceTheme.color.text,
-      label: "title",
-    });
-    title.label = "title";
-    title.layout = {
-      height: titleFontSize * 1.25,
-    };
-
-    const spacer = new Container();
-    spacer.label = "hud-spacer";
-    spacer.layout = { flexGrow: 1 };
 
     const playerSize = tokenValue(layout, surfaceTheme.size.player);
     const player = new Graphics()
@@ -306,10 +283,16 @@ export const alternateScene = scene({
 
     const assetOrb = createAssetOrb(assets.get<Texture>(demoOrbUrl), layout, 0.28, 0.58);
 
-    hud.addChild(title, spacer, marker);
-    layers.ui.addChild(hud);
+    renderSampleShell(layers.ui, layout, {
+      sceneId: "alternate",
+      title: "Alternate scene",
+      titleLabel: "title",
+      markerColor: "#80ed99",
+      markerRadius,
+    });
     layers.world.addChild(assetOrb, player);
     surface.updateLayout();
+    syncRenderedSampleShell("alternate", layers.ui, layout);
     removeDebugListeners = installDebugSceneListeners({
       onScene: () => {
         if (switchScene(verticalSliceScene, "debug")) sceneSwitches += 1;
@@ -324,19 +307,29 @@ export const alternateScene = scene({
 
   resize({ layers, layout, surface }) {
     const player = layers.world.getChildByLabel("player") as Graphics | null;
-    const hud = layers.ui.getChildByLabel("hud") as Container | null;
     if (!player) return;
 
     player.position.set(layout.visibleWidth / 2, layout.visibleHeight / 2);
-    if (hud) configureHudLayout(hud, layout);
+    rerenderSampleShell(layers.ui, layout, {
+      sceneId: "alternate",
+      title: "Alternate scene",
+      titleLabel: "title",
+      markerColor: "#80ed99",
+      markerRadius: tokenValue(layout, surfaceTheme.size.markerRadius) * 1.35,
+    });
     surface.updateLayout();
+    syncRenderedSampleShell("alternate", layers.ui, layout);
 
     syncDemoState("alternate", player.x, player.y, layout, layers.root, undefined, true);
   },
 
-  update(_dt, { layers, keyboard, pointer, layout, switchScene }) {
+  update(_dt, { layers, keyboard, pointer, layout, surface, switchScene }) {
     const player = layers.world.getChildByLabel("player") as Graphics | null;
     if (!player) return;
+
+    if (pointer.wasPressed() && handleSampleShellPointer("alternate", layers.ui, layout, pointer.position(), switchScene, () => surface.updateLayout())) {
+      return;
+    }
 
     if (keyboard.wasPressed("x")) {
       if (switchScene(verticalSliceScene, "scene")) sceneSwitches += 1;
@@ -359,8 +352,14 @@ export const designSystemScene = scene({
   loading: { minimumMs: 0 },
 
   load({ layers, layout, surface, switchScene }) {
+    sampleShellState["design-system"].sheet = "none";
     renderDesignSystem(layers.ui, layout);
+    renderSampleShell(layers.ui, layout, {
+      sceneId: "design-system",
+      title: "Design System",
+    });
     surface.updateLayout();
+    syncRenderedSampleShell("design-system", layers.ui, layout);
     removeDebugListeners = installDebugSceneListeners({
       onScene: () => {
         if (switchScene(verticalSliceScene, "debug")) sceneSwitches += 1;
@@ -373,11 +372,20 @@ export const designSystemScene = scene({
   resize({ layers, layout, surface }) {
     clearSceneLayers(layers.ui);
     renderDesignSystem(layers.ui, layout);
+    renderSampleShell(layers.ui, layout, {
+      sceneId: "design-system",
+      title: "Design System",
+    });
     surface.updateLayout();
+    syncRenderedSampleShell("design-system", layers.ui, layout);
     syncDesignSystemState(layout, layers.root);
   },
 
-  update(dt, { layers, keyboard, layout, switchScene }) {
+  update(dt, { layers, keyboard, pointer, layout, surface, switchScene }) {
+    if (pointer.wasPressed() && handleSampleShellPointer("design-system", layers.ui, layout, pointer.position(), switchScene, () => surface.updateLayout())) {
+      return;
+    }
+
     if (keyboard.wasPressed("x")) {
       if (switchScene(verticalSliceScene, "scene")) sceneSwitches += 1;
       return;
@@ -405,6 +413,23 @@ function clamp(value: number, min: number, max: number): number {
 
 function lerp(start: number, end: number, progress: number): number {
   return start + (end - start) * progress;
+}
+
+function containsPoint(bounds: RectState, x: number, y: number): boolean {
+  return x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height;
+}
+
+function toDesignBounds(
+  layout: SurfaceLayout,
+  bounds: { x: number; y: number; width: number; height: number } | undefined,
+): RectState {
+  if (!bounds) return { x: 0, y: 0, width: 0, height: 0 };
+  return {
+    x: bounds.x / layout.scale,
+    y: bounds.y / layout.scale,
+    width: bounds.width / layout.scale,
+    height: bounds.height / layout.scale,
+  };
 }
 
 function createDemoWorld(layer: Container): World {
@@ -450,6 +475,185 @@ function configureHudLayout(hud: Container, layout: SurfaceLayout): void {
     alignItems: "center",
   });
   hud.label = "hud";
+}
+
+function renderSampleShell(
+  layer: Container,
+  layout: SurfaceLayout,
+  options: {
+    sceneId: SampleSceneId;
+    title: string;
+    titleLabel?: string;
+    markerColor?: string | number;
+    markerRadius?: number;
+  },
+): AppShell {
+  const state = sampleShellState[options.sceneId];
+  const shell = createAppShell(layout, {
+    title: options.title,
+    titleLabel: options.titleLabel,
+    showBack: true,
+    activeSheet: state.sheet,
+    sheetTitle: state.sheet === "debug" ? "Debug" : "Controls",
+    sheetLines: sampleSheetLines(options.sceneId, state.sheet),
+    sheetActions: state.sheet === "debug" ? sampleDebugActions(options.sceneId) : [],
+  });
+  shell.label = "app-shell";
+
+  if (options.markerColor !== undefined && options.markerRadius !== undefined) {
+    const marker = new Graphics()
+      .circle(options.markerRadius, options.markerRadius, options.markerRadius)
+      .fill(options.markerColor);
+    marker.label = "marker";
+    marker.layout = {
+      width: options.markerRadius * 2,
+      height: options.markerRadius * 2,
+    };
+    shell.topBar.addChild(marker);
+  }
+
+  layer.addChild(shell);
+  syncSampleShellState(options.sceneId, layout, shell);
+  return shell;
+}
+
+function rerenderSampleShell(
+  layer: Container,
+  layout: SurfaceLayout,
+  options: {
+    sceneId: SampleSceneId;
+    title: string;
+    titleLabel?: string;
+    markerColor?: string | number;
+    markerRadius?: number;
+  },
+): void {
+  for (const child of layer.children.filter((candidate) => candidate.label === "app-shell")) {
+    layer.removeChild(child);
+    child.destroy({ children: true });
+  }
+  renderSampleShell(layer, layout, options);
+}
+
+function syncSampleShellState(sceneId: SampleSceneId, layout: SurfaceLayout, shell: AppShell): void {
+  sampleShellState[sceneId].buttons = {
+    back: shell.buttons.back ? toDesignBounds(layout, shell.buttons.back.getBounds()) : undefined,
+    controls: toDesignBounds(layout, shell.buttons.controls.getBounds()),
+    debug: toDesignBounds(layout, shell.buttons.debug.getBounds()),
+    close: shell.buttons.closeSheet ? toDesignBounds(layout, shell.buttons.closeSheet.getBounds()) : undefined,
+    actions: Object.fromEntries(
+      Object.entries(shell.buttons.sheetActions).map(([id, button]) => [id, toDesignBounds(layout, button.getBounds())]),
+    ),
+  };
+}
+
+function syncRenderedSampleShell(sceneId: SampleSceneId, layer: Container, layout: SurfaceLayout): void {
+  const shell = layer.getChildByLabel("app-shell") as AppShell | null;
+  if (shell) syncSampleShellState(sceneId, layout, shell);
+}
+
+function handleSampleShellPointer(
+  sceneId: SampleSceneId,
+  layer: Container,
+  layout: SurfaceLayout,
+  position: { x: number; y: number },
+  switchScene: (scene: Scene, source?: "scene" | "intro" | "debug") => boolean,
+  updateLayout: () => void,
+): boolean {
+  const state = sampleShellState[sceneId];
+  const buttons = state.buttons;
+  if (buttons.back && containsPoint(buttons.back, position.x, position.y)) {
+    return navigateToSceneIndex();
+  }
+  if (buttons.controls && containsPoint(buttons.controls, position.x, position.y)) {
+    state.sheet = state.sheet === "controls" ? "none" : "controls";
+    rerenderShellForScene(sceneId, layer, layout);
+    updateLayout();
+    syncRenderedSampleShell(sceneId, layer, layout);
+    return true;
+  }
+  if (buttons.debug && containsPoint(buttons.debug, position.x, position.y)) {
+    state.sheet = state.sheet === "debug" ? "none" : "debug";
+    rerenderShellForScene(sceneId, layer, layout);
+    updateLayout();
+    syncRenderedSampleShell(sceneId, layer, layout);
+    return true;
+  }
+  if (buttons.close && containsPoint(buttons.close, position.x, position.y)) {
+    state.sheet = "none";
+    rerenderShellForScene(sceneId, layer, layout);
+    updateLayout();
+    syncRenderedSampleShell(sceneId, layer, layout);
+    return true;
+  }
+
+  const action = Object.entries(buttons.actions).find(([, bounds]) => containsPoint(bounds, position.x, position.y))?.[0];
+  if (!action) return false;
+  if (action === "scene-index") return navigateToSceneIndex();
+  if (action === "scene-vertical") return switchScene(verticalSliceScene, "debug");
+  if (action === "scene-design") return switchScene(designSystemScene, "debug");
+  if (action === "layout-bounds") {
+    window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { enabled: true, mode: "bounds", filter: "all" } }));
+    return true;
+  }
+  if (action === "layout-off") {
+    window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { enabled: false } }));
+    return true;
+  }
+  if (action === "reload") {
+    window.location.reload();
+    return true;
+  }
+  return false;
+}
+
+function rerenderShellForScene(sceneId: SampleSceneId, layer: Container, layout: SurfaceLayout): void {
+  if (sceneId === "vertical-slice") {
+    rerenderSampleShell(layer, layout, {
+      sceneId,
+      title: "PixiJS vertical slice",
+      titleLabel: "title",
+      markerColor: surfaceTheme.color.marker,
+      markerRadius: tokenValue(layout, surfaceTheme.size.markerRadius),
+    });
+    return;
+  }
+  if (sceneId === "alternate") {
+    rerenderSampleShell(layer, layout, {
+      sceneId,
+      title: "Alternate scene",
+      titleLabel: "title",
+      markerColor: "#80ed99",
+      markerRadius: tokenValue(layout, surfaceTheme.size.markerRadius) * 1.35,
+    });
+    return;
+  }
+  rerenderSampleShell(layer, layout, {
+    sceneId,
+    title: "Design System",
+  });
+}
+
+function sampleSheetLines(sceneId: SampleSceneId, sheet: AppShellSheet): string[] {
+  if (sheet === "none") return [];
+  if (sheet === "controls") {
+    if (sceneId === "vertical-slice") return ["Drag or pinch the world.", "Tap empty space to move the player."];
+    if (sceneId === "alternate") return ["Press X to return to the vertical slice."];
+    return ["Inspect tokens, primitives, layout rows, and motion samples."];
+  }
+  return ["Debug actions are part of the Pixi app shell.", "The DOM debug panel is kept hidden for E2E state only."];
+}
+
+function sampleDebugActions(sceneId: SampleSceneId): Array<{ id: string; label: string }> {
+  const actions = [
+    { id: "scene-index", label: "Back to Samples" },
+    { id: "layout-bounds", label: "Layout Bounds" },
+    { id: "layout-off", label: "Layout Off" },
+    { id: "reload", label: "Reload" },
+  ];
+  if (sceneId !== "vertical-slice") actions.splice(1, 0, { id: "scene-vertical", label: "Open Vertical Slice" });
+  if (sceneId !== "design-system") actions.splice(1, 0, { id: "scene-design", label: "Open Design System" });
+  return actions;
 }
 
 function createAssetOrb(texture: Texture, layout: SurfaceLayout, xRatio: number, yRatio: number): Sprite {

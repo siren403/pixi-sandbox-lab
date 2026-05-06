@@ -4,6 +4,7 @@ import { createAssetRuntime } from "./assets";
 import { createCommandRuntime } from "./commandRuntime";
 import { createKeyboard } from "./keyboard";
 import { createPointer } from "./pointer";
+import { setSceneNavigator } from "./navigation";
 import type { Scene, SceneContext, SurfaceLayers, SurfaceLayout } from "./scene";
 import { SceneManager } from "./sceneManager";
 import { createSurfaceContext } from "./surface";
@@ -83,6 +84,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
       return commands.requestSceneSwitch(scene, source, () => sceneManager.switch(scene, ctx));
     },
   };
+  setSceneNavigator(ctx.switchScene);
   updateSurfaceLayout(ctx, options.width, options.height);
   const destroyLayoutDebug = await maybeInstallLayoutDebug(app, layers.root);
   await sceneManager.start(options.boot, ctx);

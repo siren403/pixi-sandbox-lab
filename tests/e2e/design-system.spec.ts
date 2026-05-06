@@ -1,18 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { collectConsoleErrors, gotoBoot, openDebugPanel, startDemoFromBoot } from "./pixi-test-helpers";
+import { clickBootStart, clickSceneIndexItem, collectConsoleErrors, gotoBoot } from "./pixi-test-helpers";
 
 test("renders design-system scene with inspectable layout contracts", async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
   const canvas = await gotoBoot(page);
-  await startDemoFromBoot(page, canvas);
-  await openDebugPanel(page);
-
-  const currentScene = page.getByTestId("layout-debug-current-scene");
-  const sceneSwitch = page.getByTestId("layout-debug-scene");
-  const designSystem = page.getByTestId("layout-debug-design-system");
-  await expect(currentScene).toContainText("vertical-slice");
-
-  await designSystem.click();
+  await clickBootStart(page, canvas);
+  await clickSceneIndexItem(page, canvas, "Design System");
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.designSystem?.rendered)).toBe(true);
   const designSystemState = await page.evaluate(() => window.__pixiDebug?.designSystem);
   expect(designSystemState?.scene).toBe("design-system");
@@ -30,11 +23,8 @@ test("renders design-system scene with inspectable layout contracts", async ({ p
   await expect
     .poll(() => page.evaluate(() => window.__pixiDebug?.layout?.layoutNodes ?? 0))
     .toBeGreaterThanOrEqual(16);
-  await expect(currentScene).toContainText("design-system");
+  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.currentScene)).toBe("design-system");
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.runtime?.appMode)).toBe("interactive");
-
-  await sceneSwitch.click();
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.demo?.scene)).toBe("vertical-slice");
 
   expect(consoleErrors).toEqual([]);
 });

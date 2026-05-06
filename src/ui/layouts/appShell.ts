@@ -18,6 +18,7 @@ export type AppShell = Container & {
     controls: ButtonPrimitive;
     debug: ButtonPrimitive;
     closeSheet?: ButtonPrimitive;
+    sheetActions: Record<string, ButtonPrimitive>;
   };
   frames: {
     topBar: RectFrame;
@@ -39,10 +40,12 @@ export function createAppShell(
   layout: SurfaceLayout,
   options: {
     title: string;
+    titleLabel?: string;
     showBack?: boolean;
     activeSheet?: AppShellSheet;
     sheetTitle?: string;
     sheetLines?: string[];
+    sheetActions?: Array<{ id: string; label: string }>;
   },
 ): AppShell {
   const safeFrame = getSafeAreaFrame(layout);
@@ -64,7 +67,7 @@ export function createAppShell(
   };
   const sheetFrame = {
     x: safeFrame.x,
-    y: bottomBarFrame.y - sheetHeight - gap,
+    y: safeFrame.y + safeFrame.height - sheetHeight,
     width: safeFrame.width,
     height: sheetHeight,
   };
@@ -99,7 +102,7 @@ export function createAppShell(
     layout,
     fontSize: surfaceTheme.typography.title,
     color: surfaceTheme.color.text,
-    label: "top-bar-title",
+    label: options.titleLabel ?? "top-bar-title",
   });
   title.layout = {
     height: topBarHeight,
@@ -109,6 +112,7 @@ export function createAppShell(
   const buttons: AppShell["buttons"] = {
     controls: createShellButton("Controls", layout),
     debug: createShellButton("Debug", layout),
+    sheetActions: {},
   };
 
   if (options.showBack) {
@@ -140,6 +144,7 @@ export function createAppShell(
 
   const bottomSheetHost = createBottomSheetHost(layout, sheetFrame, options);
   if (bottomSheetHost.closeButton) buttons.closeSheet = bottomSheetHost.closeButton;
+  buttons.sheetActions = bottomSheetHost.actions;
 
   shell.topBar = topBar;
   shell.contentHost = contentHost;
@@ -157,17 +162,19 @@ function createBottomSheetHost(
     activeSheet?: AppShellSheet;
     sheetTitle?: string;
     sheetLines?: string[];
+    sheetActions?: Array<{ id: string; label: string }>;
   },
-): { host: Container; closeButton?: ButtonPrimitive } {
+): { host: Container; closeButton?: ButtonPrimitive; actions: Record<string, ButtonPrimitive> } {
   const host = new Container({ label: "bottom-sheet-host" });
-  host.position.set(frame.x, frame.y);
+  host.position.set(frame.x, frame.y + frame.height);
+  host.pivot.y = frame.height;
   host.layout = {
     width: frame.width,
     height: frame.height,
     flexDirection: "column",
     gap: tokenValue(layout, surfaceTheme.spacing.xs),
   };
-  if ((options.activeSheet ?? "none") === "none") return { host };
+  if ((options.activeSheet ?? "none") === "none") return { host, actions: {} };
 
   const background = new Graphics()
     .roundRect(0, 0, frame.width, frame.height, tokenValue(layout, surfaceTheme.rounded.md))
@@ -209,6 +216,12 @@ function createBottomSheetHost(
     gap: tokenValue(layout, surfaceTheme.spacing.xs),
   };
 
+  for (const action of options.sheetActions ?? []) {
+    const button = createShellButton(action.label, layout);
+    button.label = `bottom-sheet-action:${action.id}`;
+    body.addChild(button);
+  }
+
   for (const line of options.sheetLines ?? []) {
     const label = createLabel({
       text: line,
@@ -225,7 +238,13 @@ function createBottomSheetHost(
   }
 
   host.addChild(background, header, body);
-  return { host, closeButton };
+  const actions: Record<string, ButtonPrimitive> = {};
+  for (const child of body.children) {
+    if (child.label?.startsWith("bottom-sheet-action:")) {
+      actions[child.label.slice("bottom-sheet-action:".length)] = child as ButtonPrimitive;
+    }
+  }
+  return { host, closeButton, actions };
 }
 
 function createShellButton(text: string, layout: SurfaceLayout): ButtonPrimitive {

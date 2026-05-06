@@ -2,15 +2,15 @@ import { expect, test } from "@playwright/test";
 import {
   collectConsoleErrors,
   clickBootStart,
+  clickSceneIndexItem,
   clickCanvasAt,
   expectCanvasFillsViewport,
   gotoBoot,
   hasVisibleCanvasPixels,
-  openDebugPanel,
   readDebugSnapshot,
 } from "./pixi-test-helpers";
 
-test("renders boot, fills the viewport, and can navigate from debug panel", async ({ page }) => {
+test("renders boot, fills the viewport, and navigates through the scene index", async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
   const canvas = await gotoBoot(page);
 
@@ -27,22 +27,15 @@ test("renders boot, fills the viewport, and can navigate from debug panel", asyn
   expect(boot?.buttonCenterDeltaY).toBeLessThanOrEqual(1.5);
   expect(await page.evaluate(() => window.__pixiDebug?.runtime?.loadingOverlayShows ?? 0)).toBe(0);
 
-  const currentScene = page.getByTestId("layout-debug-current-scene");
-  await expect(currentScene).toContainText("boot");
+  expect(await page.getByTestId("layout-debug-panel").isVisible()).toBe(false);
+  expect(await page.evaluate(() => window.__pixiDebug?.layout?.currentScene)).toBe("boot");
 
-  await openDebugPanel(page);
-  const sceneSwitch = page.getByTestId("layout-debug-scene");
-  const designSystem = page.getByTestId("layout-debug-design-system");
-  await expect(sceneSwitch).toContainText("World");
-  await expect(designSystem).toBeVisible();
-
-  await designSystem.click();
+  await clickBootStart(page, canvas);
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.sceneIndex?.rendered)).toBe(true);
+  await clickSceneIndexItem(page, canvas, "Design System");
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.designSystem?.rendered)).toBe(true);
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.runtime?.appMode)).toBe("interactive");
-  await expect(currentScene).toContainText("design-system");
-
-  await sceneSwitch.click();
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.demo?.scene)).toBe("vertical-slice");
+  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.currentScene)).toBe("design-system");
 
   expect(consoleErrors).toEqual([]);
 });

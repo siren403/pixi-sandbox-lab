@@ -35,6 +35,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   panel.dataset.testid = "layout-debug-panel";
   Object.assign(panel.style, {
     position: "fixed",
+    display: "none",
     zIndex: "20",
     minWidth: "188px",
     border: "1px solid rgba(238, 242, 246, 0.38)",
@@ -335,6 +336,25 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     window.location.reload();
   };
 
+  const onExternalSet = async (event: Event) => {
+    const detail = (event as CustomEvent<{
+      enabled?: boolean;
+      mode?: LayoutDebugMode;
+      filter?: LayoutDebugFilter;
+    }>).detail ?? {};
+    if (detail.mode) mode = detail.mode;
+    if (detail.filter) filter = detail.filter;
+    if (detail.enabled !== undefined) {
+      await setEnabled(detail.enabled);
+    } else {
+      syncLayoutFlags(true);
+      await app.renderer.layout.enableDebug(enabled && mode === "layout");
+      app.renderer.layout.update(app.stage);
+      syncState();
+    }
+    saveState();
+  };
+
   const onHeaderPointerDown = (event: PointerEvent) => {
     if ((event.target as HTMLElement).closest("button")) return;
     const rect = panel.getBoundingClientRect();
@@ -382,6 +402,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   sceneButton.addEventListener("click", onSceneClick);
   designSystemButton.addEventListener("click", onDesignSystemClick);
   reloadButton.addEventListener("click", onReloadClick);
+  window.addEventListener("pixi:layout-debug-set", onExternalSet);
   header.addEventListener("pointerdown", onHeaderPointerDown);
   header.addEventListener("pointermove", onHeaderPointerMove);
   header.addEventListener("pointerup", onHeaderPointerUp);
@@ -414,6 +435,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     sceneButton.removeEventListener("click", onSceneClick);
     designSystemButton.removeEventListener("click", onDesignSystemClick);
     reloadButton.removeEventListener("click", onReloadClick);
+    window.removeEventListener("pixi:layout-debug-set", onExternalSet);
     header.removeEventListener("pointerdown", onHeaderPointerDown);
     header.removeEventListener("pointermove", onHeaderPointerMove);
     header.removeEventListener("pointerup", onHeaderPointerUp);

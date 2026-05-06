@@ -2,6 +2,7 @@ import { Container, Graphics } from "pixi.js";
 import { designSystemScene, verticalSliceScene } from "./boot";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
+import { setSceneIndexScene } from "../runtime/navigation";
 import { tokenValue } from "../runtime/surface";
 import { surfaceTheme } from "../ui/tokens";
 import {
@@ -32,7 +33,8 @@ let sceneIndexButtons: {
   controls?: { x: number; y: number; width: number; height: number };
   debug?: { x: number; y: number; width: number; height: number };
   close?: { x: number; y: number; width: number; height: number };
-} = {};
+  actions: Record<string, { x: number; y: number; width: number; height: number }>;
+} = { actions: {} };
 let removeDebugListeners: (() => void) | null = null;
 
 export const bootScene = scene({
@@ -125,6 +127,27 @@ export const sceneIndexScene = scene({
         renderSceneIndex(app, layers.ui, layout);
         return;
       }
+      const action = Object.entries(sceneIndexButtons.actions).find(([, bounds]) => containsPoint(bounds, position.x, position.y))?.[0];
+      if (action === "scene-vertical") {
+        switchScene(verticalSliceScene, "debug");
+        return;
+      }
+      if (action === "scene-design") {
+        switchScene(designSystemScene, "debug");
+        return;
+      }
+      if (action === "layout-bounds") {
+        window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { enabled: true, mode: "bounds", filter: "all" } }));
+        return;
+      }
+      if (action === "layout-off") {
+        window.dispatchEvent(new CustomEvent("pixi:layout-debug-set", { detail: { enabled: false } }));
+        return;
+      }
+      if (action === "reload") {
+        window.location.reload();
+        return;
+      }
     }
     if (keyboard.wasPressed("escape") && sceneIndexSheet !== "none") {
       sceneIndexSheet = "none";
@@ -140,6 +163,8 @@ export const sceneIndexScene = scene({
     clearSceneIndexDebugState();
   },
 });
+
+setSceneIndexScene(sceneIndexScene);
 
 function renderIntro(app: { renderer: { layout: { update: (container: Container) => void } } }, layer: Container, layout: SurfaceLayout): void {
   const root = new Container({ label: "intro-root" });
@@ -209,8 +234,18 @@ function renderSceneIndex(app: { renderer: { layout: { update: (container: Conta
     sheetTitle: sceneIndexSheet === "debug" ? "Debug" : "Controls",
     sheetLines:
       sceneIndexSheet === "debug"
-        ? ["Layout inspector remains in the folded DOM debug panel.", "Debug commands will move to this sheet incrementally.", "E2E bridge uses a typed snapshot adapter."]
-        : ["Select a sample from the list.", "Scene-specific controls will appear here.", "Use Debug for inspection tools."],
+        ? ["Debug tools run inside the app shell.", "Layout inspector state is still backed by the dev overlay."]
+        : ["Select a sample from the list.", "Scene-specific controls will appear here."],
+    sheetActions:
+      sceneIndexSheet === "debug"
+        ? [
+            { id: "scene-vertical", label: "Open Vertical Slice" },
+            { id: "scene-design", label: "Open Design System" },
+            { id: "layout-bounds", label: "Layout Bounds" },
+            { id: "layout-off", label: "Layout Off" },
+            { id: "reload", label: "Reload" },
+          ]
+        : [],
   });
 
   const list = new Container({ label: "scene-index-list" });
@@ -288,6 +323,9 @@ function syncSceneIndexState(layout: SurfaceLayout, root: Container, shell: AppS
     controls: toDesignBounds(layout, shell.buttons.controls.getBounds()),
     debug: toDesignBounds(layout, shell.buttons.debug.getBounds()),
     close: shell.buttons.closeSheet ? toDesignBounds(layout, shell.buttons.closeSheet.getBounds()) : undefined,
+    actions: Object.fromEntries(
+      Object.entries(shell.buttons.sheetActions).map(([id, button]) => [id, toDesignBounds(layout, button.getBounds())]),
+    ),
   };
   setSceneIndexDebugState({
     scene: "scene-index",
