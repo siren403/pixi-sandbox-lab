@@ -59,7 +59,7 @@ layout debug panel:
 - `@pixi/layout` 내장 debug renderer를 토글한다.
 - `All / World / UI` 필터로 layout debug 대상 노드를 제한한다.
 - `DS` 버튼은 Storybook 대체용 runtime design system scene으로 이동한다.
-- Debug/E2E 관측 상태는 typed debug store에 모으고 `window.__pixiDebug`가 Playwright용 adapter로 미러링한다. 현재 bridge는 `boot`, `sceneIndex`, `demo`, `designSystem`, `runtime`, `layout` 상태와 `version`, `getSnapshot()`, `dispatch(command)`를 노출하며 `VITE_DEMO_DEBUG=false` release build에서는 no-op이다.
+- Debug/E2E 관측 상태는 typed debug store에 모으고 `window.__pixiDebug`가 Playwright용 adapter로 미러링한다. 현재 bridge는 `boot`, `sceneIndex`, `demo`, `designSystem`, `runtime`, `layout` 상태와 `version`, `getSnapshot()`, `dispatch(command)`, `whenReady(criteria)`를 노출하며 `VITE_DEMO_DEBUG=false` release build에서는 no-op이다.
 
 ### Debug and navigation direction
 
@@ -89,7 +89,7 @@ Debug/E2E bridge direction:
 - `window.__pixiDebug` should become a thin Playwright adapter, not the source of truth for app state.
 - Runtime/debug state should live in a typed debug store with `getSnapshot`, `patch`, and app-internal `subscribe`.
 - Test and debug commands should enter through a typed command API, for example `scene.open`, `layout.set`, `sheet.open`, `sheet.close`, and `app.reload`.
-- The public window contract should stay small: `version`, `getSnapshot()`, and `dispatch(command)`.
+- The public window contract should stay small: `version`, `getSnapshot()`, `dispatch(command)`, and runtime-backed `whenReady(criteria)`.
 - Pixi debug sheets and app UI must use the store and command modules directly, not read `window.__pixiDebug`.
 - Release builds should keep the bridge and DOM debug UI absent or tree-shaken, with E2E or bundle checks proving `window.__pixiDebug` is not installed.
 

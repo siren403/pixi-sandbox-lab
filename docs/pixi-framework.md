@@ -390,7 +390,7 @@ window.__pixiDebug = {
 
 `whenReady()` is an E2E adapter over runtime-owned readiness. It must not infer scene readiness from debug-only rendered flags. Runtime readiness is based on the active scene, scene lifecycle, transition lifecycle, command idle state, and `appMode`.
 
-The legacy direct fields such as `window.__pixiDebug.runtime` and `window.__pixiDebug.demo` remain mirrored during migration. New Playwright helpers should prefer `getSnapshot()` and `whenReady()`.
+Legacy direct fields such as `window.__pixiDebug.runtime` and `window.__pixiDebug.demo` remain mirrored for compatibility, but Playwright specs should read state through `getSnapshot()` and wait through `whenReady()`. Direct field reads belong inside the bridge implementation or in narrowly documented legacy checks.
 
 주요 기능:
 

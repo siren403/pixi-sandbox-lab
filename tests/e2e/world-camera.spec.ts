@@ -3,6 +3,7 @@ import {
   collectConsoleErrors,
   expectCanvasFillsViewport,
   gotoBoot,
+  readDebugSnapshot,
   rectsOverlap,
   startDemoFromBoot,
 } from "./pixi-test-helpers";
@@ -15,7 +16,7 @@ test("renders vertical slice world and supports keyboard, pointer, pan, and zoom
 
   const box = await canvas.boundingBox();
   const viewport = page.viewportSize();
-  const before = await page.evaluate(() => window.__pixiDebug?.demo);
+  const before = (await readDebugSnapshot(page))?.demo;
   expect(before?.playerX).toBeGreaterThan(0);
   expect(before?.worldWidth).toBeGreaterThan(before?.visibleWidth ?? 0);
   expect(before?.worldHeight).toBeGreaterThan(before?.visibleHeight ?? 0);
@@ -36,14 +37,14 @@ test("renders vertical slice world and supports keyboard, pointer, pan, and zoom
   expect(rectsOverlap(before?.titleBounds, before?.markerBounds)).toBe(false);
   expect(before?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
   expect(before?.scene).toBe("vertical-slice");
-  expect(await page.evaluate(() => window.__pixiDebug?.runtime?.loading)).toBe(false);
-  expect(await page.evaluate(() => window.__pixiDebug?.runtime?.loadingOverlayVisible)).toBe(false);
+  expect((await readDebugSnapshot(page))?.runtime?.loading).toBe(false);
+  expect((await readDebugSnapshot(page))?.runtime?.loadingOverlayVisible).toBe(false);
 
   await page.keyboard.down("ArrowRight");
   await page.waitForTimeout(250);
   await page.keyboard.up("ArrowRight");
 
-  const after = await page.evaluate(() => window.__pixiDebug?.demo);
+  const after = (await readDebugSnapshot(page))?.demo;
   expect(after?.playerX).toBeGreaterThan(before?.playerX ?? 0);
 
   const pointerTarget = {
@@ -52,29 +53,29 @@ test("renders vertical slice world and supports keyboard, pointer, pan, and zoom
   };
   await canvas.click({ position: pointerTarget });
   await expect
-    .poll(() => page.evaluate(() => window.__pixiDebug?.demo?.playerX ?? 0))
+    .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.demo?.playerX ?? 0))
     .toBeGreaterThan(after?.playerX ?? 0);
 
-  const afterPointer = await page.evaluate(() => window.__pixiDebug?.demo);
+  const afterPointer = (await readDebugSnapshot(page))?.demo;
   expect(afterPointer?.playerY).toBeGreaterThan(after?.playerY ?? 0);
   expect(afterPointer?.pointerX).toBeGreaterThan((afterPointer?.visibleWidth ?? 0) * 0.78);
   expect(afterPointer?.pointerX).toBeLessThan((afterPointer?.visibleWidth ?? 0) * 0.82);
   expect(afterPointer?.pointerY).toBeGreaterThan((afterPointer?.visibleHeight ?? 0) * 0.68);
   expect(afterPointer?.pointerY).toBeLessThan((afterPointer?.visibleHeight ?? 0) * 0.72);
 
-  const cameraBeforeZoom = await page.evaluate(() => window.__pixiDebug?.demo);
+  const cameraBeforeZoom = (await readDebugSnapshot(page))?.demo;
   await page.mouse.wheel(0, -420);
   await expect
-    .poll(() => page.evaluate(() => window.__pixiDebug?.demo?.cameraZoom ?? 0))
+    .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.demo?.cameraZoom ?? 0))
     .toBeGreaterThan(cameraBeforeZoom?.cameraZoom ?? 0);
 
-  const cameraBeforePan = await page.evaluate(() => window.__pixiDebug?.demo);
+  const cameraBeforePan = (await readDebugSnapshot(page))?.demo;
   await page.mouse.move(Math.round((box?.width ?? 0) * 0.48), Math.round((box?.height ?? 0) * 0.52));
   await page.mouse.down();
   await page.mouse.move(Math.round((box?.width ?? 0) * 0.65), Math.round((box?.height ?? 0) * 0.62), { steps: 6 });
   await page.mouse.up();
   await expect
-    .poll(() => page.evaluate(() => window.__pixiDebug?.demo?.cameraX ?? 0))
+    .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.demo?.cameraX ?? 0))
     .toBeGreaterThan((cameraBeforePan?.cameraX ?? 0) + 20);
 
   expect(consoleErrors).toEqual([]);

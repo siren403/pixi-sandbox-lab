@@ -18,7 +18,7 @@ test("renders boot, fills the viewport, and navigates through the scene index", 
   await expectCanvasFillsViewport(page, canvas);
   await expect.poll(() => hasVisibleCanvasPixels(page)).toBe(true);
 
-  const boot = await page.evaluate(() => window.__pixiDebug?.boot);
+  const boot = (await readDebugSnapshot(page))?.boot;
   expect(boot?.scene).toBe("boot");
   expect(boot?.promptBounds.width).toBeGreaterThan(0);
   expect(boot?.buttonBounds.width).toBeGreaterThan(boot?.promptBounds.width ?? 0);
@@ -26,17 +26,17 @@ test("renders boot, fills the viewport, and navigates through the scene index", 
   expect(boot?.layoutPolicy).toBe("safe-area-frame");
   expect(boot?.layoutNodes).toBeGreaterThanOrEqual(3);
   expect(boot?.buttonCenterDeltaY).toBeLessThanOrEqual(1.5);
-  expect(await page.evaluate(() => window.__pixiDebug?.runtime?.loadingOverlayShows ?? 0)).toBe(0);
+  expect((await readDebugSnapshot(page))?.runtime?.loadingOverlayShows ?? 0).toBe(0);
 
   expect(await page.getByTestId("layout-debug-panel").isVisible()).toBe(false);
-  expect(await page.evaluate(() => window.__pixiDebug?.layout?.currentScene)).toBe("boot");
+  expect((await readDebugSnapshot(page))?.layout?.currentScene).toBe("boot");
 
   await clickBootStart(page, canvas);
   await waitForSceneIndexReady(page);
   await clickSceneIndexItem(page, canvas, "Design System");
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.designSystem?.rendered), { timeout: 15000 }).toBe(true);
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.runtime?.appMode), { timeout: 15000 }).toBe("interactive");
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.currentScene), { timeout: 15000 }).toBe("design-system");
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.designSystem?.rendered), { timeout: 15000 }).toBe(true);
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.runtime?.appMode), { timeout: 15000 }).toBe("interactive");
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.currentScene), { timeout: 15000 }).toBe("design-system");
 
   expect(consoleErrors).toEqual([]);
 });

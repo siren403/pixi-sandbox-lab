@@ -27,7 +27,7 @@ This document tracks the current implementation and validation state for the Pix
 - GitHub Pages deployment runs `bun run check` before uploading the demo build artifact.
 - Vite `chunkSizeWarningLimit` is set to 1100kB. `bun run check:bundle` enforces total JS, gzip, max chunk, and entry budgets.
 - `window.__pixiDebug.runtime` exposes E2E-only app mode, runtime readiness, command counts, loading state, transition state, sampled timing, progress, overlay alpha, and transition panel counts.
-- `window.__pixiDebug` now mirrors a typed debug store and also exposes `version`, `getSnapshot()`, `dispatch(command)`, and runtime-backed `whenReady(criteria)` for Playwright migration.
+- `window.__pixiDebug` mirrors a typed debug store and exposes `version`, `getSnapshot()`, `dispatch(command)`, and runtime-backed `whenReady(criteria)` for Playwright. E2E helpers read state through `getSnapshot()` instead of direct runtime/demo/layout/debug field access.
 - `scene.load(ctx)` is sync; assets are already available through `ctx.assets.get(source)` at that point.
 - `AssetRuntime` wraps Pixi `Assets` and throws if `get()` is called for an asset that is not ready.
 - The first validation asset uses a Vite import URL so GitHub Pages subpath deployment does not depend on `public` absolute paths.
@@ -54,7 +54,7 @@ Current checks include:
 ## Near-Term Surface Work
 
 - Continue moving debug/navigation controls from the floating DOM panel into Pixi bottom sheet content while keeping DOM layout inspection as development tooling until replaced or retired.
-- Migrate Playwright specs from direct `window.__pixiDebug.runtime/demo/...` reads to `window.__pixiDebug.getSnapshot()`.
+- Keep Playwright specs on the `window.__pixiDebug.getSnapshot()` / `whenReady()` contract as runtime debug state evolves. Direct field reads should stay limited to bridge implementation or explicitly documented legacy compatibility checks.
 - Expand AppShell from the Scene Index into sample scenes where top navigation, back, controls, or debug sheets are useful.
 - Evaluate `@pixi/ui` when controls such as slider, checkbox, progress, scroll/list, or text input become real product needs.
 - Expand scene-independent UI primitives as HUD, menu, modal, badge, list, and panel patterns repeat.

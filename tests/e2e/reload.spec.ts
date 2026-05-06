@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { dispatchDebugCommand, gotoBoot } from "./pixi-test-helpers";
+import { dispatchDebugCommand, gotoBoot, readDebugSnapshot } from "./pixi-test-helpers";
 
 test("debug reload command reloads the page while DOM debug panel stays hidden", async ({ page }) => {
   await gotoBoot(page);
@@ -12,12 +12,12 @@ test("debug reload command reloads the page while DOM debug panel stays hidden",
   await expect
     .poll(async () => {
       try {
-        return await page.evaluate(() => window.__pixiDebug?.boot?.rendered);
+        return (await readDebugSnapshot(page))?.boot?.rendered;
       } catch {
         return false;
       }
     })
     .toBe(true);
   await expect(page.getByTestId("layout-debug-panel")).toBeHidden();
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.layout?.panelConnected)).toBe(true);
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.panelConnected)).toBe(true);
 });

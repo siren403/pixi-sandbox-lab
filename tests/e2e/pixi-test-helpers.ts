@@ -108,7 +108,7 @@ export async function waitForSceneIndexReady(page: Page): Promise<void> {
 }
 
 export async function readDebugSnapshot(page: Page): Promise<PixiDebugState | undefined> {
-  return page.evaluate(() => window.__pixiDebug?.getSnapshot?.() ?? window.__pixiDebug);
+  return page.evaluate(() => window.__pixiDebug?.getSnapshot?.());
 }
 
 export async function waitForRuntimeReady(
