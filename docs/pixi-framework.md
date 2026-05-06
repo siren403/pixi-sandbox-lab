@@ -162,6 +162,22 @@ await ctx.runtime.scene.whenReady({ scene: "scene-index", interactive: true });
 
 현재는 migration 중이라 `ctx.layout`, `ctx.keyboard`, `ctx.pointer`를 계속 노출한다. 새 코드에서는 가능한 한 `ctx.surface`를 우선 사용한다.
 
+### Runtime Readiness
+
+Runtime readiness는 scene 전환이 “요청됨”과 “플레이 가능한 상태가 됨”을 분리하기 위한 계약이다.
+
+`ctx.switchScene()`과 `ctx.runtime.scene.open()`은 요청 수락 여부만 반환한다. 새 scene에서 필요한 상태는 scene 자체의 `load`/`update` 흐름이나 명시적인 game state로 전달하고, 전환 완료 후 검증이 필요한 framework/debug/E2E 코드는 `ctx.runtime.scene.whenReady(criteria)`를 기다린다.
+
+`interactiveReady`는 다음 조건이 모두 true일 때만 true다.
+
+- `sceneLifecycle === "ready"`
+- `transitionLifecycle === "idle"`
+- `loadingPhase === "idle"`이고 runtime loading이 아님
+- 실행 중인 runtime command가 없음
+- `appMode === "interactive"`
+
+`RuntimeReadyCriteria`는 현재 active scene과 true 조건만 매칭한다. `{ scene, interactive: true }`는 특정 scene이 interactive-ready가 될 때까지 기다리는 기본 E2E 패턴이고, `{ transitionIdle: true, commandIdle: true }`처럼 낮은 수준의 조건은 transition/debug 검증에만 사용한다. scene code가 from-scene 선택값에 따라 to-scene을 다르게 구성해야 할 때는 `whenReady()` 완료 콜백에 의존하지 말고, 명시적인 scene args 또는 game state/store를 통해 전달한다.
+
 ### SurfaceContext
 
 `ctx.surface`는 surface 좌표계와 layout 업데이트를 한 곳에서 다루기 위한 얇은 facade다.
@@ -388,7 +404,7 @@ window.__pixiDebug = {
 }
 ```
 
-`whenReady()` is an E2E adapter over runtime-owned readiness. It must not infer scene readiness from debug-only rendered flags. Runtime readiness is based on the active scene, scene lifecycle, transition lifecycle, command idle state, and `appMode`.
+`whenReady()` is an E2E adapter over runtime-owned readiness. It must not infer scene readiness from debug-only rendered flags. Runtime readiness is based on the active scene, scene lifecycle, transition lifecycle, loading phase, command idle state, and `appMode`.
 
 Legacy direct fields such as `window.__pixiDebug.runtime` and `window.__pixiDebug.demo` remain mirrored for compatibility, but Playwright specs should read state through `getSnapshot()` and wait through `whenReady()`. Direct field reads belong inside the bridge implementation or in narrowly documented legacy checks.
 

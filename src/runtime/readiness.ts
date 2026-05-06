@@ -48,7 +48,7 @@ export function waitForRuntimeReady(
   criteria: RuntimeReadyCriteria,
 ): Promise<RuntimeReadySnapshot> {
   const snapshot = readRuntimeReadySnapshot(runtime);
-  if (matchesReadyCriteria(snapshot, criteria)) return Promise.resolve(snapshot);
+  if (matchesRuntimeReadyCriteria(snapshot, criteria)) return Promise.resolve(snapshot);
 
   const timeoutMs = criteria.timeoutMs ?? 15000;
   return new Promise((resolve, reject) => {
@@ -80,25 +80,28 @@ export function readRuntimeReadySnapshot(runtime: RuntimeInternalState): Runtime
   };
 }
 
-function notifyRuntimeWaiters(runtime: RuntimeInternalState, snapshot: RuntimeReadySnapshot): void {
-  const waiters = waitersByRuntime.get(runtime);
-  if (!waiters) return;
-
-  for (const waiter of Array.from(waiters)) {
-    if (!matchesReadyCriteria(snapshot, waiter.criteria)) continue;
-    window.clearTimeout(waiter.timeout);
-    waiters.delete(waiter);
-    waiter.resolve(snapshot);
-  }
-}
-
-function matchesReadyCriteria(snapshot: RuntimeReadySnapshot, criteria: RuntimeReadyCriteria): boolean {
+export function matchesRuntimeReadyCriteria(
+  snapshot: RuntimeReadySnapshot,
+  criteria: RuntimeReadyCriteria,
+): boolean {
   if (criteria.scene !== undefined && snapshot.activeScene !== criteria.scene) return false;
   if (criteria.interactive === true && !snapshot.interactiveReady) return false;
   if (criteria.sceneReady === true && !snapshot.sceneReady) return false;
   if (criteria.transitionIdle === true && !snapshot.transitionIdle) return false;
   if (criteria.commandIdle === true && !snapshot.commandIdle) return false;
   return true;
+}
+
+function notifyRuntimeWaiters(runtime: RuntimeInternalState, snapshot: RuntimeReadySnapshot): void {
+  const waiters = waitersByRuntime.get(runtime);
+  if (!waiters) return;
+
+  for (const waiter of Array.from(waiters)) {
+    if (!matchesRuntimeReadyCriteria(snapshot, waiter.criteria)) continue;
+    window.clearTimeout(waiter.timeout);
+    waiters.delete(waiter);
+    waiter.resolve(snapshot);
+  }
 }
 
 function readRuntimeWaiters(runtime: RuntimeInternalState): Set<RuntimeWaiter> {

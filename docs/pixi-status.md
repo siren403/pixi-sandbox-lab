@@ -28,6 +28,7 @@ This document tracks the current implementation and validation state for the Pix
 - Vite `chunkSizeWarningLimit` is set to 1100kB. `bun run check:bundle` enforces total JS, gzip, max chunk, and entry budgets.
 - `window.__pixiDebug.runtime` exposes E2E-only app mode, runtime readiness, command counts, loading state, transition state, sampled timing, progress, overlay alpha, and transition panel counts.
 - `window.__pixiDebug` mirrors a typed debug store and exposes `version`, `getSnapshot()`, `dispatch(command)`, and runtime-backed `whenReady(criteria)` for Playwright. E2E helpers read state through `getSnapshot()` instead of direct runtime/demo/layout/debug field access, and send scene/layout/reload input through `dispatch(command)` instead of direct `pixi:*` DOM events.
+- `src/runtime/readiness.ts` owns the runtime readiness contract. `interactiveReady` requires a ready scene, idle transition/loading state, no running runtime commands, and interactive app mode; `bun run check:runtime-readiness` verifies the criteria matcher without launching a browser.
 - `scene.load(ctx)` is sync; assets are already available through `ctx.assets.get(source)` at that point.
 - `AssetRuntime` wraps Pixi `Assets` and throws if `get()` is called for an asset that is not ready.
 - The first validation asset uses a Vite import URL so GitHub Pages subpath deployment does not depend on `public` absolute paths.
@@ -50,6 +51,7 @@ Current checks include:
 - button label center delta stays within contract
 - button, input-target, and marker component sizes meet their screen-space token contracts
 - release build output does not contain debug overlay identifiers
+- runtime readiness criteria matching and `interactiveReady` derivation are covered by `bun run check:runtime-readiness`
 
 ## Near-Term Surface Work
 

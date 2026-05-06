@@ -11,6 +11,7 @@
     "check": "bun run check:design-tokens && bun run build:demo",
     "check:bundle": "bun scripts/check-bundle-size.ts",
     "check:design-tokens": "bun scripts/check-design-tokens.ts",
+    "check:runtime-readiness": "bun scripts/check-runtime-readiness.ts",
     "pw:install": "PLAYWRIGHT_BROWSERS_PATH=0 bunx playwright install chromium",
     "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=0 bunx playwright test"
   },
