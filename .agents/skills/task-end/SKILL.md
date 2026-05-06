@@ -36,13 +36,29 @@ git status --short
    - For app/code changes, run the project-specific test/build command when available.
    - If validation cannot be run, report why.
 
-5. Commit policy:
+5. Inspect the active task manifest:
+
+```bash
+mise run active-task -- status
+```
+
+Confirm that dirty files match the manifest scope. If intentional work is outside scope, stop before committing and report the scope drift.
+
+6. Commit policy:
    - If the user approved implementation for a planned task and validation passed, commit the intentional changes as part of task closeout.
    - If the user explicitly asked not to commit, leave changes uncommitted and report the remaining status.
    - If validation failed, dirty files include unknown/user changes, or scope changed unexpectedly, stop before committing and report the blocker.
    - For exploratory edits without prior implementation approval, ask before committing unless the user already requested commit closeout.
 
-6. Confirm final state:
+7. Close the active task manifest after validation and commit decision:
+
+```bash
+mise run active-task -- close --reason "<validated and committed|validated without commit|blocked: reason>"
+```
+
+If no manifest exists for a trivial task, report that explicitly. Do not close an unrelated active task.
+
+8. Confirm final state:
 
 ```bash
 git status --short
@@ -73,5 +89,6 @@ Include:
 - Validation run and result.
 - Files cleaned up.
 - Files committed, including commit hash, or why commit was intentionally skipped.
+- Active task manifest closeout result, or why no manifest was used.
 - Remaining dirty files, if any.
 - Final `git status --short` result.

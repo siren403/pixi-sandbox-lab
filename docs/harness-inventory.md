@@ -157,10 +157,10 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   Validation: smoke-tested with active, consumed, missing, malformed, and subdirectory `cwd` checkpoint cases.
 
 - `.codex/hooks/dirty-state-stop.ts`  
-  Bun/TypeScript command hook for the Codex `Stop` event. Runs `git status --short` in the hook `cwd`, emits a non-blocking `systemMessage` when the working tree is dirty, and exits cleanly on git inspection errors with a warning.
+  Bun/TypeScript command hook for the Codex `Stop` event. Runs `git status --short` from the git root, reads `.codex-harness/active-task.json` when present, emits non-blocking `systemMessage` warnings for dirty state, missing active task manifests, dirty paths outside active task scope, and open active task manifests, and exits cleanly on git inspection errors with a warning.
   Event: `Stop`. Matcher: none. Behavior: warn-only, non-blocking.
   Expected user/agent: all Codex sessions in this project once project hooks are active.
-  Validation: smoke-tested with clean and dirty temporary git repositories; dirty state emitted `systemMessage`.
+  Validation: smoke-tested with clean, dirty/no active task, dirty/scope mismatch, and open active task cases.
 
 When hooks are added, register:
 
@@ -229,6 +229,15 @@ When MCP config is added, register:
 - `.mise/tasks/validate-skills`  
   Use the project-scoped mise Python runtime and `.venv` to run Codex skill validation. Reports each valid project skill by name and path.
 
+- `.mise/tasks/help`
+  Lists project-local mise task shortcuts for the yolobox harness.
+
+- `.mise/tasks/active-task`
+  Official mise execution surface for the active task guardrail. Agents should call `mise run active-task -- <command>` instead of invoking the Bun script directly.
+  Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
+  Expected user/agent: parent Codex and harness agents opening, inspecting, and closing the current editing-session manifest before and after implementation work.
+  Validation: state transition smoke tests with `status`, `start`, `close`, active overwrite refusal, and forced replacement.
+
 - `.mise/tasks/setup-browser`
   Prepares the sandbox for headless browser validation. Runs Bun dependency install, project-local Playwright Chromium install, Chromium Linux dependency install, and the browser environment smoke check.
   Discovery route: `harness_architect` boot discovery reads `.mise/tasks/*` and this inventory.
@@ -287,6 +296,12 @@ When MCP config is added, register:
 
 ### Harness Scripts
 
+- `scripts/harness/active-task.ts`
+  Bun/TypeScript state manager for `.codex-harness/active-task.json`. It records the current editing-session task id, title, git branch, HEAD, in/out scope, validation commands, active/closed status, and closeout metadata for Stop hook guardrails.
+  Discovery route: `.mise/tasks/active-task` points to this script; `harness_architect` discovery includes `scripts/harness/*`.
+  Expected user/agent: parent Codex and harness agents creating a local guardrail before editing and closing it during task-end.
+  Validation: run through the mise wrapper so the same command surface is used by agents.
+
 - `scripts/harness/checkpoint.ts`
   Bun/TypeScript state manager for `.codex-harness/checkpoint.json`. It captures git state, task-flow summary, task-plan-loop summary, next action, and `active`/`consumed` checkpoint state, and emits continuation guidance that agents should translate into the next work proposal or plan.
   Discovery route: `.mise/tasks/checkpoint` points to this script; `harness_architect` discovery includes `scripts/harness/*`.
@@ -320,10 +335,10 @@ When MCP config is added, register:
   Validation: `git check-ignore` for local state and tracked Codex config/hook exceptions, plus final `git status --short`.
 
 - `.codex-harness/`  
-  Ignored local runtime state directory for harness workflows. Registered state files include `.codex-harness/checkpoint.json`, managed only by `scripts/harness/checkpoint.ts`, `.codex-harness/task-plan-loop.json`, managed only by `scripts/harness/task-plan-loop.ts`, and `.codex-harness/task-flow.json`, managed only by `scripts/harness/task-flow.ts`.
+  Ignored local runtime state directory for harness workflows. Registered state files include `.codex-harness/active-task.json`, managed only by `scripts/harness/active-task.ts`, `.codex-harness/checkpoint.json`, managed only by `scripts/harness/checkpoint.ts`, `.codex-harness/task-plan-loop.json`, managed only by `scripts/harness/task-plan-loop.ts`, and `.codex-harness/task-flow.json`, managed only by `scripts/harness/task-flow.ts`.
   Discovery route: `.gitignore`, this inventory, and the relevant state manager documentation.
   Expected user/agent: parent Codex and harness agents recovering or inspecting active local harness workflow state.
-  Validation: `git check-ignore -v .codex-harness/checkpoint.json`, `git check-ignore -v .codex-harness/task-plan-loop.json`, and `git check-ignore -v .codex-harness/task-flow.json`.
+  Validation: `git check-ignore -v .codex-harness/active-task.json`, `git check-ignore -v .codex-harness/checkpoint.json`, `git check-ignore -v .codex-harness/task-plan-loop.json`, and `git check-ignore -v .codex-harness/task-flow.json`.
 
 ### Harness Documentation
 

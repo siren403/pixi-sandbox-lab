@@ -33,12 +33,28 @@ git rev-parse --short HEAD
    - Files/directories explicitly out of scope
    - Validation expected at the end
 
-5. Stop and ask before editing if:
+5. Create or update the active task manifest for approved implementation work:
+
+```bash
+mise run active-task -- start \
+  --id <task-id> \
+  --title "<task title>" \
+  --in <path> \
+  --out <path> \
+  --validation "<command>"
+```
+
+Use repeated `--in`, `--out`, and `--validation` flags as needed. Use `--force` only when intentionally replacing a closed or stale manifest after inspecting `mise run active-task -- status`.
+
+6. Stop and ask before editing if:
    - Existing dirty files overlap the intended scope.
    - The task scope is unclear.
    - The baseline cannot be inspected.
+   - An active task manifest already exists for unrelated work.
 
-6. Begin implementation only after the baseline and scope are clear.
+7. Begin implementation only after the baseline, scope, and active task manifest are clear.
+
+For trivial one-line edits, `task-start` may omit manifest creation at the parent agent's judgment. Do not use that exception for harness spec changes, multi-file changes, framework structure changes, or any work that already required `task-plan`.
 
 ## Output Shape
 
@@ -49,4 +65,5 @@ Report:
 - Existing dirty state
 - Intended file scope
 - Validation plan
+- Active task manifest status
 - Any blockers before editing

@@ -136,3 +136,19 @@ Common commands:
 - Prefer Bun/TypeScript for project-local harness scripts and hooks.
 - Do not add generic validators unless they prove the feature behavior.
 - Do not implement while using this skill unless the user separately approves implementation.
+
+## Task-Start Handoff
+
+Before implementation, the approved plan should provide enough information for `task-start` to create an active task manifest.
+
+Include these handoff fields explicitly for non-trivial work:
+
+- stable task id or short slug
+- task title
+- whether a plan was required
+- files/directories in scope
+- files/directories out of scope
+- validation commands
+- commit or no-commit expectation
+
+`task-plan` is required for harness spec changes even when the edit is small. This includes `.codex/**`, `.agents/**`, `.mise/**`, `scripts/harness/**`, `docs/harness*.md`, MCP config, hooks, skills, custom agents, plugins, sandbox config, and lifecycle/task protocol changes.

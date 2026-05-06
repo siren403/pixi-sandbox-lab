@@ -22,8 +22,10 @@ For trivial one-line edits, use judgment, but still close with `git status --sho
 task-plan
   -> plan-reviewer, when non-trivial
   -> task-start
+  -> active-task manifest opened
   -> implementation
   -> task-end
+  -> active-task manifest closed
   -> Stop dirty-state hook as a guardrail
 ```
 
@@ -41,6 +43,8 @@ The plan must name:
 
 For harness changes, `harness_architect` owns architecture/protocol fit and `plan_reviewer` reviews the plan before implementation.
 
+`task-plan` is required for harness spec changes even when the visible edit is small. This includes skills, hooks, custom agents, MCP config, plugins, mise tasks, sandbox config, `scripts/harness/**`, `.codex/**`, `.agents/**`, and `docs/harness*.md`.
+
 ### 2. Start
 
 Use `$task-start` immediately before editing.
@@ -55,6 +59,28 @@ Record:
 - blockers before editing
 
 If existing dirty files overlap the intended scope, stop and ask.
+
+For approved implementation work, open an active task manifest:
+
+```bash
+mise run active-task -- start \
+  --id <task-id> \
+  --title "<task title>" \
+  --in <path> \
+  --out <path> \
+  --validation "<command>"
+```
+
+The manifest is a local guardrail for the current editing session. It is not a long-running project tracker and does not replace `task-flow`, `task-plan-loop`, or `checkpoint`.
+
+State file responsibilities:
+
+- `.codex-harness/active-task.json`: current editing-session scope, validation, and closeout guardrail
+- `.codex-harness/task-flow.json`: main task, detours, and resume hints across turns
+- `.codex-harness/task-plan-loop.json`: persisted plan/review loop state
+- `.codex-harness/checkpoint.json`: clean continuation checkpoint for context changes
+
+Trivial one-line edits may omit an active task manifest at the parent agent's judgment. Do not use that exception for harness spec changes, multi-file changes, framework structure changes, or work that required `task-plan`.
 
 ### 3. Implement
 
@@ -154,9 +180,15 @@ Stop before committing when:
 
 The Codex `Stop` hook is a guardrail, not a task manager.
 
-It runs at turn end and warns when `git status --short` is dirty. It does not automatically block, clean, commit, or decide whether a task is complete.
+It runs at turn end and warns when `git status --short` is dirty or when an active task manifest remains open. It does not automatically block, clean, commit, or decide whether a task is complete.
 
-If the Stop hook reports dirty state, the next turn should use `$task-end` or report why dirty files remain.
+The Stop hook checks:
+
+- dirty working tree without an active task manifest
+- dirty files outside `active-task.scope.in` or matching `active-task.scope.out`
+- active task manifest still open at turn end
+
+If the Stop hook reports dirty state or an open active task, the next turn should use `$task-end`, close the manifest with `mise run active-task -- close`, or report why dirty files remain.
 
 ## Harness Audit Follow-Up
 
