@@ -338,6 +338,9 @@ When MCP config is added, register:
 - `DESIGN.md`
   Canonical Pixi surface design-system contract for tokens, layout policy, safe area, component contracts, and agent-readable visual rules.
 
+- `docs/pixi-framework.md`
+  PixiJS prototype framework quick start, runtime API, implemented architecture, and current boundaries.
+
 - `docs/pixi-stack.md`  
   PixiJS rapid game prototyping framework architecture, research, and design rationale.
 

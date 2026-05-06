@@ -50,6 +50,10 @@ Current checks include:
 
 ## Near-Term Surface Work
 
+- Add a Pixi-native Scene Index after boot so shared sandbox demos browse samples without relying on the DOM debug panel.
+- Add an accepted-but-not-implemented Pixi layout component system around AppShell, TopBar, ContentHost, BottomBar, BottomSheetHost, SceneIndexLayout, DebugSheetContent, and scene-specific controls.
+- Move debug/navigation controls from the floating DOM panel into Pixi bottom sheet content while keeping DOM layout inspection as development tooling until replaced or retired.
+- Replace direct `window.__pixiDebug` state growth with a typed debug runtime store, command API, and thin Playwright window adapter.
 - Evaluate `@pixi/ui` when controls such as slider, checkbox, progress, scroll/list, or text input become real product needs.
 - Expand scene-independent UI primitives as HUD, menu, modal, badge, list, and panel patterns repeat.
 - Extend pointer/touch runtime when multi-touch, gesture, virtual stick, or other game input patterns are needed.

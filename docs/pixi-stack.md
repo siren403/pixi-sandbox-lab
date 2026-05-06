@@ -61,6 +61,45 @@ layout debug panel:
 - `DS` 버튼은 Storybook 대체용 runtime design system scene으로 이동한다.
 - Debug/E2E 관측 상태는 `window.__pixiDebug` bridge에 모은다. 현재 bridge는 `boot`, `demo`, `designSystem`, `runtime`, `layout` 상태를 노출하며 `VITE_DEMO_DEBUG=false` release build에서는 no-op이다.
 
+### Debug and navigation direction
+
+The current DOM debug panel is useful as a development inspector, but it should not keep growing into the primary sandbox app navigation. Shared demos should present an app-owned Pixi surface:
+
+```text
+Boot
+  -> Scene Index
+  -> Sample Scene
+     + AppShell
+       - TopBar: scene name, back/navigation actions
+       - ContentHost: scene or page content
+       - BottomBar: controls/debug sheet triggers
+       - BottomSheetHost: scene controls or debug content
+```
+
+Accepted direction:
+
+- Scene navigation and sample discovery should move into a Pixi Scene Index after the boot action.
+- Floating DOM controls should be reduced to development inspection duties, such as layout bounds tooling, while app navigation and scene controls move into Pixi UI.
+- Scene-specific controls should render as bottom sheet content so mobile portrait playtesting keeps a clean default screen.
+- AppShell is only one member of a broader Pixi layout component system. Repeated content surfaces such as popups, settings, shops, sample indexes, and scene controls should reuse layout components instead of scene-local coordinate placement.
+- `@pixi/layout` should remain the default for AppShell slots, bars, sheets, and sample lists. `@pixi/ui` remains deferred until controls like sliders, checkboxes, scroll/list, or text input repeat across scenes.
+
+Debug/E2E bridge direction:
+
+- `window.__pixiDebug` should become a thin Playwright adapter, not the source of truth for app state.
+- Runtime/debug state should live in a typed debug store with `getSnapshot`, `patch`, and app-internal `subscribe`.
+- Test and debug commands should enter through a typed command API, for example `scene.open`, `layout.set`, `sheet.open`, `sheet.close`, and `app.reload`.
+- The public window contract should stay small: `version`, `getSnapshot()`, and `dispatch(command)`.
+- Pixi debug sheets and app UI must use the store and command modules directly, not read `window.__pixiDebug`.
+- Release builds should keep the bridge and DOM debug UI absent or tree-shaken, with E2E or bundle checks proving `window.__pixiDebug` is not installed.
+
+Promotion criteria:
+
+- Directional architecture belongs here until implemented.
+- Surface/layout contracts move to `DESIGN.md` before implementation.
+- Implemented API and usage examples move to `docs/pixi-framework.md` only after the corresponding `src/` modules exist.
+- Current status and validation coverage move to `docs/pixi-status.md`.
+
 ### 입력과 모바일 기본 동작
 
 게임 surface에서는 브라우저 기본 제스처가 게임 입력을 방해하지 않아야 한다.

@@ -175,6 +175,25 @@ Safe-area containers:
 - Use `configureSafeAreaRow()` for top HUD/control rows.
 - Keep safe-area frame logic in `src/ui/layout.ts` or a future surface-level primitive, not scattered scene math.
 
+Accepted direction, not implemented:
+
+- The sandbox demo should move from floating DOM debug controls toward Pixi-native navigation and controls.
+- After the boot action, a Scene Index should act as the sample browser for vertical slice, design-system, and future camera/input/layout/motion samples.
+- Shared Pixi layout components should support repeated surfaces whose content changes, such as sample indexes, popups, settings, shops, and scene-specific controls.
+- `AppShell` is one layout component in that system, not the whole system.
+- App UI must not read `window.__pixiDebug`; debug and E2E bridge state stays behind runtime/store adapters.
+
+Proposed layout component contracts:
+
+- `AppShell` owns only placement slots: `topBar`, `contentHost`, `bottomBar`, `bottomSheetHost`, and optional `overlayHost`. It must not own scene registry, scene switching, or game commands.
+- `TopBar` sits inside the safe-area frame, exposes scene title and navigation/action slots, and keeps back/navigation touch targets at least `48px` screen-space.
+- `ContentHost` provides the usable scene or page region after top/bottom shell regions are reserved. It must not be silently covered by closed shell UI.
+- `BottomBar` sits inside the safe-area frame and exposes controls/debug/sheet trigger slots with centered labels or icons and stable hit targets.
+- `BottomSheetHost` owns sheet bounds, open/closed state visuals, optional scrim, clipping, and input capture rules. Sheet content is supplied separately.
+- `SceneIndexLayout` is a safe-area-aware list/grid surface for sample cards or rows. Each item must have a visible label, stable bounds, and a touch target of at least `48px` screen-space height.
+- `DebugSheetContent` may expose reload, scene navigation, layout inspection, and runtime status in demo/debug builds. It should use the same layout primitives as other sheet content.
+- Scene-specific controls should be provided as bottom sheet content rather than floating over the gameplay surface.
+
 ## Do's and Don'ts
 
 Do:
@@ -182,7 +201,7 @@ Do:
 - Keep UI layout-first and safe-area-aware.
 - Keep world/gameplay coordinates explicit when that makes game logic clearer.
 - Add E2E checks for component contracts such as button label centering, touch target size, no overlap, and no critical crop.
-- Use the debug panel `Bounds` mode to inspect semantic boxes before considering a layout task complete.
+- Use debug inspection bounds to inspect semantic boxes before considering a layout task complete.
 - Update this file when design tokens or component contracts change.
 
 Don't:
