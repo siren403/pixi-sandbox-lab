@@ -1,6 +1,6 @@
 # PixiJS Demo Status
 
-This document tracks the current implementation and validation state for the PixiJS prototype. Keep stable design contracts in `DESIGN.md` and runtime architecture rationale in `docs/pixi-stack.md`.
+This document tracks the current implementation and validation state for the PixiJS prototype. Use `docs/pixi-framework.md` for the framework quick start and runtime API, keep stable design contracts in `DESIGN.md`, and keep runtime architecture rationale in `docs/pixi-stack.md`.
 
 ## Current Vertical Slice
 

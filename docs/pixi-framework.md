@@ -1,0 +1,358 @@
+# PixiJS Prototype Framework
+
+이 문서는 현재 데모 안에 구현된 PixiJS 프로토타입 프레임워크를 사용하는 관점에서 정리한 빠른 시작, 런타임 구조, 씬 작성 API, surface/layout 스펙이다.
+
+관련 문서의 역할은 다르다.
+
+- `DESIGN.md`: surface 토큰, 1080x1920 기준 해상도, safe-area, UI 컴포넌트 계약의 source of truth
+- `docs/pixi-stack.md`: LÖVE2D, PixiJS, async asset loading, scene lifecycle을 선택한 설계 근거
+- `docs/pixi-status.md`: 현재 구현 상태와 Playwright 검증 상태
+- 이 문서: 프레임워크를 실제로 쓰거나 확장할 때 먼저 읽는 사용 문서
+
+## Quick Start
+
+개발 서버:
+
+```bash
+bun install
+mise run setup-browser
+bun run dev
+```
+
+빠른 검증:
+
+```bash
+bun run check
+```
+
+전체 E2E:
+
+```bash
+mise run check-browser
+bun run test:e2e
+```
+
+릴리즈 빌드:
+
+```bash
+bun run build:release
+```
+
+GitHub Pages용 데모 빌드는 debug panel을 포함하는 `bun run build:demo`를 사용한다. 서비스용 릴리즈 검증은 `VITE_DEMO_DEBUG=false`인 `bun run build:release`로 확인한다.
+
+## Minimal App
+
+현재 엔트리는 `src/main.ts`처럼 `createGame()`에 부모 DOM, 기준 해상도, 배경색, boot scene을 넘긴다.
+
+```ts
+import "./styles.css";
+import { createGame } from "./runtime/createGame";
+import { bootScene } from "./scenes/intro";
+
+void createGame({
+  parent: "#app",
+  width: 1080,
+  height: 1920,
+  background: "#17202a",
+  boot: bootScene,
+});
+```
+
+`width`와 `height`는 디자인 기준 해상도다. 런타임은 브라우저 viewport를 채우고, 기준 해상도를 작은 축 기준으로 스케일한 뒤 남는 축의 visible design bounds를 확장한다. 이 정책은 `adaptive-expand`이며 critical UI는 safe-area frame 안에 배치해야 한다.
+
+## Minimal Scene
+
+씬은 `scene()` 헬퍼로 정의한다. `load(ctx)`는 동기 함수다. `assets`에 선언한 파일은 `load()`가 호출되기 전에 런타임이 먼저 로드하므로 `ctx.assets.get()`을 동기로 사용할 수 있다.
+
+```ts
+import { Graphics } from "pixi.js";
+import { scene } from "../runtime/scene";
+import { surfaceTheme } from "../ui/tokens";
+
+export const sampleScene = scene({
+  name: "sample",
+  assets: [],
+
+  load({ layers, surface }) {
+    const radius = surface.token(surfaceTheme.size.markerRadius);
+    const center = surface.center();
+
+    const marker = new Graphics()
+      .circle(0, 0, radius)
+      .fill(surfaceTheme.color.marker);
+
+    marker.label = "sample-marker";
+    marker.position.set(center.x, center.y);
+    layers.world.addChild(marker);
+  },
+
+  update(dt, { keyboard, layers }) {
+    const marker = layers.world.getChildByLabel("sample-marker") as Graphics | null;
+    if (!marker) return;
+
+    if (keyboard.isDown("arrowright")) marker.x += 300 * dt;
+    if (keyboard.isDown("arrowleft")) marker.x -= 300 * dt;
+  },
+
+  unload({ layers }) {
+    for (const child of layers.world.removeChildren()) {
+      child.destroy({ children: true });
+    }
+  },
+});
+```
+
+## Scene Lifecycle
+
+현재 scene lifecycle은 단순하게 유지한다.
+
+```text
+createGame()
+  -> create Pixi Application
+  -> create surface layers
+  -> create SceneContext
+  -> SceneManager.start(boot)
+
+switchScene(next)
+  -> accept/drop command through commandRuntime
+  -> optional transition animate-in
+  -> previous.unload(ctx)
+  -> evaluate next.assets
+  -> await ctx.assets.load(...)
+  -> next.load(ctx)
+  -> optional transition animate-out
+
+each frame
+  -> current.update(dt, ctx)
+
+resize
+  -> update SurfaceLayout
+  -> current.resize(ctx)
+```
+
+중복 scene switch 요청은 `commandRuntime`이 drop한다. 이 덕분에 Tap to start, debug panel 버튼, 키 입력이 짧은 시간에 겹쳐도 transition과 scene load가 중복 생성되지 않는다.
+
+## SceneContext
+
+`SceneContext`는 씬이 직접 쓰는 런타임 표면이다.
+
+```ts
+type SceneContext = {
+  app: Application;
+  stage: Container;
+  layers: SurfaceLayers;
+  assets: AssetRuntime;
+  keyboard: Keyboard;
+  pointer: Pointer;
+  layout: SurfaceLayout;
+  surface: SurfaceContext;
+  runtime: RuntimeState;
+  switchScene: (scene: Scene, source?: CommandSource) => boolean;
+};
+```
+
+현재는 migration 중이라 `ctx.layout`, `ctx.keyboard`, `ctx.pointer`를 계속 노출한다. 새 코드에서는 가능한 한 `ctx.surface`를 우선 사용한다.
+
+### SurfaceContext
+
+`ctx.surface`는 surface 좌표계와 layout 업데이트를 한 곳에서 다루기 위한 얇은 facade다.
+
+```ts
+surface.layout
+surface.token(token)
+surface.screen(token)
+surface.safeFrame(margin?)
+surface.center(frame?)
+surface.anchor(anchor, frame?)
+surface.updateLayout(container?)
+```
+
+- `token()`은 디자인 토큰을 현재 surface scale에 맞는 design-space 값으로 변환한다.
+- `screen()`은 토큰의 실제 screen-space px 값을 확인할 때 쓴다.
+- `safeFrame()`은 visible design bounds에서 safe-area와 margin을 뺀 frame을 반환한다.
+- `center()`와 `anchor()`는 visible frame 또는 전달한 frame 안의 기준점을 반환한다.
+- `updateLayout()`은 기본적으로 `layers.root`에 대해 `@pixi/layout` 업데이트를 실행한다.
+
+`surface`는 게임 로직을 소유하지 않는다. 좌표계와 UI 배치 실수를 줄이는 도구일 뿐이다.
+
+### Layers
+
+현재 Pixi layer 구조:
+
+```text
+app.stage
+└─ stage
+   └─ surface-root
+      ├─ world-layer
+      ├─ ui-layer
+      └─ debug-layer
+```
+
+- `layers.world`: gameplay, camera 대상, world coordinate 오브젝트
+- `layers.ui`: HUD, menu, design-system scene, safe-area-aware UI
+- `layers.debug`: runtime/debug용 Pixi layer
+
+씬 코드는 child index에 의존하지 말고 `ctx.layers`를 사용한다.
+
+## Surface And Layout Spec
+
+현재 surface 정책:
+
+- 기준 해상도: `1080 x 1920` portrait
+- canvas: browser viewport 전체를 채움
+- 스케일: `adaptive-expand`
+- safe-area: CSS safe-area inset을 design-space 단위로 변환
+- UI: safe-area-aware `@pixi/layout` container와 `src/ui` primitive 우선
+- gameplay/world/effect: 명시 좌표 허용
+
+금지 기본값:
+
+- `cover/crop`: 중요한 콘텐츠가 잘릴 수 있으므로 기본 정책으로 쓰지 않는다.
+- `stretch`: 비율 왜곡 때문에 쓰지 않는다.
+- `contain/fit` 단독: 레터박스가 생기므로 기본 정책으로 쓰지 않는다.
+
+자세한 토큰과 컴포넌트 계약은 `DESIGN.md`가 기준이다. 이 문서에서 수치를 다시 정의하지 않는다.
+
+## UI Primitives
+
+반복 UI는 scene-local `Graphics + Text`로 직접 만들지 말고 `src/ui` primitive로 승격한다.
+
+현재 primitive:
+
+- `createButton()` in `src/ui/button.ts`
+- `createLabel()` in `src/ui/label.ts`
+- `createPanel()` in `src/ui/panel.ts`
+- `configureSafeAreaColumn()` / `configureSafeAreaRow()` in `src/ui/layout.ts`
+
+권장 기준:
+
+- HUD, menu, modal, panel, repeated control은 layout-first로 작성한다.
+- 버튼 텍스트는 수평/수직 중앙 정렬이 기본 계약이다.
+- design-system scene에 추가하는 주요 샘플은 layout node여야 debug bounds로 확인할 수 있다.
+- `@pixi/ui`는 아직 도입하지 않았다. slider, checkbox, scroll/list, text input 같은 반복 상호작용이 실제 필요해질 때 평가한다.
+
+## World And Camera
+
+월드 좌표와 카메라는 `src/runtime/world.ts`, `src/runtime/worldCamera.ts`가 담당한다.
+
+```ts
+const world = createWorld(layers.world, { width: 3600, height: 5200 });
+const camera = world.createCamera(surface.layout, {
+  minZoom: 0.32,
+  maxZoom: 2.2,
+});
+
+const player = new Graphics();
+player.position.set(world.center().x, world.center().y);
+world.clampObject(player, 80);
+
+camera.centerOn(player.x, player.y, surface.layout);
+camera.updateGesture(pointer, surface.layout);
+camera.apply(surface.layout);
+```
+
+현재 API는 아직 `layout`과 `pointer`를 직접 넘긴다. 다음 정리 대상은 `ctx.createWorld(bounds)`와 `camera.updateFromInput(...)`처럼 반복 인자를 줄이는 것이다.
+
+## Input
+
+키보드:
+
+```ts
+keyboard.isDown("a")
+keyboard.wasPressed("enter")
+```
+
+포인터:
+
+```ts
+pointer.isDown()
+pointer.wasPressed()
+pointer.wasReleased()
+pointer.position()
+pointer.pointers()
+pointer.wheelDelta()
+```
+
+`pointer.position()`은 viewport px가 아니라 surface scale이 제거된 design-space 좌표다. world camera가 있는 씬에서는 `camera.screenToWorld(pointer.position())`로 world 좌표로 변환한다. 이 함수명은 현재 구현명이며, 향후 `designToWorld()`로 정리할 수 있다.
+
+## Assets
+
+`Scene.assets`는 정적 배열 또는 `(ctx) => array`를 받는다.
+
+```ts
+import type { Texture } from "pixi.js";
+import spriteUrl from "../assets/sprite.png";
+
+export const sceneWithAsset = scene({
+  name: "asset-demo",
+  assets: [spriteUrl],
+
+  load({ assets }) {
+    const texture = assets.get<Texture>(spriteUrl);
+  },
+});
+```
+
+계약:
+
+- `load()`에서 `assets.get()`은 동기다.
+- 로드되지 않은 source를 `get()`하면 오류를 던진다.
+- GitHub Pages subpath 배포를 위해 asset은 Vite import URL을 우선 사용한다.
+
+## Debug And E2E
+
+debug build는 DOM 기반 layout debug panel과 `window.__pixiDebug` bridge를 포함한다.
+
+주요 기능:
+
+- 현재 scene 이름 표시
+- folded/open 상태 저장
+- 드래그 위치 저장
+- reload 버튼
+- layout bounds/filter 토글
+- boot, vertical slice, design-system scene 이동
+
+E2E는 Playwright로 desktop portrait와 mobile portrait를 검증한다. 현재 분리된 spec:
+
+- `tests/e2e/boot.spec.ts`
+- `tests/e2e/transition.spec.ts`
+- `tests/e2e/world-camera.spec.ts`
+- `tests/e2e/debug-panel.spec.ts`
+- `tests/e2e/design-system.spec.ts`
+- `tests/e2e/reload.spec.ts`
+
+framework 또는 surface 변경 후 기본 검증:
+
+```bash
+bun run check
+mise run check-browser
+bun run test:e2e
+bun run build:release
+```
+
+## Current Boundaries
+
+현재 구현된 것:
+
+- Pixi app bootstrap
+- scene lifecycle
+- sync `load(ctx)` with framework-owned async asset loading
+- command-guarded scene switch
+- transition overlay
+- adaptive surface layout
+- keyboard/pointer input
+- world bounds and world camera
+- UI primitives and design-system scene
+- debug panel and Playwright E2E
+
+아직 프레임워크 API로 확정하지 않은 것:
+
+- ECS
+- physics
+- audio
+- generalized scene-local state manager
+- generic entity/component authoring API
+- `@pixi/ui` controls
+- production deployment policy
+
+연구 문서에 있는 장기 방향을 구현된 API처럼 사용하지 않는다. 새 기능은 vertical slice에서 검증한 뒤 이 문서와 `docs/pixi-status.md`를 함께 갱신한다.

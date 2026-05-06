@@ -24,6 +24,7 @@ The current demonstration project is a PixiJS-based rapid game prototyping stack
 - `docs/harness.md` - current PromptOps/yolobox agent harness notes
 - `docs/harness-inventory.md` - registry of current harness components and discovery paths
 - `docs/harness-change-protocol.md` - required process for adding or changing harness specs
+- `docs/pixi-framework.md` - PixiJS prototype framework quick start, architecture, runtime API, and current boundaries
 - `docs/pixi-stack.md` - PixiJS prototype framework research and design notes
 - `docs/pixi-status.md` - current PixiJS demo implementation and validation status
 
@@ -84,4 +85,4 @@ https://siren403.github.io/pixi-sandbox-lab/
 
 The repository must have Pages configured to deploy from GitHub Actions. Pushing to `main` runs `.github/workflows/pages.yml`, installs with Bun, runs `bun run check`, builds the demo, and deploys `dist/`.
 
-Use `DESIGN.md` for the PixiJS app surface contract, `docs/pixi-stack.md` for runtime architecture rationale, and `docs/pixi-status.md` for the current implementation and validation state.
+Use `docs/pixi-framework.md` for the framework quick start and runtime API, `DESIGN.md` for the PixiJS app surface contract, `docs/pixi-stack.md` for runtime architecture rationale, and `docs/pixi-status.md` for the current implementation and validation state.

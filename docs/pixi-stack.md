@@ -2,6 +2,8 @@
 
 > 이 문서는 대화를 통해 설계된 프레임워크의 의도, 목표, 설계 결정 및 그 이유를 다른 에이전트(또는 개발자)가 컨텍스트 없이도 이어받을 수 있도록 작성되었다.
 
+Use `docs/pixi-framework.md` for the current framework quick start, architecture overview, runtime API, and implementation boundaries.
+
 UI tokens, layout rules, safe-area policy, and component contracts are summarized for agents in the root `DESIGN.md`. Treat that file as the concise design-system source of truth, and use this document for broader framework rationale.
 
 ---
