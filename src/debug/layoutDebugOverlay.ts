@@ -19,6 +19,11 @@ type LayoutDebugStorage = {
   y?: number;
 };
 
+type SemanticBoundsTarget = {
+  container: Container;
+  bounds: { x: number; y: number; width: number; height: number };
+};
+
 const storageKey = "prompt-ops:pixi-layout-debug";
 
 export function installLayoutDebug(app: Application, root: Container): () => void {
@@ -27,6 +32,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
   const semanticBounds = new Graphics();
   semanticBounds.label = "semantic-bounds-lines";
   const semanticLabels = new Container({ label: "semantic-bounds-labels" });
+  const semanticLabelPool: Text[] = [];
   semanticOverlay.addChild(semanticBounds, semanticLabels);
   const debugLayer = root.getChildByLabel("debug-layer") as Container | null;
   debugLayer?.addChild(semanticOverlay);
@@ -224,13 +230,12 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     });
   };
 
-  const syncState = () => {
+  const syncState = (semanticTargets: SemanticBoundsTarget[] = []) => {
     ensurePanelConnected();
     const layoutNodes = countLayoutNodes(root);
     const debuggedNodes = countDebuggedNodes(root);
-    const semanticTargets = collectSemanticTargets(root, filter);
     const semanticBoxes = semanticTargets.length;
-    const semanticLabelNames = semanticTargets.map((target) => target.label ?? "unlabeled");
+    const semanticLabelNames = semanticTargets.map((target) => target.container.label ?? "unlabeled");
     const layerLabels = root.children.map((child) => child.label ?? "");
     const currentScene = readCurrentDebugScene();
     const rect = panel.getBoundingClientRect();
@@ -287,9 +292,11 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     lastLayoutSyncAt = now;
 
     const layoutDebugEnabled = enabled && mode === "layout";
+    const boundsDebugEnabled = enabled && mode === "bounds";
+    const semanticTargets = boundsDebugEnabled ? collectSemanticTargets(root, filter) : [];
     applyDebugFlag(root, layoutDebugEnabled, filter);
-    drawSemanticBounds(semanticBounds, semanticLabels, root, enabled && mode === "bounds", filter);
-    syncState();
+    drawSemanticBounds(semanticBounds, semanticLabels, semanticLabelPool, semanticTargets);
+    syncState(semanticTargets);
   };
 
   const setEnabled = async (next: boolean) => {
@@ -446,6 +453,7 @@ export function installLayoutDebug(app: Application, root: Container): () => voi
     panel.remove();
     void app.renderer.layout.enableDebug(false);
     applyDebugFlag(root, false, "all");
+    destroyTextPool(semanticLabelPool);
     semanticOverlay.destroy({ children: true });
     setLayoutDebugState({
       enabled: false,
@@ -513,38 +521,47 @@ function writeStoredState(state: LayoutDebugStorage): void {
 function drawSemanticBounds(
   graphics: Graphics,
   labels: Container,
-  root: Container,
-  enabled: boolean,
-  filter: LayoutDebugFilter,
+  labelPool: Text[],
+  targets: SemanticBoundsTarget[],
 ): void {
   graphics.clear();
-  clearContainer(labels);
-  if (!enabled) return;
+  labels.removeChildren();
+  if (targets.length === 0) return;
 
   let index = 0;
-  for (const container of collectSemanticTargets(root, filter)) {
-    const bounds = container.getBounds();
-    if (bounds.width <= 0 || bounds.height <= 0) return;
+  for (const target of targets) {
+    const { bounds, container } = target;
+    if (bounds.width <= 0 || bounds.height <= 0) continue;
 
     const topLeft = graphics.toLocal({ x: bounds.x, y: bounds.y });
     const bottomRight = graphics.toLocal({ x: bounds.x + bounds.width, y: bounds.y + bounds.height });
     const width = bottomRight.x - topLeft.x;
     const height = bottomRight.y - topLeft.y;
-    if (width <= 0 || height <= 0) return;
+    if (width <= 0 || height <= 0) continue;
 
     graphics
       .rect(topLeft.x, topLeft.y, width, height)
       .stroke({ color: semanticColor(index), width: 2, alpha: 0.94 });
-    labels.addChild(createBoundsLabel(container, topLeft.x, topLeft.y, width, height, semanticColor(index)));
+    labels.addChild(updateBoundsLabel(readBoundsLabel(labelPool, index), container, topLeft.x, topLeft.y, width, height, semanticColor(index)));
     index += 1;
   }
 }
 
-function collectSemanticTargets(root: Container, filter: LayoutDebugFilter): Container[] {
-  const targets: Container[] = [];
+function collectSemanticTargets(root: Container, filter: LayoutDebugFilter): SemanticBoundsTarget[] {
+  const targets: SemanticBoundsTarget[] = [];
   visitSemanticTargets(root, filter, (container) => {
     const bounds = container.getBounds();
-    if (bounds.width > 0 && bounds.height > 0) targets.push(container);
+    if (bounds.width > 0 && bounds.height > 0) {
+      targets.push({
+        container,
+        bounds: {
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
+        },
+      });
+    }
   });
   return targets;
 }
@@ -566,11 +583,12 @@ function visitSemanticTargets(
   }
 }
 
-function createBoundsLabel(container: Container, x: number, y: number, width: number, height: number, color: number): Text {
-  const layer = readLayerLabel(container);
-  const label = container.label ?? "unlabeled";
+function readBoundsLabel(labelPool: Text[], index: number): Text {
+  const existing = labelPool[index];
+  if (existing) return existing;
+
   const text = new Text({
-    text: `${label} ${Math.round(width)}x${Math.round(height)} ${layer}`,
+    text: "",
     style: {
       fill: "#f8fafc",
       fontFamily: "Inter, system-ui, sans-serif",
@@ -580,9 +598,17 @@ function createBoundsLabel(container: Container, x: number, y: number, width: nu
     },
   });
   text.label = "semantic-bounds-label";
-  text.position.set(x + 4, Math.max(0, y - 20));
-  text.tint = color;
+  labelPool[index] = text;
   return text;
+}
+
+function updateBoundsLabel(containerLabel: Text, container: Container, x: number, y: number, width: number, height: number, color: number): Text {
+  const layer = readLayerLabel(container);
+  const label = container.label ?? "unlabeled";
+  containerLabel.text = `${label} ${Math.round(width)}x${Math.round(height)} ${layer}`;
+  containerLabel.position.set(x + 4, Math.max(0, y - 20));
+  containerLabel.tint = color;
+  return containerLabel;
 }
 
 function readLayerLabel(container: Container): string {
@@ -596,10 +622,12 @@ function readLayerLabel(container: Container): string {
   return "root";
 }
 
-function clearContainer(container: Container): void {
-  for (const child of container.removeChildren()) {
-    child.destroy({ children: true });
+function destroyTextPool(labelPool: Text[]): void {
+  for (const label of labelPool) {
+    label.parent?.removeChild(label);
+    label.destroy();
   }
+  labelPool.length = 0;
 }
 
 function shouldDrawSemanticBounds(container: Container): boolean {
