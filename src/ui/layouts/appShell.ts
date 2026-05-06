@@ -39,6 +39,21 @@ export type RectFrame = {
   height: number;
 };
 
+export type AppShellButtonBounds = {
+  back?: RectFrame;
+  controls: RectFrame;
+  debug: RectFrame;
+  close?: RectFrame;
+  actions: Record<string, RectFrame>;
+};
+
+export type AppShellHit =
+  | { kind: "back" }
+  | { kind: "controls" }
+  | { kind: "debug" }
+  | { kind: "close" }
+  | { kind: "action"; id: string };
+
 type AppShellOptions = {
   title: string;
   titleLabel?: string;
@@ -125,6 +140,27 @@ export function createAppShell(
   shell.buttons = buttons;
   shell.addChild(topBar, contentHost, bottomBar, bottomSheetHost.host);
   return shell;
+}
+
+export function readAppShellButtonBounds(layout: SurfaceLayout, shell: AppShell): AppShellButtonBounds {
+  return {
+    back: shell.buttons.back ? toDesignBounds(layout, shell.buttons.back.getBounds()) : undefined,
+    controls: toDesignBounds(layout, shell.buttons.controls.getBounds()),
+    debug: toDesignBounds(layout, shell.buttons.debug.getBounds()),
+    close: shell.buttons.closeSheet ? toDesignBounds(layout, shell.buttons.closeSheet.getBounds()) : undefined,
+    actions: Object.fromEntries(
+      Object.entries(shell.buttons.sheetActions).map(([id, button]) => [id, toDesignBounds(layout, button.getBounds())]),
+    ),
+  };
+}
+
+export function resolveAppShellHit(bounds: AppShellButtonBounds, position: { x: number; y: number }): AppShellHit | undefined {
+  if (bounds.back && containsPoint(bounds.back, position.x, position.y)) return { kind: "back" };
+  if (containsPoint(bounds.controls, position.x, position.y)) return { kind: "controls" };
+  if (containsPoint(bounds.debug, position.x, position.y)) return { kind: "debug" };
+  if (bounds.close && containsPoint(bounds.close, position.x, position.y)) return { kind: "close" };
+  const action = Object.entries(bounds.actions).find(([, actionBounds]) => containsPoint(actionBounds, position.x, position.y))?.[0];
+  return action ? { kind: "action", id: action } : undefined;
 }
 
 function getScaffoldFrame(layout: SurfaceLayout): RectFrame {
@@ -376,6 +412,23 @@ function createShellButton(text: string, layout: SurfaceLayout): ButtonPrimitive
     height,
   };
   return button;
+}
+
+function containsPoint(bounds: RectFrame, x: number, y: number): boolean {
+  return x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height;
+}
+
+function toDesignBounds(
+  layout: SurfaceLayout,
+  bounds: { x: number; y: number; width: number; height: number } | undefined,
+): RectFrame {
+  if (!bounds) return { x: 0, y: 0, width: 0, height: 0 };
+  return {
+    x: bounds.x / layout.scale,
+    y: bounds.y / layout.scale,
+    width: bounds.width / layout.scale,
+    height: bounds.height / layout.scale,
+  };
 }
 
 function createSheetActionButton(text: string, layout: SurfaceLayout, width: number): ButtonPrimitive {

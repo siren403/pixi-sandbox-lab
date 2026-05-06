@@ -15,7 +15,14 @@ import { setDebugCommandHandler, type DebugCommandResult } from "../debug/comman
 import { createButton } from "../ui/button";
 import { createLabel } from "../ui/label";
 import { configureSafeAreaColumn } from "../ui/layout";
-import { createAppShell, type AppShell, type AppShellSheet } from "../ui/layouts/appShell";
+import {
+  createAppShell,
+  readAppShellButtonBounds,
+  resolveAppShellHit,
+  type AppShell,
+  type AppShellButtonBounds,
+  type AppShellSheet,
+} from "../ui/layouts/appShell";
 
 type BootState = {
   scene: "boot";
@@ -31,12 +38,11 @@ let startButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
 let sceneIndexSheet: AppShellSheet = "none";
 let layoutBoundsEnabled = false;
 let sceneIndexItems: Array<{ id: string; label: string; bounds: { x: number; y: number; width: number; height: number } }> = [];
-let sceneIndexButtons: {
-  controls?: { x: number; y: number; width: number; height: number };
-  debug?: { x: number; y: number; width: number; height: number };
-  close?: { x: number; y: number; width: number; height: number };
-  actions: Record<string, { x: number; y: number; width: number; height: number }>;
-} = { actions: {} };
+let sceneIndexButtons: AppShellButtonBounds = {
+  controls: { x: 0, y: 0, width: 0, height: 0 },
+  debug: { x: 0, y: 0, width: 0, height: 0 },
+  actions: {},
+};
 let removeDebugListeners: (() => void) | null = null;
 
 export const bootScene = scene({
@@ -111,25 +117,26 @@ export const sceneIndexScene = scene({
         switchScene(designSystemScene, { source: "scene", args: { from: "scene-index", selectedSample: "design-system" } });
         return;
       }
-      if (sceneIndexButtons.controls && containsPoint(sceneIndexButtons.controls, position.x, position.y)) {
+      const shellHit = resolveAppShellHit(sceneIndexButtons, position);
+      if (shellHit?.kind === "controls") {
         sceneIndexSheet = sceneIndexSheet === "controls" ? "none" : "controls";
         clearLayer(layers.ui);
         renderSceneIndex(app, layers.ui, layout);
         return;
       }
-      if (sceneIndexButtons.debug && containsPoint(sceneIndexButtons.debug, position.x, position.y)) {
+      if (shellHit?.kind === "debug") {
         sceneIndexSheet = sceneIndexSheet === "debug" ? "none" : "debug";
         clearLayer(layers.ui);
         renderSceneIndex(app, layers.ui, layout);
         return;
       }
-      if (sceneIndexButtons.close && containsPoint(sceneIndexButtons.close, position.x, position.y)) {
+      if (shellHit?.kind === "close") {
         sceneIndexSheet = "none";
         clearLayer(layers.ui);
         renderSceneIndex(app, layers.ui, layout);
         return;
       }
-      const action = Object.entries(sceneIndexButtons.actions).find(([, bounds]) => containsPoint(bounds, position.x, position.y))?.[0];
+      const action = shellHit?.kind === "action" ? shellHit.id : undefined;
       if (action === "scene-vertical") {
         switchScene(verticalSliceScene, "debug");
         return;
@@ -323,14 +330,7 @@ function syncSceneIndexState(layout: SurfaceLayout, root: Container, shell: AppS
       bounds: toDesignBounds(layout, node?.getBounds()),
     };
   });
-  sceneIndexButtons = {
-    controls: toDesignBounds(layout, shell.buttons.controls.getBounds()),
-    debug: toDesignBounds(layout, shell.buttons.debug.getBounds()),
-    close: shell.buttons.closeSheet ? toDesignBounds(layout, shell.buttons.closeSheet.getBounds()) : undefined,
-    actions: Object.fromEntries(
-      Object.entries(shell.buttons.sheetActions).map(([id, button]) => [id, toDesignBounds(layout, button.getBounds())]),
-    ),
-  };
+  sceneIndexButtons = readAppShellButtonBounds(layout, shell);
   setSceneIndexDebugState({
     scene: "scene-index",
     rendered: true,

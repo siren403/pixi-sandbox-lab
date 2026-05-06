@@ -10,7 +10,14 @@ import type { WorldCamera } from "../runtime/worldCamera";
 import { createButton } from "../ui/button";
 import { createLabel } from "../ui/label";
 import { configureSafeAreaRow } from "../ui/layout";
-import { createAppShell, type AppShell, type AppShellSheet } from "../ui/layouts/appShell";
+import {
+  createAppShell,
+  readAppShellButtonBounds,
+  resolveAppShellHit,
+  type AppShell,
+  type AppShellButtonBounds,
+  type AppShellSheet,
+} from "../ui/layouts/appShell";
 import { createPanel } from "../ui/panel";
 import {
   clearDemoDebugState,
@@ -32,13 +39,7 @@ type SampleSceneId = "vertical-slice" | "alternate" | "design-system";
 type RectState = { x: number; y: number; width: number; height: number };
 type SampleShellState = {
   sheet: AppShellSheet;
-  buttons: {
-    back?: RectState;
-    controls?: RectState;
-    debug?: RectState;
-    close?: RectState;
-    actions: Record<string, RectState>;
-  };
+  buttons: AppShellButtonBounds;
 };
 type SampleSceneArgs = {
   openSheet?: AppShellSheet;
@@ -94,10 +95,19 @@ let layoutBoundsEnabled = false;
 const cameraByWorld = new WeakMap<Container, WorldCamera>();
 const worldByLayer = new WeakMap<Container, World>();
 const sampleShellState: Record<SampleSceneId, SampleShellState> = {
-  "vertical-slice": { sheet: "none", buttons: { actions: {} } },
-  alternate: { sheet: "none", buttons: { actions: {} } },
-  "design-system": { sheet: "none", buttons: { actions: {} } },
+  "vertical-slice": { sheet: "none", buttons: emptyAppShellButtonBounds() },
+  alternate: { sheet: "none", buttons: emptyAppShellButtonBounds() },
+  "design-system": { sheet: "none", buttons: emptyAppShellButtonBounds() },
 };
+
+function emptyAppShellButtonBounds(): AppShellButtonBounds {
+  const empty = { x: 0, y: 0, width: 0, height: 0 };
+  return {
+    controls: empty,
+    debug: empty,
+    actions: {},
+  };
+}
 
 type MotionPlayer = Graphics & {
   targetX?: number;
@@ -437,10 +447,6 @@ function lerp(start: number, end: number, progress: number): number {
   return start + (end - start) * progress;
 }
 
-function containsPoint(bounds: RectState, x: number, y: number): boolean {
-  return x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height;
-}
-
 function toDesignBounds(
   layout: SurfaceLayout,
   bounds: { x: number; y: number; width: number; height: number } | undefined,
@@ -558,15 +564,7 @@ function rerenderSampleShell(
 }
 
 function syncSampleShellState(sceneId: SampleSceneId, layout: SurfaceLayout, shell: AppShell): void {
-  sampleShellState[sceneId].buttons = {
-    back: shell.buttons.back ? toDesignBounds(layout, shell.buttons.back.getBounds()) : undefined,
-    controls: toDesignBounds(layout, shell.buttons.controls.getBounds()),
-    debug: toDesignBounds(layout, shell.buttons.debug.getBounds()),
-    close: shell.buttons.closeSheet ? toDesignBounds(layout, shell.buttons.closeSheet.getBounds()) : undefined,
-    actions: Object.fromEntries(
-      Object.entries(shell.buttons.sheetActions).map(([id, button]) => [id, toDesignBounds(layout, button.getBounds())]),
-    ),
-  };
+  sampleShellState[sceneId].buttons = readAppShellButtonBounds(layout, shell);
 }
 
 function syncRenderedSampleShell(sceneId: SampleSceneId, layer: Container, layout: SurfaceLayout): void {
@@ -583,25 +581,25 @@ function handleSampleShellPointer(
   updateLayout: () => void,
 ): boolean {
   const state = sampleShellState[sceneId];
-  const buttons = state.buttons;
-  if (buttons.back && containsPoint(buttons.back, position.x, position.y)) {
+  const shellHit = resolveAppShellHit(state.buttons, position);
+  if (shellHit?.kind === "back") {
     return navigateToSceneIndex();
   }
-  if (buttons.controls && containsPoint(buttons.controls, position.x, position.y)) {
+  if (shellHit?.kind === "controls") {
     state.sheet = state.sheet === "controls" ? "none" : "controls";
     rerenderShellForScene(sceneId, layer, layout);
     updateLayout();
     syncRenderedSampleShell(sceneId, layer, layout);
     return true;
   }
-  if (buttons.debug && containsPoint(buttons.debug, position.x, position.y)) {
+  if (shellHit?.kind === "debug") {
     state.sheet = state.sheet === "debug" ? "none" : "debug";
     rerenderShellForScene(sceneId, layer, layout);
     updateLayout();
     syncRenderedSampleShell(sceneId, layer, layout);
     return true;
   }
-  if (buttons.close && containsPoint(buttons.close, position.x, position.y)) {
+  if (shellHit?.kind === "close") {
     state.sheet = "none";
     rerenderShellForScene(sceneId, layer, layout);
     updateLayout();
@@ -609,7 +607,7 @@ function handleSampleShellPointer(
     return true;
   }
 
-  const action = Object.entries(buttons.actions).find(([, bounds]) => containsPoint(bounds, position.x, position.y))?.[0];
+  const action = shellHit?.kind === "action" ? shellHit.id : undefined;
   if (!action) return false;
   if (action === "scene-index") return navigateToSceneIndex();
   if (action === "scene-vertical") return switchScene(verticalSliceScene, "debug");

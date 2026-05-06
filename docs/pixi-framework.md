@@ -308,7 +308,7 @@ The first implementation is intentionally small:
 - `BottomBar` exposes `Controls` and `Debug` triggers.
 - `BottomSheetHost` opens scene controls or debug placeholder content.
 
-Scene switching and sample registry decisions stay outside `AppShell`. The shell owns placement slots and button bounds only.
+Scene switching and sample registry decisions stay outside `AppShell`. The shell owns placement slots, exposes `readAppShellButtonBounds()`, and resolves shell button hits through `resolveAppShellHit()` so scenes do not duplicate AppShell hit-test loops.
 
 Scaffold contract:
 
