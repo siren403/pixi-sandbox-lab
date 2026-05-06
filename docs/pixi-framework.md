@@ -310,6 +310,14 @@ The first implementation is intentionally small:
 
 Scene switching and sample registry decisions stay outside `AppShell`. The shell owns placement slots and button bounds only.
 
+Scaffold contract:
+
+- `AppShell` itself belongs in `layers.ui`.
+- UI/content scenes such as scene index, design-system, settings, shop, inventory, and component gallery put their primary content under `AppShell.contentHost`.
+- Gameplay/world scenes may keep world objects under `layers.world`; their HUD, navigation, controls, and debug sheets should use AppShell slots or other safe-area-aware UI.
+- Boot/splash scenes may remain AppShell exceptions when they are immediate start, loading, or branding screens.
+- Content-host scenes must not attach primary content as a sibling of `AppShell`, because top/bottom bars and bottom sheets can cover it.
+
 ## World And Camera
 
 월드 좌표와 카메라는 `src/runtime/world.ts`, `src/runtime/worldCamera.ts`가 담당한다.

@@ -369,11 +369,11 @@ export const designSystemScene = scene({
 
   load({ layers, layout, surface, scene, switchScene }) {
     sampleShellState["design-system"].sheet = readSampleSceneArgs(scene.args<SampleSceneArgs>()).openSheet ?? "none";
-    renderDesignSystem(layers.ui, layout);
-    renderSampleShell(layers.ui, layout, {
+    const shell = renderSampleShell(layers.ui, layout, {
       sceneId: "design-system",
       title: "Design System",
     });
+    renderDesignSystem(shell.contentHost, layout, shell.frames.content);
     surface.updateLayout();
     syncRenderedSampleShell("design-system", layers.ui, layout);
     removeDebugListeners = installDebugSceneListeners({
@@ -392,11 +392,11 @@ export const designSystemScene = scene({
 
   resize({ layers, layout, surface }) {
     clearSceneLayers(layers.ui);
-    renderDesignSystem(layers.ui, layout);
-    renderSampleShell(layers.ui, layout, {
+    const shell = renderSampleShell(layers.ui, layout, {
       sceneId: "design-system",
       title: "Design System",
     });
+    renderDesignSystem(shell.contentHost, layout, shell.frames.content);
     surface.updateLayout();
     syncRenderedSampleShell("design-system", layers.ui, layout);
     syncDesignSystemState(layout, layers.root);
@@ -750,10 +750,9 @@ function createInputTarget(layout: SurfaceLayout): Graphics {
   return target;
 }
 
-function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
+function renderDesignSystem(layer: Container, layout: SurfaceLayout, frame: RectState): void {
   const margin = tokenValue(layout, surfaceTheme.spacing.screen);
-  const panelWidth = Math.min(layout.visibleWidth - margin * 2, 900 / layout.scale);
-  const startX = layout.referenceX + layout.safeArea.left + margin;
+  const panelWidth = Math.min(frame.width - margin * 2, 900 / layout.scale);
   const sectionGap = margin * 0.42;
   const sectionLabelHeight = tokenValue(layout, { design: 42, minScreenPx: 24, maxScreenPx: 34 });
   const root = createPanel({
@@ -764,7 +763,7 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout): void {
     alignItems: "flex-start",
     gap: margin * 0.55,
   });
-  root.position.set(startX, layout.referenceY + layout.safeArea.top + margin);
+  root.position.set(margin, margin);
 
   const title = createLabel({
     text: "Design System",
