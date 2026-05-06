@@ -29,6 +29,14 @@ task-plan
   -> Stop dirty-state hook as a guardrail
 ```
 
+Front guard hooks add early reminders before this flow can drift:
+
+- `UserPromptSubmit` emits a short task-cycle reminder before handling each submitted prompt.
+- `PreToolUse` emits a warn-only message before likely file edits, write-like shell commands, staging, or commits when no active task manifest is open.
+- Read-only search/status commands should not warn.
+
+These hooks do not replace approval. If `plan_reviewer` returns changes, present the revised plan to the user and wait for approval before `task-start` or file edits.
+
 ### 1. Plan
 
 Use `$task-plan` before non-trivial implementation.
@@ -189,6 +197,16 @@ The Stop hook checks:
 - active task manifest still open at turn end
 
 If the Stop hook reports dirty state or an open active task, the next turn should use `$task-end`, close the manifest with `mise run active-task -- close`, or report why dirty files remain.
+
+### Hook Limits
+
+Hooks are deterministic reminders, not a complete enforcement boundary.
+
+- `UserPromptSubmit` can remind the agent before a new user request is handled, but cannot decide the task scope.
+- `PreToolUse` can catch common write paths such as `apply_patch`, write-like shell commands, `git add`, and `git commit`, but equivalent writes may still be possible through other tool paths.
+- `Stop` remains the final dirty-state and scope-drift guardrail.
+
+When hooks warn, the agent should pause and restore the task cycle rather than treating the warning as noise.
 
 ## Harness Audit Follow-Up
 

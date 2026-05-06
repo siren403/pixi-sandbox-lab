@@ -14,6 +14,22 @@ command = "mise exec bun -- bun .codex/hooks/checkpoint-session-start.ts"
 timeout = 10
 statusMessage = "Checking active checkpoint"
 
+[[hooks.UserPromptSubmit]]
+
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = "mise exec bun -- bun .codex/hooks/task-cycle-front-guard.ts"
+timeout = 10
+statusMessage = "Checking task cycle"
+
+[[hooks.PreToolUse]]
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "mise exec bun -- bun .codex/hooks/task-boundary-pre-tool.ts"
+timeout = 10
+statusMessage = "Checking task boundary"
+
 [[hooks.Stop]]
 
 [[hooks.Stop.hooks]]

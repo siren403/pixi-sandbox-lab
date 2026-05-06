@@ -147,7 +147,7 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
 ### Codex Hooks
 
 - `.codex/config.toml`  
-  Project-scoped Codex config. Enables `codex_hooks`, declares the Serena MCP server, and registers the `SessionStart` checkpoint reminder hook and `Stop` dirty-state warning hook.
+  Project-scoped Codex config. Enables `codex_hooks`, declares the Serena MCP server, and registers `SessionStart`, `UserPromptSubmit`, `PreToolUse`, and `Stop` guardrail hooks.
   Discovery route: `harness_architect` boot discovery reads `.codex/config.toml`.
 
 - `.codex/hooks/checkpoint-session-start.ts`
@@ -155,6 +155,18 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   Event: `SessionStart`. Matcher: none. Behavior: warn-only, non-blocking, read-only.
   Expected user/agent: all Codex sessions in this project once project hooks are active.
   Validation: smoke-tested with active, consumed, missing, malformed, and subdirectory `cwd` checkpoint cases.
+
+- `.codex/hooks/task-cycle-front-guard.ts`
+  Bun/TypeScript command hook for the Codex `UserPromptSubmit` event. Emits a concise task-cycle reminder before a submitted prompt is handled: non-trivial work should flow through task-plan, user approval, task-start, active-task manifest, implementation, validation, and task-end.
+  Event: `UserPromptSubmit`. Matcher: none. Behavior: warn-only reminder.
+  Expected user/agent: parent Codex sessions in this project, especially when continuing after plan review or repeated "next/continue" prompts.
+  Validation: smoke-tested with representative `UserPromptSubmit`, `SessionStart`, and malformed JSON inputs.
+
+- `.codex/hooks/task-boundary-pre-tool.ts`
+  Bun/TypeScript command hook for the Codex `PreToolUse` event. Detects common write paths such as `apply_patch`, write-like shell commands, and git staging/commit commands, then warns when no active task manifest is open. Read-only search/status commands should produce no warning.
+  Event: `PreToolUse`. Matcher: none. Behavior: warn-only, non-blocking.
+  Expected user/agent: parent Codex and spawned agents using project hooks before file edits, staging, commits, or write-like shell commands.
+  Validation: smoke-tested with write/no-active warning, read-only no-warning, active-task no-warning, and malformed JSON cases.
 
 - `.codex/hooks/dirty-state-stop.ts`  
   Bun/TypeScript command hook for the Codex `Stop` event. Runs `git status --short` from the git root, reads `.codex-harness/active-task.json` when present, emits non-blocking `systemMessage` warnings for dirty state, missing active task manifests, dirty paths outside active task scope, and open active task manifests, and exits cleanly on git inspection errors with a warning.
