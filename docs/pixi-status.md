@@ -13,7 +13,7 @@ This document tracks the current implementation and validation state for the Pix
 - `src/runtime/world.ts` owns world bounds, center point, object clamp, target clamp, and camera creation against a world layer.
 - `src/runtime/worldCamera.ts` owns world camera pan, zoom, clamp, gesture tracking, layer application, and screen-to-world conversion.
 - The debug panel can switch to the vertical slice scene or the runtime design-system scene from boot.
-- Scene transitions use a runtime-owned overlay with animated panels and slash patterns.
+- Scene transitions are configured through `Scene.transition` and rendered by a runtime-owned overlay with animated panels and slash patterns.
 - Scene switch commands go through `src/runtime/commandRuntime.ts`; duplicate scene switch requests are dropped while a switch is active and counts are exposed through runtime debug state.
 - The design-system scene renders tokens, type, components, and motion samples inside the Pixi runtime. Major sample regions use `@pixi/layout` nodes so layout debug bounds can inspect them.
 - Semantic UI uses `src/ui` primitives for repeated components such as button, label, and panel. Button text is horizontally and vertically centered and covered by E2E checks.
@@ -21,7 +21,7 @@ This document tracks the current implementation and validation state for the Pix
 - `bun run check:design-tokens` compares the `DESIGN.md` frontmatter contract with `src/ui/tokens.ts`; release builds run this drift check before bundling.
 - `bun run check` is the fast local validation path for design token drift, TypeScript, and demo build.
 - The layout debug panel starts folded, stores fold/filter/drag position in `localStorage`, can be dragged by its header, and shows the current scene name.
-- The loading overlay includes a progress bar and GSAP/PixiPlugin-based loop animation with a randomized minimum display time between 500ms and 1000ms.
+- The transition overlay includes a progress bar and GSAP/PixiPlugin-based loop animation with a randomized minimum display time between 500ms and 1000ms.
 - Motion code is isolated behind `src/runtime/motion.ts`. PixiPlugin is used for supported display-object properties, while filter animation uses Pixi filter instances plus GSAP core.
 - Demo builds use code splitting across entry, Pixi vendor, motion vendor, shared vendor, and debug-only dynamic chunks.
 - GitHub Pages deployment runs `bun run check` before uploading the demo build artifact.

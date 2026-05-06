@@ -8,6 +8,7 @@ import {
   gotoBoot,
   hasVisibleCanvasPixels,
   readDebugSnapshot,
+  waitForSceneIndexReady,
 } from "./pixi-test-helpers";
 
 test("renders boot, fills the viewport, and navigates through the scene index", async ({ page }) => {
@@ -31,7 +32,7 @@ test("renders boot, fills the viewport, and navigates through the scene index", 
   expect(await page.evaluate(() => window.__pixiDebug?.layout?.currentScene)).toBe("boot");
 
   await clickBootStart(page, canvas);
-  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.sceneIndex?.rendered)).toBe(true);
+  await waitForSceneIndexReady(page);
   await clickSceneIndexItem(page, canvas, "Design System");
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.designSystem?.rendered), { timeout: 15000 }).toBe(true);
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.runtime?.appMode), { timeout: 15000 }).toBe("interactive");
@@ -45,7 +46,7 @@ test("opens scene index with app shell and bottom sheet controls", async ({ page
   const canvas = await gotoBoot(page);
 
   await clickBootStart(page, canvas);
-  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.sceneIndex?.rendered)).toBe(true);
+  await waitForSceneIndexReady(page);
 
   let sceneIndex = (await readDebugSnapshot(page))?.sceneIndex;
   expect(sceneIndex?.items.map((item) => item.label)).toContain("Vertical Slice");

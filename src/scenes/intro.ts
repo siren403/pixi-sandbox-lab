@@ -39,7 +39,7 @@ let removeDebugListeners: (() => void) | null = null;
 
 export const bootScene = scene({
   name: "boot",
-  loading: { overlay: false, minimumMs: 0 },
+  transition: { enabled: false, minimumMs: 0 },
 
   load({ app, layers, layout, switchScene }) {
     renderIntro(app, layers.ui, layout);
@@ -77,7 +77,7 @@ export const bootScene = scene({
 
 export const sceneIndexScene = scene({
   name: "scene-index",
-  loading: { overlay: false, minimumMs: 0 },
+  transition: { enabled: true, minimumMs: 0 },
 
   load({ app, layers, layout, switchScene }) {
     sceneIndexSheet = "none";

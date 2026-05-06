@@ -330,6 +330,26 @@ export const sceneWithAsset = scene({
 - 로드되지 않은 source를 `get()`하면 오류를 던진다.
 - GitHub Pages subpath 배포를 위해 asset은 Vite import URL을 우선 사용한다.
 
+## Scene Transition
+
+`Scene.transition`은 씬 전환 연출을 켜거나 끄는 공개 설정이다. 전환 구현은 현재 debug layer의 Pixi overlay로 그려지지만, 씬 API에서는 overlay가 아니라 transition으로 다룬다.
+
+```ts
+export const menuScene = scene({
+  name: "menu",
+  transition: {
+    enabled: true,
+    minimumMs: 0,
+  },
+});
+```
+
+계약:
+
+- `transition.enabled: false`는 해당 씬으로 들어갈 때 전환 연출을 만들지 않는다.
+- `transition.minimumMs`는 async asset loading이 너무 빨리 끝나도 전환 로딩 상태를 최소 유지할 시간이다.
+- `loading.overlay`는 이전 설정명과의 호환용으로만 남긴다. 새 씬은 `transition`을 사용한다.
+
 ## Debug And E2E
 
 debug build는 DOM 기반 layout debug panel과 `window.__pixiDebug` bridge를 포함한다.

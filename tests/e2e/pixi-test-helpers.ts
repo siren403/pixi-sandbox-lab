@@ -37,6 +37,7 @@ export async function expectCanvasFillsViewport(page: Page, canvas: Locator): Pr
 export async function startDemoFromBoot(page: Page, canvas: Locator): Promise<void> {
   const bootLoadingShows = (await readDebugSnapshot(page))?.runtime?.loadingOverlayShows ?? 0;
   await clickBootStart(page, canvas);
+  await waitForSceneIndexReady(page);
   await clickSceneIndexItem(page, canvas, "Vertical Slice");
   await expect
     .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.runtime?.loadingOverlayShows ?? 0))
@@ -87,7 +88,7 @@ export async function clickBootStart(page: Page, canvas: Locator): Promise<void>
 }
 
 export async function clickSceneIndexItem(page: Page, canvas: Locator, label: string): Promise<void> {
-  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.sceneIndex?.rendered)).toBe(true);
+  await waitForSceneIndexReady(page);
   const item = (await readDebugSnapshot(page))?.sceneIndex?.items.find((candidate) => candidate.label === label);
   expect(item).toBeDefined();
   await clickCanvasAt(
@@ -97,6 +98,18 @@ export async function clickSceneIndexItem(page: Page, canvas: Locator, label: st
     (item?.bounds.y ?? 0) + (item?.bounds.height ?? 0) / 2,
     { designSpace: true },
   );
+}
+
+export async function waitForSceneIndexReady(page: Page): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        readDebugSnapshot(page).then(
+          (snapshot) => snapshot?.sceneIndex?.rendered === true && snapshot.runtime?.appMode === "interactive",
+        ),
+      { timeout: 15000 },
+    )
+    .toBe(true);
 }
 
 export async function readDebugSnapshot(page: Page): Promise<PixiDebugState | undefined> {

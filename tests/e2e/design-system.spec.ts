@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { clickBootStart, collectConsoleErrors, gotoBoot } from "./pixi-test-helpers";
+import { clickBootStart, collectConsoleErrors, gotoBoot, waitForSceneIndexReady } from "./pixi-test-helpers";
 
 test("renders design-system scene with inspectable layout contracts", async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
   const canvas = await gotoBoot(page);
   await clickBootStart(page, canvas);
-  await expect.poll(() => page.evaluate(() => window.__pixiDebug?.sceneIndex?.rendered)).toBe(true);
+  await waitForSceneIndexReady(page);
   await page.evaluate(() => window.dispatchEvent(new CustomEvent("pixi:design-system")));
   await expect.poll(() => page.evaluate(() => window.__pixiDebug?.designSystem?.rendered), { timeout: 15000 }).toBe(true);
   const designSystemState = await page.evaluate(() => window.__pixiDebug?.designSystem);

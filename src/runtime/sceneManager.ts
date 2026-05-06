@@ -17,12 +17,11 @@ export class SceneManager {
     setActiveDebugScene(scene.name);
     syncTransitionState(ctx);
 
-    const loadingOptions = scene.loading ?? {};
-    const showOverlay = loadingOptions.overlay !== false;
-    const minimumLoadingMs = loadingOptions.minimumMs ?? sampleMinimumLoadingMs();
-    ctx.runtime.loadingMinimumMs = showOverlay ? minimumLoadingMs : 0;
+    const transitionOptions = resolveTransitionOptions(scene);
+    const minimumLoadingMs = transitionOptions.minimumMs ?? sampleMinimumLoadingMs();
+    ctx.runtime.loadingMinimumMs = transitionOptions.enabled ? minimumLoadingMs : 0;
     const loadingStartedAt = performance.now();
-    const transition = showOverlay ? createTransition(ctx) : null;
+    const transition = transitionOptions.enabled ? createTransition(ctx) : null;
     const assets = typeof scene.assets === "function" ? scene.assets(ctx) : (scene.assets ?? []);
 
     try {
@@ -89,6 +88,20 @@ export class SceneManager {
     this.current?.unload?.(ctx);
     this.current = null;
   }
+}
+
+function resolveTransitionOptions(scene: Scene): { enabled: boolean; minimumMs?: number } {
+  if (scene.transition) {
+    return {
+      enabled: scene.transition.enabled !== false,
+      minimumMs: scene.transition.minimumMs,
+    };
+  }
+
+  return {
+    enabled: scene.loading?.overlay !== false,
+    minimumMs: scene.loading?.minimumMs,
+  };
 }
 
 function startProgressLoop(

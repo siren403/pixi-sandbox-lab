@@ -349,7 +349,7 @@ export const alternateScene = scene({
 
 export const designSystemScene = scene({
   name: "design-system",
-  loading: { minimumMs: 0 },
+  transition: { enabled: true, minimumMs: 0 },
 
   load({ layers, layout, surface, switchScene }) {
     sampleShellState["design-system"].sheet = "none";

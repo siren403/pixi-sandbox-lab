@@ -65,8 +65,14 @@ export type SceneContext = {
 export type Scene = {
   name: string;
   assets?: AssetList | ((ctx: SceneContext) => AssetList);
+  transition?: {
+    enabled?: boolean;
+    minimumMs?: number;
+  };
   loading?: {
+    /** @deprecated Use transition.enabled. */
     overlay?: boolean;
+    /** @deprecated Use transition.minimumMs. */
     minimumMs?: number;
   };
   load?: (ctx: SceneContext) => void;
