@@ -138,6 +138,12 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   Expected user/agent: parent Codex, harness agents, and documentation/refactor workflows that need context-loading strategy or instruction-boundary review.
   Validation: TOML syntax smoke check and reference search for required context files.
 
+- `.codex/agents/scoped-worker.toml`
+  Project-local low-cost implementation worker for narrow, already-designed tasks with explicit file ownership and validation commands.
+  Discovery route: `harness_architect` boot discovery reads `.codex/agents/*.toml`; parent Codex may spawn this worker after architecture, planning, or specialist review has defined the implementation boundary.
+  Expected user/agent: parent Codex and specialist agents that need bounded code or documentation edits without spending a high-reasoning specialist on mechanical implementation.
+  Validation: TOML syntax smoke check and reference search for required context files.
+
 ### Codex Hooks
 
 - `.codex/config.toml`  
