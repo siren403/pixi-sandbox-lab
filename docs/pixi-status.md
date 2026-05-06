@@ -8,6 +8,7 @@ This document tracks the current implementation and validation state for the Pix
 - `SceneManager.switch()` cleans up the previous scene, evaluates scene assets, awaits `ctx.assets.load()`, then runs sync scene loading.
 - The app starts in the `boot` scene with `Tap to start`; Enter/Space or the boot button switches to `vertical-slice`.
 - The vertical slice scene contains a larger explorable world with dense demo objects; drag pans the camera and wheel/pinch zoom adjusts the view while taps still move the player.
+- `src/runtime/world.ts` owns world bounds, center point, object clamp, target clamp, and camera creation against a world layer.
 - `src/runtime/worldCamera.ts` owns world camera pan, zoom, clamp, gesture tracking, layer application, and screen-to-world conversion.
 - The debug panel can switch to the vertical slice scene or the runtime design-system scene from boot.
 - Scene transitions use a runtime-owned overlay with animated panels and slash patterns.
