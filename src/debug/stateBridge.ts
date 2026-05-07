@@ -6,6 +6,7 @@ type RectState = { x: number; y: number; width: number; height: number };
 
 export type PixiSampleAppShellDebugState = {
   activeSheet: "none" | "controls" | "debug";
+  sheetBounds: RectState;
   backButtonBounds?: RectState;
   controlsButtonBounds?: RectState;
   debugButtonBounds?: RectState;

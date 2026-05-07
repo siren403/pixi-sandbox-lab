@@ -46,6 +46,16 @@ test("renders design-system scene with inspectable layout contracts", async ({ p
     { designSpace: true },
   );
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.designSystem?.appShell?.activeSheet), { timeout: 15000 }).toBe("debug");
+  await clickCanvasAt(
+    page,
+    canvas,
+    (debugButtonBounds?.x ?? 0) + (debugButtonBounds?.width ?? 0) / 2,
+    (debugButtonBounds?.y ?? 0) + (debugButtonBounds?.height ?? 0) / 2,
+    { designSpace: true },
+  );
+  await expect
+    .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.designSystem?.appShell?.activeSheet), { timeout: 15000 })
+    .toBe("debug");
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.designSystem?.sections), { timeout: 15000 }).toBe(initialSections);
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.layoutNodes ?? 0)).toBeGreaterThanOrEqual(16);
   const layoutToggleBounds = (await readDebugSnapshot(page))?.designSystem?.appShell?.actionButtonBounds["layout-toggle"];

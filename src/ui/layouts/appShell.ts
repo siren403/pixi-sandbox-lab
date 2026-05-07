@@ -35,6 +35,8 @@ export type AppShell = Container & {
 export type RectFrame = UiBounds;
 
 export type AppShellButtonBounds = {
+  activeSheet: AppShellSheet;
+  sheet: RectFrame;
   back?: RectFrame;
   controls: RectFrame;
   debug: RectFrame;
@@ -47,6 +49,7 @@ export type AppShellHit =
   | { kind: "controls" }
   | { kind: "debug" }
   | { kind: "close" }
+  | { kind: "sheet" }
   | { kind: "action"; id: string };
 
 type AppShellOptions = {
@@ -139,6 +142,8 @@ export function createAppShell(
 
 export function readAppShellButtonBounds(layout: SurfaceLayout, shell: AppShell): AppShellButtonBounds {
   return {
+    activeSheet: shell.activeSheet,
+    sheet: shell.frames.sheet,
     back: shell.buttons.back ? readButtonBounds(layout, shell.buttons.back) : undefined,
     controls: readButtonBounds(layout, shell.buttons.controls),
     debug: readButtonBounds(layout, shell.buttons.debug),
@@ -150,12 +155,14 @@ export function readAppShellButtonBounds(layout: SurfaceLayout, shell: AppShell)
 }
 
 export function resolveAppShellHit(bounds: AppShellButtonBounds, position: { x: number; y: number }): AppShellHit | undefined {
+  const action = Object.entries(bounds.actions).find(([, actionBounds]) => containsBounds(actionBounds, position))?.[0];
+  if (action) return { kind: "action", id: action };
+  if (bounds.close && containsBounds(bounds.close, position)) return { kind: "close" };
+  if (bounds.activeSheet !== "none" && containsBounds(bounds.sheet, position)) return { kind: "sheet" };
   if (bounds.back && containsBounds(bounds.back, position)) return { kind: "back" };
   if (containsBounds(bounds.controls, position)) return { kind: "controls" };
   if (containsBounds(bounds.debug, position)) return { kind: "debug" };
-  if (bounds.close && containsBounds(bounds.close, position)) return { kind: "close" };
-  const action = Object.entries(bounds.actions).find(([, actionBounds]) => containsBounds(actionBounds, position))?.[0];
-  return action ? { kind: "action", id: action } : undefined;
+  return undefined;
 }
 
 function getScaffoldFrame(layout: SurfaceLayout): RectFrame {

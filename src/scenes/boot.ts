@@ -103,6 +103,8 @@ const sampleShellState: Record<SampleSceneId, SampleShellState> = {
 function emptyAppShellButtonBounds(): AppShellButtonBounds {
   const empty = { x: 0, y: 0, width: 0, height: 0 };
   return {
+    activeSheet: "none",
+    sheet: empty,
     controls: empty,
     debug: empty,
     actions: {},
@@ -606,6 +608,7 @@ function handleSampleShellPointer(
     syncRenderedSampleShell(sceneId, layer, layout);
     return true;
   }
+  if (shellHit?.kind === "sheet") return true;
 
   const action = shellHit?.kind === "action" ? shellHit.id : undefined;
   if (!action) return false;
@@ -1083,6 +1086,7 @@ function readSampleAppShellDebugState(sceneName: string) {
   const state = sampleShellState[sceneName];
   return {
     activeSheet: state.sheet,
+    sheetBounds: state.buttons.sheet,
     backButtonBounds: state.buttons.back,
     controlsButtonBounds: state.buttons.controls,
     debugButtonBounds: state.buttons.debug,

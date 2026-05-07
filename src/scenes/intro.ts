@@ -39,6 +39,8 @@ let sceneIndexSheet: AppShellSheet = "none";
 let layoutBoundsEnabled = false;
 let sceneIndexItems: Array<{ id: string; label: string; bounds: UiBounds }> = [];
 let sceneIndexButtons: AppShellButtonBounds = {
+  activeSheet: "none",
+  sheet: { x: 0, y: 0, width: 0, height: 0 },
   controls: { x: 0, y: 0, width: 0, height: 0 },
   debug: { x: 0, y: 0, width: 0, height: 0 },
   actions: {},
@@ -108,15 +110,6 @@ export const sceneIndexScene = scene({
   update(_dt, { app, layers, layout, pointer, keyboard, switchScene }) {
     const position = pointer.position();
     if (pointer.wasPressed()) {
-      const itemId = resolveButtonHit(sceneIndexItems, position);
-      if (itemId === "vertical-slice") {
-        switchScene(verticalSliceScene, { source: "scene", args: { from: "scene-index", selectedSample: "vertical-slice" } });
-        return;
-      }
-      if (itemId === "design-system") {
-        switchScene(designSystemScene, { source: "scene", args: { from: "scene-index", selectedSample: "design-system" } });
-        return;
-      }
       const shellHit = resolveAppShellHit(sceneIndexButtons, position);
       if (shellHit?.kind === "controls") {
         sceneIndexSheet = sceneIndexSheet === "controls" ? "none" : "controls";
@@ -136,6 +129,8 @@ export const sceneIndexScene = scene({
         renderSceneIndex(app, layers.ui, layout);
         return;
       }
+      if (shellHit?.kind === "sheet") return;
+
       const action = shellHit?.kind === "action" ? shellHit.id : undefined;
       if (action === "scene-vertical") {
         switchScene(verticalSliceScene, "debug");
@@ -158,6 +153,16 @@ export const sceneIndexScene = scene({
       }
       if (action === "reload") {
         window.location.reload();
+        return;
+      }
+
+      const itemId = resolveButtonHit(sceneIndexItems, position);
+      if (itemId === "vertical-slice") {
+        switchScene(verticalSliceScene, { source: "scene", args: { from: "scene-index", selectedSample: "vertical-slice" } });
+        return;
+      }
+      if (itemId === "design-system") {
+        switchScene(designSystemScene, { source: "scene", args: { from: "scene-index", selectedSample: "design-system" } });
         return;
       }
     }
