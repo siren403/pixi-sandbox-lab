@@ -267,7 +267,7 @@ app.stage
 
 현재 primitive:
 
-- `createButton()` in `src/ui/button.ts`
+- `createButton()` in `src/ui/button.ts`, implemented with `@pixi/ui` `FancyButton`
 - `createLabel()` in `src/ui/label.ts`
 - `createPanel()` in `src/ui/panel.ts`
 - `configureSafeAreaColumn()` / `configureSafeAreaRow()` in `src/ui/layout.ts`
@@ -277,7 +277,7 @@ app.stage
 - HUD, menu, modal, panel, repeated control은 layout-first로 작성한다.
 - 버튼 텍스트는 수평/수직 중앙 정렬이 기본 계약이다.
 - design-system scene에 추가하는 주요 샘플은 layout node여야 debug bounds로 확인할 수 있다.
-- `@pixi/ui`는 아직 도입하지 않았다. slider, checkbox, scroll/list, text input 같은 반복 상호작용이 실제 필요해질 때 평가한다.
+- `@pixi/ui`는 버튼 primitive부터 도입한다. slider, checkbox, scroll/list, text input 같은 반복 상호작용은 실제 필요해질 때 같은 방식으로 평가한다.
 
 ## Scene Index And App Shell
 

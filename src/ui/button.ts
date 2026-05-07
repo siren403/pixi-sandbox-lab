@@ -1,3 +1,4 @@
+import { FancyButton } from "@pixi/ui";
 import { Container, Graphics, Text } from "pixi.js";
 import { tokenValue } from "../runtime/surface";
 import { surfaceTheme } from "./tokens";
@@ -5,7 +6,7 @@ import type { SurfaceLayout } from "../runtime/scene";
 
 type TokenSize = { design: number; minScreenPx?: number; maxScreenPx?: number };
 
-export type ButtonPrimitive = Container & {
+export type ButtonPrimitive = FancyButton & {
   background: Graphics;
   labelText: Text;
   metrics: {
@@ -46,12 +47,23 @@ export function createButton({
   stroke = surfaceTheme.color.actionAccent,
   textColor = surfaceTheme.color.text,
 }: ButtonOptions): ButtonPrimitive {
-  const button = new Container({ label: "button" }) as ButtonPrimitive;
+  const radius = tokenValue(layout, surfaceTheme.components.buttonPrimary.rounded);
+  const strokeWidth = tokenValue(layout, surfaceTheme.components.actionHighlight.size);
   const background = new Graphics()
-    .roundRect(0, 0, width, height, tokenValue(layout, surfaceTheme.components.buttonPrimary.rounded))
+    .roundRect(0, 0, width, height, radius)
     .fill({ color: fill, alpha: 0.94 })
-    .stroke({ color: stroke, width: tokenValue(layout, surfaceTheme.components.actionHighlight.size) });
+    .stroke({ color: stroke, width: strokeWidth });
   background.label = "button-background";
+  const hoverBackground = new Graphics()
+    .roundRect(0, 0, width, height, radius)
+    .fill({ color: fill, alpha: 1 })
+    .stroke({ color: stroke, width: strokeWidth * 1.35 });
+  hoverBackground.label = "button-background-hover";
+  const pressedBackground = new Graphics()
+    .roundRect(0, 0, width, height, radius)
+    .fill({ color: fill, alpha: 0.82 })
+    .stroke({ color: stroke, width: strokeWidth * 1.1 });
+  pressedBackground.label = "button-background-pressed";
 
   const labelText = new Text({
     text,
@@ -64,8 +76,16 @@ export function createButton({
   });
   labelText.label = "button-label";
   labelText.anchor.set(0.5);
-  labelText.position.set(width / 2, height / 2);
 
+  const button = new FancyButton({
+    defaultView: background,
+    hoverView: hoverBackground,
+    pressedView: pressedBackground,
+    text: labelText,
+    padding: tokenValue(layout, surfaceTheme.spacing.xs),
+    contentFittingMode: "none",
+  }) as ButtonPrimitive;
+  button.label = "button";
   button.background = background;
   button.labelText = labelText;
   button.metrics = {
