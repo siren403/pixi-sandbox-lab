@@ -73,7 +73,8 @@ export const bootScene = scene({
     renderIntro(app, layers.ui, layout);
   },
 
-  update(_dt, { keyboard, pointer, switchScene }) {
+  update(_dt, { input, switchScene }) {
+    const { keyboard, pointer } = input;
     const pointerPosition = pointer.position();
     const startByPointer = pointer.wasPressed() && containsBounds(startButtonBounds, pointerPosition);
     const startByKeyboard = keyboard.wasPressed("enter") || keyboard.wasPressed(" ");
@@ -115,7 +116,8 @@ export const sceneIndexScene = scene({
     renderSceneIndex(app, layers.ui, layout);
   },
 
-  update(_dt, { app, layers, layout, pointer, keyboard, switchScene }) {
+  update(_dt, { input, app, layers, layout, switchScene }) {
+    const { pointer, keyboard } = input;
     const position = pointer.position();
     if (pointer.wasPressed()) {
       const shellHit = resolveAppShellHit(sceneIndexButtons, position);

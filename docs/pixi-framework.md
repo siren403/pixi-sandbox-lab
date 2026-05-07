@@ -123,7 +123,9 @@ switchScene(next)
   -> optional transition animate-out
 
 each frame
+  -> runtimeSystems.preUpdate(dt, ctx)
   -> current.update(dt, ctx)
+  -> runtimeSystems.postUpdate(dt, ctx)
 
 resize
   -> update SurfaceLayout
@@ -142,6 +144,7 @@ type SceneContext = {
   stage: Container;
   layers: SurfaceLayers;
   assets: AssetRuntime;
+  input: InputRuntime;
   keyboard: Keyboard;
   pointer: Pointer;
   layout: SurfaceLayout;
@@ -168,7 +171,7 @@ await ctx.runtime.scene.whenReady({ scene: "scene-index", interactive: true });
 
 일반 scene code에서는 전환 요청용 `ctx.switchScene()`을 기본으로 사용한다. `ctx.runtime.scene.whenReady()`는 framework/debug/E2E처럼 완료 시점이 중요한 곳에서 제한적으로 사용한다.
 
-현재는 migration 중이라 `ctx.layout`, `ctx.keyboard`, `ctx.pointer`를 계속 노출한다. 새 코드에서는 가능한 한 `ctx.surface`를 우선 사용한다.
+현재는 migration 중이라 `ctx.layout`, `ctx.input`, `ctx.keyboard`, `ctx.pointer`를 계속 노출한다. `ctx.pointer`와 `ctx.keyboard`는 `ctx.input`의 alias로 유지되며 같은 frame snapshot 의미론을 가진다. 새 코드에서는 가능한 한 `ctx.surface`와 `ctx.input`을 우선 사용한다.
 
 ### Scene Args
 
@@ -342,6 +345,8 @@ camera.apply(surface.layout);
 
 ## Input
 
+`ctx.input`은 프레임 시작 시 runtime이 freeze하는 snapshot이다. `ctx.pointer`와 `ctx.keyboard`는 migration alias이며 같은 snapshot을 읽는다. `preUpdate`/`postUpdate`는 runtime 내부 라이프사이클이며 scene API로 노출하지 않는다.
+
 키보드:
 
 ```ts
@@ -359,6 +364,8 @@ pointer.position()
 pointer.pointers()
 pointer.wheelDelta()
 ```
+
+`wasPressed()`, `wasReleased()`, `wheelDelta()`, `keyboard.wasPressed()`는 같은 frame 안에서 여러 번 읽어도 같은 값을 반환한다. transient 값은 runtime이 frame 종료 후 `postUpdate()`에서 clear한다.
 
 `pointer.position()`은 viewport px가 아니라 surface scale이 제거된 design-space 좌표다. world camera가 있는 씬에서는 `camera.screenToWorld(pointer.position())`로 world 좌표로 변환한다. 이 함수명은 현재 구현명이며, 향후 `designToWorld()`로 정리할 수 있다.
 

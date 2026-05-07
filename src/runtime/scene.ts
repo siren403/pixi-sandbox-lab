@@ -1,6 +1,7 @@
 import type { Application, Container } from "pixi.js";
 import type { AssetList, AssetRuntime } from "./assets";
 import type { AppMode, CommandSource } from "./commandRuntime";
+import type { InputApi } from "./input";
 import type { Keyboard } from "./keyboard";
 import type { Pointer } from "./pointer";
 import type { RuntimeReadyCriteria, RuntimeReadySnapshot } from "./readiness";
@@ -93,6 +94,7 @@ export type SceneContext = {
   stage: Container;
   layers: SurfaceLayers;
   assets: AssetRuntime;
+  input: InputApi;
   keyboard: Keyboard;
   pointer: Pointer;
   layout: SurfaceLayout;

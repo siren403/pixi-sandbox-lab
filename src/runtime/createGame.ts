@@ -2,8 +2,8 @@ import "@pixi/layout";
 import { Application, Container } from "pixi.js";
 import { createAssetRuntime } from "./assets";
 import { createCommandRuntime } from "./commandRuntime";
-import { createKeyboard } from "./keyboard";
-import { createPointer } from "./pointer";
+import { createInput } from "./input";
+import { createRuntimeSystems } from "./systems";
 import { waitForRuntimeReady } from "./readiness";
 import { setSceneNavigator } from "./navigation";
 import type { RuntimeApi, RuntimeContext, Scene, SurfaceLayers, SurfaceLayout } from "./scene";
@@ -43,7 +43,6 @@ export async function createGame(options: GameOptions): Promise<Application> {
   stage.addChild(layers.root);
   app.stage.addChild(stage);
 
-  const keyboard = createKeyboard();
   const assets = createAssetRuntime();
   const runtimeState = {
     appMode: "interactive" as const,
@@ -76,7 +75,14 @@ export async function createGame(options: GameOptions): Promise<Application> {
   const surface = createSurfaceContext(layout, (container = layers.root) => {
     app.renderer.layout.update(container);
   });
-  const pointer = createPointer(app.canvas, () => layout);
+  const input = createInput({
+    pointerTarget: app.canvas,
+    keyboardTarget: window,
+    getLayout: () => layout,
+  });
+  const runtimeSystems = createRuntimeSystems(input);
+  const pointer = input.pointer;
+  const keyboard = input.keyboard;
   const sceneManager = new SceneManager();
   const commands = createCommandRuntime({
     runtimeState,
@@ -93,6 +99,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
     stage,
     layers,
     assets,
+    input,
     keyboard,
     pointer,
     layout,
@@ -120,7 +127,13 @@ export async function createGame(options: GameOptions): Promise<Application> {
   app.renderer.on("resize", onResize);
 
   app.ticker.add((ticker) => {
-    sceneManager.update(ticker.deltaMS / 1000, ctx);
+    const dt = ticker.deltaMS / 1000;
+    runtimeSystems.preUpdate(dt, ctx);
+    try {
+      sceneManager.update(dt, ctx);
+    } finally {
+      runtimeSystems.postUpdate(dt, ctx);
+    }
   });
 
   const recoverSurface = () => {
@@ -159,8 +172,7 @@ export async function createGame(options: GameOptions): Promise<Application> {
     restoreDebugReadyHandler();
     commands.destroy();
     sceneManager.destroy(ctx);
-    keyboard.destroy();
-    pointer.destroy();
+    runtimeSystems.destroy();
     app.destroy();
   };
 

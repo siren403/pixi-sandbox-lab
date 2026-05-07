@@ -206,7 +206,8 @@ export const verticalSliceScene = scene({
     syncDemoState("vertical-slice", player.x, player.y, layout, layers.root, undefined, true);
   },
 
-  update(dt, { layers, keyboard, pointer, layout, surface, switchScene }) {
+  update(dt, { input, layers, layout, surface, switchScene }) {
+    const { keyboard, pointer } = input;
     const player = layers.world.getChildByLabel("player") as MotionPlayer | null;
     const inputTarget = layers.world.getChildByLabel("input-target") as Graphics | null;
     const world = readWorld(layers.world);
@@ -356,7 +357,8 @@ export const alternateScene = scene({
     syncDemoState("alternate", player.x, player.y, layout, layers.root, undefined, true);
   },
 
-  update(_dt, { layers, keyboard, pointer, layout, surface, switchScene }) {
+  update(_dt, { input, layers, layout, surface, switchScene }) {
+    const { keyboard, pointer } = input;
     const player = layers.world.getChildByLabel("player") as Graphics | null;
     if (!player) return;
 
@@ -419,7 +421,8 @@ export const designSystemScene = scene({
     syncDesignSystemState(layout, layers.root);
   },
 
-  update(dt, { layers, keyboard, pointer, layout, surface, switchScene }) {
+  update(dt, { input, layers, layout, surface, switchScene }) {
+    const { keyboard, pointer } = input;
     if (pointer.wasPressed() && handleSampleShellPointer("design-system", layers.ui, layout, pointer.position(), switchScene, () => surface.updateLayout())) {
       return;
     }

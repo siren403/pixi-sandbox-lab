@@ -68,7 +68,8 @@ export const balatroLiteScene = scene({
     renderScene({ app, layers, layout });
   },
 
-  update(_dt, { keyboard, pointer, layers, layout, app }) {
+  update(_dt, { input, layers, layout, app }) {
+    const { keyboard, pointer } = input;
     const pointerPressed = pointer.wasPressed();
     if (pointerPressed) {
       const shellHit = resolveAppShellHit(appShellButtons, pointer.position());

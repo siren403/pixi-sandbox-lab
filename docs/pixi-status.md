@@ -9,6 +9,7 @@ This document tracks the current implementation and validation state for the Pix
 - The app starts in the `boot` scene with `Tap to start`; Enter/Space or the boot button opens a Pixi-native Scene Index with vertical slice, design-system, and planned sample entries.
 - `src/ui/layouts/appShell.ts` provides AppShell, TopBar, ContentHost, BottomBar, and BottomSheetHost. `src/ui/button.ts` keeps project-owned button drawing, uses `@pixi/ui` `ButtonContainer` for button events, and provides shared UI bounds helpers used by AppShell and Scene Index. Scene Index and Design System use ContentHost for UI/content panels; gameplay/world scenes keep world objects in `layers.world` and use AppShell for HUD/navigation/control slots.
 - Scene switches accept either the legacy source string or `{ source, args }`; active scene metadata is exposed as `ctx.scene`, and target scenes read one-shot transition args through `ctx.scene.args<T>()`.
+- `ctx.input` is the frame snapshot input runtime. `ctx.pointer` and `ctx.keyboard` remain aliases to the same snapshot-backed objects while scenes migrate off consuming reads.
 - The vertical slice scene contains a larger explorable world with dense demo objects; drag pans the camera and wheel/pinch zoom adjusts the view while taps still move the player.
 - `SceneContext.surface` exposes the current surface layout plus token, screen-size, safe-frame, anchor, center, and layout update helpers. Existing `ctx.layout` remains available during migration.
 - `src/runtime/world.ts` owns world bounds, center point, object clamp, target clamp, and camera creation against a world layer.
@@ -31,6 +32,7 @@ This document tracks the current implementation and validation state for the Pix
 - `window.__pixiDebug.runtime` exposes E2E-only app mode, runtime readiness, command counts, loading state, transition state, sampled timing, progress, overlay alpha, and transition panel counts.
 - `window.__pixiDebug` mirrors a typed debug store and exposes `version`, `getSnapshot()`, `dispatch(command)`, and runtime-backed `whenReady(criteria)` for Playwright. E2E helpers read state through `getSnapshot()` instead of direct runtime/demo/layout/debug field access, and send scene/layout/reload input through `dispatch(command)` instead of direct `pixi:*` DOM events.
 - `src/runtime/readiness.ts` owns the runtime readiness contract. `interactiveReady` requires a ready scene, idle transition/loading state, no running runtime commands, and interactive app mode; `bun run check:runtime-readiness` verifies the criteria matcher without launching a browser.
+- `scripts/check-input-snapshot.ts` covers the snapshot input contract: repeated reads stay stable inside a frame, transient values clear on the next frame, wheel delta is non-consuming, and keyboard repeat does not emit duplicate presses.
 - `scene.load(ctx)` is sync; assets are already available through `ctx.assets.get(source)` at that point.
 - `AssetRuntime` wraps Pixi `Assets` and throws if `get()` is called for an asset that is not ready.
 - The first validation asset uses a Vite import URL so GitHub Pages subpath deployment does not depend on `public` absolute paths.

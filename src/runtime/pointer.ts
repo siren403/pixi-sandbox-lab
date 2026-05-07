@@ -10,15 +10,57 @@ export type Pointer = {
   destroy: () => void;
 };
 
-export function createPointer(target: HTMLElement, getLayout: () => SurfaceLayout): Pointer {
-  let activePointerId: number | null = null;
-  const activePointers = new Map<number, { x: number; y: number }>();
-  let down = false;
-  let pressed = false;
-  let released = false;
-  let x = 0;
-  let y = 0;
-  let wheel = 0;
+export type PointerDevice = Pointer & {
+  preUpdate: () => void;
+  postUpdate: () => void;
+  clearAll: () => void;
+};
+
+type PointerSnapshot = {
+  down: boolean;
+  pressed: boolean;
+  released: boolean;
+  x: number;
+  y: number;
+  wheel: number;
+  pointers: Array<{ id: number; x: number; y: number }>;
+};
+
+type PointerRawState = {
+  down: boolean;
+  pressed: boolean;
+  released: boolean;
+  x: number;
+  y: number;
+  wheel: number;
+  activePointerId: number | null;
+  activePointers: Map<number, { x: number; y: number }>;
+};
+
+const emptyPointerSnapshot = (): PointerSnapshot => ({
+  down: false,
+  pressed: false,
+  released: false,
+  x: 0,
+  y: 0,
+  wheel: 0,
+  pointers: [],
+});
+
+const emptyPointerRawState = (): PointerRawState => ({
+  down: false,
+  pressed: false,
+  released: false,
+  x: 0,
+  y: 0,
+  wheel: 0,
+  activePointerId: null,
+  activePointers: new Map(),
+});
+
+export function createPointer(target: HTMLElement, getLayout: () => SurfaceLayout): PointerDevice {
+  const raw = emptyPointerRawState();
+  const snapshot = emptyPointerSnapshot();
 
   const readPosition = (event: PointerEvent) => {
     const rect = target.getBoundingClientRect();
@@ -31,49 +73,49 @@ export function createPointer(target: HTMLElement, getLayout: () => SurfaceLayou
 
   const updatePosition = (event: PointerEvent) => {
     const position = readPosition(event);
-    x = position.x;
-    y = position.y;
-    activePointers.set(event.pointerId, position);
+    raw.x = position.x;
+    raw.y = position.y;
+    raw.activePointers.set(event.pointerId, position);
   };
 
   const onPointerDown = (event: PointerEvent) => {
     event.preventDefault();
-    activePointerId ??= event.pointerId;
-    down = true;
-    pressed = true;
+    raw.activePointerId ??= event.pointerId;
+    raw.down = true;
+    raw.pressed = true;
     updatePosition(event);
     target.setPointerCapture?.(event.pointerId);
   };
 
   const onPointerMove = (event: PointerEvent) => {
-    if (!activePointers.has(event.pointerId)) return;
+    if (!raw.activePointers.has(event.pointerId)) return;
 
     event.preventDefault();
     updatePosition(event);
   };
 
   const endPointer = (event: PointerEvent) => {
-    if (!activePointers.has(event.pointerId)) return;
+    if (!raw.activePointers.has(event.pointerId)) return;
 
     event.preventDefault();
     updatePosition(event);
-    activePointers.delete(event.pointerId);
-    if (activePointerId === event.pointerId) {
-      activePointerId = activePointers.keys().next().value ?? null;
-      const next = activePointerId === null ? null : activePointers.get(activePointerId);
+    raw.activePointers.delete(event.pointerId);
+    if (raw.activePointerId === event.pointerId) {
+      raw.activePointerId = raw.activePointers.keys().next().value ?? null;
+      const next = raw.activePointerId === null ? null : raw.activePointers.get(raw.activePointerId);
       if (next) {
-        x = next.x;
-        y = next.y;
+        raw.x = next.x;
+        raw.y = next.y;
       }
     }
-    down = activePointers.size > 0;
-    released = true;
+    raw.down = raw.activePointers.size > 0;
+    raw.released = true;
     target.releasePointerCapture?.(event.pointerId);
   };
 
   const onWheel = (event: WheelEvent) => {
     event.preventDefault();
-    wheel += event.deltaY;
+    raw.wheel += event.deltaY;
   };
 
   target.addEventListener("pointerdown", onPointerDown);
@@ -82,30 +124,70 @@ export function createPointer(target: HTMLElement, getLayout: () => SurfaceLayou
   target.addEventListener("pointercancel", endPointer);
   target.addEventListener("wheel", onWheel, { passive: false });
 
+  const preUpdate = () => {
+    snapshot.down = raw.down;
+    snapshot.pressed = raw.pressed;
+    snapshot.released = raw.released;
+    snapshot.x = raw.x;
+    snapshot.y = raw.y;
+    snapshot.wheel = raw.wheel;
+    snapshot.pointers = Array.from(raw.activePointers, ([id, position]) => ({ id, ...position }));
+    raw.pressed = false;
+    raw.released = false;
+    raw.wheel = 0;
+  };
+
+  const postUpdate = () => {
+    snapshot.pressed = false;
+    snapshot.released = false;
+    snapshot.wheel = 0;
+  };
+
+  const clearAll = () => {
+    raw.down = false;
+    raw.pressed = false;
+    raw.released = false;
+    raw.x = 0;
+    raw.y = 0;
+    raw.wheel = 0;
+    raw.activePointerId = null;
+    raw.activePointers.clear();
+    snapshot.down = false;
+    snapshot.pressed = false;
+    snapshot.released = false;
+    snapshot.x = 0;
+    snapshot.y = 0;
+    snapshot.wheel = 0;
+    snapshot.pointers = [];
+  };
+
   return {
     isDown() {
-      return down;
+      return snapshot.down;
     },
     wasPressed() {
-      const result = pressed;
-      pressed = false;
-      return result;
+      return snapshot.pressed;
     },
     wasReleased() {
-      const result = released;
-      released = false;
-      return result;
+      return snapshot.released;
     },
     position() {
-      return { x, y };
+      return { x: snapshot.x, y: snapshot.y };
     },
     pointers() {
-      return Array.from(activePointers, ([id, position]) => ({ id, ...position }));
+      return snapshot.pointers.map((pointer) => ({ ...pointer }));
     },
     wheelDelta() {
-      const result = wheel;
-      wheel = 0;
-      return result;
+      return snapshot.wheel;
+    },
+    preUpdate() {
+      preUpdate();
+    },
+    postUpdate() {
+      postUpdate();
+    },
+    clearAll() {
+      clearAll();
     },
     destroy() {
       target.removeEventListener("pointerdown", onPointerDown);
@@ -113,12 +195,7 @@ export function createPointer(target: HTMLElement, getLayout: () => SurfaceLayou
       target.removeEventListener("pointerup", endPointer);
       target.removeEventListener("pointercancel", endPointer);
       target.removeEventListener("wheel", onWheel);
-      activePointerId = null;
-      activePointers.clear();
-      down = false;
-      pressed = false;
-      released = false;
-      wheel = 0;
+      clearAll();
     },
   };
 }
