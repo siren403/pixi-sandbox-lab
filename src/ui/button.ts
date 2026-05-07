@@ -1,4 +1,4 @@
-import { FancyButton } from "@pixi/ui";
+import { ButtonContainer } from "@pixi/ui";
 import { Container, Graphics, Text } from "pixi.js";
 import { tokenValue } from "../runtime/surface";
 import { surfaceTheme } from "./tokens";
@@ -6,7 +6,7 @@ import type { SurfaceLayout } from "../runtime/scene";
 
 type TokenSize = { design: number; minScreenPx?: number; maxScreenPx?: number };
 
-export type ButtonPrimitive = FancyButton & {
+export type ButtonPrimitive = ButtonContainer & {
   background: Graphics;
   labelText: Text;
   metrics: {
@@ -54,16 +54,6 @@ export function createButton({
     .fill({ color: fill, alpha: 0.94 })
     .stroke({ color: stroke, width: strokeWidth });
   background.label = "button-background";
-  const hoverBackground = new Graphics()
-    .roundRect(0, 0, width, height, radius)
-    .fill({ color: fill, alpha: 1 })
-    .stroke({ color: stroke, width: strokeWidth * 1.35 });
-  hoverBackground.label = "button-background-hover";
-  const pressedBackground = new Graphics()
-    .roundRect(0, 0, width, height, radius)
-    .fill({ color: fill, alpha: 0.82 })
-    .stroke({ color: stroke, width: strokeWidth * 1.1 });
-  pressedBackground.label = "button-background-pressed";
 
   const labelText = new Text({
     text,
@@ -76,15 +66,9 @@ export function createButton({
   });
   labelText.label = "button-label";
   labelText.anchor.set(0.5);
+  labelText.position.set(width / 2, height / 2);
 
-  const button = new FancyButton({
-    defaultView: background,
-    hoverView: hoverBackground,
-    pressedView: pressedBackground,
-    text: labelText,
-    padding: tokenValue(layout, surfaceTheme.spacing.xs),
-    contentFittingMode: "none",
-  }) as ButtonPrimitive;
+  const button = new ButtonContainer() as ButtonPrimitive;
   button.label = "button";
   button.background = background;
   button.labelText = labelText;
@@ -97,6 +81,21 @@ export function createButton({
     labelCenterY: height / 2,
   };
   button.addChild(background, labelText);
+  button.onHover.connect(() => {
+    redrawButtonBackground(background, { width, height, radius, fill, stroke, strokeWidth: strokeWidth * 1.35, alpha: 1 });
+  });
+  button.onOut.connect(() => {
+    redrawButtonBackground(background, { width, height, radius, fill, stroke, strokeWidth, alpha: 0.94 });
+  });
+  button.onDown.connect(() => {
+    redrawButtonBackground(background, { width, height, radius, fill, stroke, strokeWidth: strokeWidth * 1.1, alpha: 0.82 });
+  });
+  button.onUp.connect(() => {
+    redrawButtonBackground(background, { width, height, radius, fill, stroke, strokeWidth: strokeWidth * 1.35, alpha: 1 });
+  });
+  button.onUpOut.connect(() => {
+    redrawButtonBackground(background, { width, height, radius, fill, stroke, strokeWidth, alpha: 0.94 });
+  });
   return button;
 }
 
@@ -135,4 +134,23 @@ function toDesignBounds(
     width: bounds.width / layout.scale,
     height: bounds.height / layout.scale,
   };
+}
+
+function redrawButtonBackground(
+  background: Graphics,
+  options: {
+    width: number;
+    height: number;
+    radius: number;
+    fill: number;
+    stroke: string;
+    strokeWidth: number;
+    alpha: number;
+  },
+): void {
+  background
+    .clear()
+    .roundRect(0, 0, options.width, options.height, options.radius)
+    .fill({ color: options.fill, alpha: options.alpha })
+    .stroke({ color: options.stroke, width: options.strokeWidth });
 }

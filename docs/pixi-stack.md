@@ -82,7 +82,7 @@ Accepted direction:
 - Floating DOM controls should be reduced to development inspection duties, such as layout bounds tooling, while app navigation and scene controls move into Pixi UI.
 - Scene-specific controls should render as bottom sheet content so mobile portrait playtesting keeps a clean default screen.
 - AppShell is only one member of a broader Pixi layout component system. Repeated content surfaces such as popups, settings, shops, sample indexes, and scene controls should reuse layout components instead of scene-local coordinate placement.
-- `@pixi/layout` should remain the default for AppShell slots, bars, sheets, and sample lists. `@pixi/ui` remains deferred until controls like sliders, checkboxes, scroll/list, or text input repeat across scenes.
+- `@pixi/layout` should remain the default for AppShell slots, bars, sheets, and sample lists. `@pixi/ui` starts at the minimum event layer through `ButtonContainer`; higher-level controls such as `FancyButton`, sliders, checkboxes, scroll/list, or text input remain deferred until they repeat across scenes.
 
 Debug/E2E bridge direction:
 

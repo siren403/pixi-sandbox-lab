@@ -156,7 +156,7 @@ Button:
 - Use `button-primary` for the boot start action and design-system control samples.
 - The text label is horizontally and vertically centered.
 - Minimum visible touch target is `48px` screen-space height; current boot button target is larger.
-- Use `createButton()` rather than hand-building a `Graphics + Text` pair. `createButton()` is the project wrapper around `@pixi/ui` `FancyButton`.
+- Use `createButton()` rather than hand-building a `Graphics + Text` pair. `createButton()` keeps project-owned drawing and uses `@pixi/ui` `ButtonContainer` for button events.
 
 HUD row:
 
