@@ -1,8 +1,10 @@
-import { Container, Graphics, Rectangle } from "pixi.js";
+import { Container, Graphics } from "pixi.js";
 import type { SurfaceLayout } from "../../runtime/scene";
 import { pixiTo } from "../../runtime/motion";
 import { tokenValue } from "../../runtime/surface";
 import { containsBounds, createButton, readButtonBounds, type ButtonPrimitive, type UiBounds } from "../button";
+import { createBlockingPanel } from "../blockingPanel";
+import { createBottomSheetHandle } from "../bottomSheetHandle";
 import { createLabel } from "../label";
 import { surfaceTheme } from "../tokens";
 
@@ -310,34 +312,29 @@ function createBottomSheetHost(
 
   const sidePadding = tokenValue(layout, surfaceTheme.spacing.sm);
   const sectionGap = tokenValue(layout, surfaceTheme.spacing.xs);
-  const background = new Graphics()
-    .roundRect(0, 0, frame.width, frame.height, tokenValue(layout, { design: 32, minScreenPx: 18 }))
-    .fill({ color: 0x0b1220, alpha: 1 })
-    .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.5 });
-  background.label = "bottom-sheet-blocker";
-  background.eventMode = "static";
-  background.hitArea = new Rectangle(0, 0, frame.width, frame.height);
-  const stopPropagation = (event: { stopPropagation: () => void }) => {
-    event.stopPropagation();
-  };
-  background.on("pointerdown", stopPropagation);
-  background.on("pointerup", stopPropagation);
-  background.on("pointertap", stopPropagation);
-  background.on("pointermove", stopPropagation);
-  background.on("pointerover", stopPropagation);
-  background.on("pointerout", stopPropagation);
+  const bottomSheetPanel = createBlockingPanel(
+    { x: 0, y: 0, width: frame.width, height: frame.height },
+    {
+      label: "bottom-sheet-panel",
+      fillColor: 0x0b1220,
+      fillAlpha: 1,
+      strokeColor: surfaceTheme.color.actionAccent,
+      strokeWidth: Math.max(1, 2 / layout.scale),
+      strokeAlpha: 0.5,
+      radius: tokenValue(layout, { design: 32, minScreenPx: 18 }),
+    },
+  );
+  bottomSheetPanel.alpha = 0.88;
 
-  const handleRowHeight = tokenValue(layout, { design: 44, minScreenPx: 22 });
+  const bottomSheetHandle = createBottomSheetHandle(layout, frame.width);
+  const handleRowHeight = bottomSheetHandle.hitHeight;
   const handleRow = new Container({ label: "bottom-sheet-handle-row" });
   handleRow.position.set(0, tokenValue(layout, surfaceTheme.spacing.xs));
-  const handleWidth = tokenValue(layout, { design: 92, minScreenPx: 48 });
-  const handleHeight = tokenValue(layout, { design: 10, minScreenPx: 6 });
-  const handle = new Graphics()
-    .roundRect(0, 0, handleWidth, handleHeight, handleHeight / 2)
-    .fill({ color: 0xe2e8f0, alpha: 0.42 });
-  handle.label = "bottom-sheet-handle";
-  handle.position.set((frame.width - handleWidth) / 2, (handleRowHeight - handleHeight) / 2);
-  handleRow.addChild(handle);
+  handleRow.layout = {
+    width: frame.width,
+    height: handleRowHeight,
+  };
+  handleRow.addChild(bottomSheetHandle);
 
   const title = createLabel({
     text: options.sheetTitle ?? "Controls",
@@ -398,12 +395,9 @@ function createBottomSheetHost(
     cursorY += lineHeight + tokenValue(layout, surfaceTheme.spacing.xs);
   }
 
-  const content = new Container({ label: "bottom-sheet-content" });
-  content.addChild(handleRow, header, body);
-
-  host.addChild(background, content);
-  host.alpha = 0.88;
-  pixiTo(host, {
+  bottomSheetPanel.content.addChild(handleRow, header, body);
+  host.addChild(bottomSheetPanel);
+  pixiTo(bottomSheetPanel, {
     pixi: { alpha: 1 },
     duration: 0.16,
     ease: "sine.out",

@@ -22,14 +22,35 @@ test("renders design-system scene with inspectable layout contracts", async ({ p
   expect(designSystemState?.labels).toBeGreaterThanOrEqual(3);
   expect(designSystemState?.swatches).toBeGreaterThanOrEqual(6);
   expect(designSystemState?.typeSamples).toBeGreaterThanOrEqual(3);
-  expect(designSystemState?.componentSamples).toBeGreaterThanOrEqual(2);
+  expect(designSystemState?.componentSamples).toBeGreaterThanOrEqual(4);
   expect(designSystemState?.safeAreaSamples).toBeGreaterThanOrEqual(2);
   expect(designSystemState?.buttonScreenHeight).toBeGreaterThanOrEqual(48);
   expect(designSystemState?.inputTargetScreenSize).toBeGreaterThanOrEqual(44);
   expect(designSystemState?.markerScreenSize).toBeGreaterThanOrEqual(20);
+  expect(designSystemState?.bottomSheetHandleScreenHeight).toBeGreaterThanOrEqual(48);
+  expect(designSystemState?.bottomSheetHandleHitBounds.height).toBeGreaterThanOrEqual(48);
+  expect(designSystemState?.blockingPanelBlockerBounds.width).toBeGreaterThan(0);
+  expect(designSystemState?.blockingPanelBlockerBounds.height).toBeGreaterThan(0);
+  expect(designSystemState?.blockingPanelContentButtonBounds.height).toBeGreaterThanOrEqual(48);
   expect(designSystemState?.buttonCenterDeltaY).toBeLessThanOrEqual(1.5);
   expect(designSystemState?.layerLabels).toEqual(["world-layer", "ui-layer", "debug-layer"]);
   const initialSections = designSystemState?.sections ?? 0;
+  const initialBlockingPanelPresses = designSystemState?.blockingPanelButtonPresses ?? 0;
+  await clickCanvasAt(
+    page,
+    canvas,
+    (designSystemState?.blockingPanelContentButtonBounds.x ?? 0) + (designSystemState?.blockingPanelContentButtonBounds.width ?? 0) / 2,
+    (designSystemState?.blockingPanelContentButtonBounds.y ?? 0) + (designSystemState?.blockingPanelContentButtonBounds.height ?? 0) / 2,
+  );
+  await expect
+    .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.designSystem?.blockingPanelButtonPresses ?? 0), { timeout: 15000 })
+    .toBe(initialBlockingPanelPresses + 1);
+  const blockingPanelPressesAfterButton = (await readDebugSnapshot(page))?.designSystem?.blockingPanelButtonPresses ?? 0;
+  const blockerBounds = (await readDebugSnapshot(page))?.designSystem?.blockingPanelBlockerBounds;
+  await clickCanvasAt(page, canvas, (blockerBounds?.x ?? 0) + (blockerBounds?.width ?? 0) - 8, (blockerBounds?.y ?? 0) + (blockerBounds?.height ?? 0) - 8);
+  await expect
+    .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.designSystem?.blockingPanelButtonPresses ?? 0), { timeout: 15000 })
+    .toBe(blockingPanelPressesAfterButton);
   await expect
     .poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.layout?.layoutNodes ?? 0))
     .toBeGreaterThanOrEqual(16);

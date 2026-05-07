@@ -67,6 +67,12 @@ export type PixiDesignSystemDebugState = {
   buttonScreenHeight: number;
   inputTargetScreenSize: number;
   markerScreenSize: number;
+  blockingPanelBounds: RectState;
+  blockingPanelBlockerBounds: RectState;
+  blockingPanelContentButtonBounds: RectState;
+  blockingPanelButtonPresses: number;
+  bottomSheetHandleHitBounds: RectState;
+  bottomSheetHandleScreenHeight: number;
   buttonCenterDeltaY: number;
   layerLabels: string[];
   appShell?: PixiSampleAppShellDebugState;

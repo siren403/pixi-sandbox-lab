@@ -8,6 +8,8 @@ import { navigateToSceneIndex } from "../runtime/navigation";
 import { createWorld, type World } from "../runtime/world";
 import type { WorldCamera } from "../runtime/worldCamera";
 import { createButton } from "../ui/button";
+import { createBlockingPanel } from "../ui/blockingPanel";
+import { createBottomSheetHandle } from "../ui/bottomSheetHandle";
 import { createLabel } from "../ui/label";
 import { configureSafeAreaRow } from "../ui/layout";
 import {
@@ -93,6 +95,7 @@ type DesignSystemState = {
 let sceneSwitches = 0;
 let removeDebugListeners: (() => void) | null = null;
 let layoutBoundsEnabled = false;
+let designSystemBlockingPanelButtonPresses = 0;
 const cameraByWorld = new WeakMap<Container, WorldCamera>();
 const worldByLayer = new WeakMap<Container, World>();
 const sampleShellState: Record<SampleSceneId, SampleShellState> = {
@@ -986,6 +989,97 @@ function renderDesignSystem(layer: Container, layout: SurfaceLayout, frame: Rect
 
   componentRow.addChild(button, marker, motion);
   componentSection.addChild(componentRow);
+
+  const blockingDemoWidth = panelWidth;
+  const blockingDemoHeight = tokenValue(layout, { design: 156, minScreenPx: 88, maxScreenPx: 120 });
+  const blockingPanelCard = createPanel({
+    layout,
+    label: "ds-blocking-panel-card",
+    width: blockingDemoWidth,
+    direction: "column",
+    gap: sectionGap * 0.32,
+  });
+  const blockingPanelLabel = createLabel({
+    text: "Blocking panel",
+    layout,
+    fontSize: { design: 30, minScreenPx: 16, maxScreenPx: 24 },
+    color: "#bfdbfe",
+    label: "ds-blocking-panel-label",
+  });
+  blockingPanelLabel.layout = {
+    height: tokenValue(layout, { design: 42, minScreenPx: 24, maxScreenPx: 34 }),
+  };
+  const blockingPanelSample = createBlockingPanel(
+    { x: 0, y: 0, width: blockingDemoWidth, height: blockingDemoHeight },
+    {
+      label: "ds-component-sample",
+      fillColor: surfaceTheme.color.primary,
+      fillAlpha: 0.78,
+      strokeColor: surfaceTheme.color.actionAccent,
+      strokeAlpha: 0.3,
+      strokeWidth: Math.max(1, 2 / layout.scale),
+      radius: tokenValue(layout, { design: 24, minScreenPx: 14 }),
+    },
+  );
+  blockingPanelSample.content.layout = {
+    width: blockingDemoWidth - margin,
+    height: blockingDemoHeight - margin,
+    flexDirection: "column",
+    gap: margin * 0.22,
+  };
+  const blockingPanelCopy = createLabel({
+    text: "Block background input, keep content interactive.",
+    layout,
+    fontSize: { design: 28, minScreenPx: 15, maxScreenPx: 22 },
+    color: surfaceTheme.color.text,
+    label: "ds-blocking-panel-copy",
+  });
+  blockingPanelCopy.layout = {
+    height: tokenValue(layout, { design: 46, minScreenPx: 26, maxScreenPx: 34 }),
+  };
+  const blockingPanelButton = createButton({
+    text: "Content button",
+    width: Math.min(blockingDemoWidth - margin * 2, 264 / layout.scale),
+    height: buttonHeight,
+    layout,
+    fontSize: surfaceTheme.components.buttonPrimary.typography,
+    textColor: surfaceTheme.color.text,
+  });
+  blockingPanelButton.label = "blocking-panel-content-button";
+  blockingPanelButton.layout = {
+    width: Math.min(blockingDemoWidth - margin * 2, 264 / layout.scale),
+    height: buttonHeight,
+  };
+  blockingPanelButton.onPress.connect(() => {
+    designSystemBlockingPanelButtonPresses += 1;
+    syncDesignSystemState(layout, layer);
+  });
+  blockingPanelSample.content.addChild(blockingPanelCopy, blockingPanelButton);
+  blockingPanelCard.addChild(blockingPanelLabel, blockingPanelSample);
+  componentSection.addChild(blockingPanelCard);
+
+  const handleCard = createPanel({
+    layout,
+    label: "ds-bottom-sheet-handle-card",
+    width: blockingDemoWidth,
+    direction: "column",
+    gap: sectionGap * 0.32,
+  });
+  const handleLabel = createLabel({
+    text: "Bottom sheet handle",
+    layout,
+    fontSize: { design: 30, minScreenPx: 16, maxScreenPx: 24 },
+    color: "#bfdbfe",
+    label: "ds-bottom-sheet-handle-label",
+  });
+  handleLabel.layout = {
+    height: tokenValue(layout, { design: 42, minScreenPx: 24, maxScreenPx: 34 }),
+  };
+  const bottomSheetHandle = createBottomSheetHandle(layout, blockingDemoWidth);
+  bottomSheetHandle.label = "ds-component-sample";
+  handleCard.addChild(handleLabel, bottomSheetHandle);
+  componentSection.addChild(handleCard);
+
   root.addChild(componentSection);
   layer.addChild(root);
 }
@@ -1057,6 +1151,12 @@ function syncDesignSystemState(layout: SurfaceLayout, stage: Container): void {
     buttonScreenHeight: screenValue(layout, surfaceTheme.components.buttonPrimary.height),
     inputTargetScreenSize: screenValue(layout, surfaceTheme.components.inputTarget.size),
     markerScreenSize: screenValue(layout, surfaceTheme.components.marker.size),
+    blockingPanelBounds: getPixiBounds(stage, "ds-component-sample"),
+    blockingPanelBlockerBounds: getPixiBounds(stage, "ds-component-sample-blocker"),
+    blockingPanelContentButtonBounds: getPixiBounds(stage, "blocking-panel-content-button"),
+    blockingPanelButtonPresses: designSystemBlockingPanelButtonPresses,
+    bottomSheetHandleHitBounds: getPixiBounds(stage, "bottom-sheet-handle-hit-target"),
+    bottomSheetHandleScreenHeight: getPixiBounds(stage, "bottom-sheet-handle-hit-target").height,
     buttonCenterDeltaY: measureButtonCenterDeltaY(stage),
     layerLabels: stage.children.map((child) => child.label ?? ""),
     appShell: readSampleAppShellDebugState("design-system"),
