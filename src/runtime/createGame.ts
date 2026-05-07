@@ -123,8 +123,38 @@ export async function createGame(options: GameOptions): Promise<Application> {
     sceneManager.update(ticker.deltaMS / 1000, ctx);
   });
 
-  window.addEventListener("beforeunload", () => {
+  const recoverSurface = () => {
+    if (destroyed) return;
+    if (!app.canvas.isConnected) parent.replaceChildren(app.canvas);
+    app.ticker.start();
+    updateSurfaceLayout(ctx, options.width, options.height);
+    sceneManager.resize(ctx);
+    app.renderer.layout.update(layers.root);
+    app.render();
+  };
+
+  const onPageHide = (event: PageTransitionEvent) => {
+    if (event.persisted) return;
+    destroyGame();
+  };
+  const onPageShow = () => recoverSurface();
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") recoverSurface();
+  };
+  const onContextLost = (event: Event) => {
+    event.preventDefault();
+  };
+  const onContextRestored = () => recoverSurface();
+  let destroyed = false;
+  const destroyGame = () => {
+    if (destroyed) return;
+    destroyed = true;
     app.renderer.off("resize", onResize);
+    window.removeEventListener("pagehide", onPageHide);
+    window.removeEventListener("pageshow", onPageShow);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    app.canvas.removeEventListener("webglcontextlost", onContextLost);
+    app.canvas.removeEventListener("webglcontextrestored", onContextRestored);
     destroyLayoutDebug();
     restoreDebugReadyHandler();
     commands.destroy();
@@ -132,7 +162,13 @@ export async function createGame(options: GameOptions): Promise<Application> {
     keyboard.destroy();
     pointer.destroy();
     app.destroy();
-  });
+  };
+
+  window.addEventListener("pagehide", onPageHide);
+  window.addEventListener("pageshow", onPageShow);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  app.canvas.addEventListener("webglcontextlost", onContextLost);
+  app.canvas.addEventListener("webglcontextrestored", onContextRestored);
 
   return app;
 }
