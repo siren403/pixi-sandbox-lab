@@ -366,6 +366,12 @@ When MCP config is added, register:
 - `docs/harness-task-boundary.md`  
   Defines the task boundary workflow: `task-plan`, `task-start`, implementation, `task-end`, Stop dirty-state hook, and harness-audit follow-up.
 
+- `docs/harness-task-loop-implementation.md`
+  Portable implementation spec for applying the task loop guardrail in another agent harness, including state files, command surface, hook set, agent instructions, Claude Code mapping, adoption phases, validation checklist, and first-cut rollout scope.
+  Discovery route: `harness_architect` boot discovery reads `docs/harness*.md`; users may hand this document to another project for pre-implementation review.
+  Expected user/agent: parent Codex, harness architects, and external harness implementers evaluating task-loop adoption.
+  Validation: documentation reference checks, `git diff --check`, and `mise run validate-skills`.
+
 ### Demo-Project Documentation
 
 - `DESIGN.md`
