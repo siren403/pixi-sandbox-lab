@@ -96,6 +96,8 @@ Before implementation:
 - Define E2E checks that prove canvas fill, no offset, no crop of critical UI, and interaction.
 - For layout/debuggable UI, include a check that layout nodes exist and relevant component bounds are inspectable.
 - For semantic components, include contract checks such as button label center delta, touch target minimum size, or no-overlap assertions.
+- For panels, bottom sheets, popups, modals, and invisible overlays, define the input blocking contract before implementation. Prefer a dedicated blocker/backdrop object with `eventMode: "static"` and an explicit `hitArea`; do not rely on empty `Container` bounds.
+- When panel content remains interactive, keep the blocker/backdrop separate from the content container so child buttons and lists can still receive events.
 - For Pixi framework API surface changes, check namespace symmetry, public/raw separation, one-shot args versus store boundaries, and legacy normalization.
 
 After implementation:

@@ -168,6 +168,10 @@ Panel:
 
 - Use `createPanel()` for grouped design-system samples and future menus/modals.
 - Major design-system sections must be layout nodes so the layout/bounds debug overlay can inspect them.
+- Visible panels, bottom sheets, popups, modal backdrops, and invisible input blockers must own their covered input region. Use a Pixi interactive object with `eventMode: "static"` and an explicit `hitArea` for the blocking region.
+- Do not rely on an empty `Container` or a visual `Graphics` bounds alone for input blocking. If the covered area matters, set the hit area deliberately.
+- If panel content must remain interactive, split the blocker/backdrop object from the content container. Do not set `interactiveChildren = false` on a container that must pass input to child buttons, lists, or form controls.
+- Backdrop-like blockers should stop pointer propagation for the pointer events they consume. Closing on backdrop tap is an explicit component option, not the default behavior.
 
 Safe-area containers:
 
@@ -190,6 +194,7 @@ Proposed layout component contracts:
 - `ContentHost` provides the usable scene or page region after top/bottom shell regions are reserved. It must not be silently covered by closed shell UI.
 - `BottomBar` sits inside the safe-area frame and exposes controls/debug/sheet trigger slots with centered labels or icons and stable hit targets.
 - `BottomSheetHost` owns sheet bounds, open/closed state visuals, optional scrim, clipping, and input capture rules. Sheet content is supplied separately.
+- `BottomSheetHost` must block pointer input inside the open sheet bounds, including visually empty sheet background. If it uses a scrim, the scrim must also have an explicit hit area and input policy.
 - `SceneIndexLayout` is a safe-area-aware list/grid surface for sample cards or rows. Each item must have a visible label, stable bounds, and a touch target of at least `48px` screen-space height.
 - `DebugSheetContent` may expose reload, scene navigation, layout inspection, and runtime status in demo/debug builds. It should use the same layout primitives as other sheet content.
 - Scene-specific controls should be provided as bottom sheet content rather than floating over the gameplay surface.

@@ -112,6 +112,16 @@ Promotion criteria:
 - pointer runtime은 browser coordinate를 surface design-space coordinate로 변환해 scene에 제공한다.
 - scene은 viewport 픽셀을 직접 읽지 않고 `ctx.pointer`의 `isDown()`, `wasPressed()`, `wasReleased()`, `position()`을 사용한다.
 
+### UI 입력 차단 정책
+
+Pixi UI는 DOM처럼 "보이는 패널이면 자동으로 뒤 입력을 막는다"는 보장을 주지 않는다. 런타임과 UI primitives는 패널, 바텀시트, 팝업, 모달, 투명 입력 블로커가 자기 입력 영역을 명시적으로 소유하도록 만들어야 한다.
+
+- 입력을 막는 영역은 `eventMode: "static"`과 명시적인 `hitArea`를 가진 Pixi object로 표현한다.
+- 빈 `Container`만으로 입력 차단을 기대하지 않는다. 투명하거나 시각적으로 빈 영역도 입력을 잡아야 하면 hit area를 반드시 둔다.
+- 패널 안쪽 버튼이나 리스트가 상호작용해야 하면 blocker/backdrop object와 content container를 분리한다.
+- backdrop tap으로 닫기는 컴포넌트 옵션이다. 단순 입력 차단과 닫기 동작을 같은 기본값으로 묶지 않는다.
+- 이 정책은 `@pixi/ui`의 `Dialog`가 내부 backdrop을 interactive object로 두는 패턴과 같은 계열이며, AppShell bottom sheet나 future popup에는 project-owned `BlockingPanel`/`InputBlocker` primitive로 승격할 수 있다.
+
 ### 명시적으로 기본값에서 제외
 
 - `cover/crop`: 화면은 채우지만 중요한 콘텐츠가 잘릴 수 있으므로 기본 정책으로 쓰지 않는다.
