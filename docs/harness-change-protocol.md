@@ -100,6 +100,9 @@ Use this format:
    - `harness_architect`: architecture, protocol compliance, inventory/discovery updates.
    - Creator skill or specialist agent: exact generation/research responsibility.
    - Worker/explorer agents: bounded implementation or read-only discovery tasks.
+   - For cost control, assign bounded implementation to `scoped_worker` after architecture and expected behavior are clear.
+   - For contract-bearing work, assign a domain specialist reviewer instead of relying on parent-only review. Examples: `pixi_surface_architect` for Pixi UI primitives/app surface, `harness_architect` for harness specs, and `plan_reviewer` for non-trivial implementation plans.
+   - Parent Codex integrates worker output only after reviewer feedback is resolved or explicitly deferred with a reason.
    - File ownership for each role.
 
 3. **Scope**

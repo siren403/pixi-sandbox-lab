@@ -98,7 +98,7 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   UI metadata for the `task-end` skill.
 
 - `.agents/skills/task-plan/SKILL.md`  
-  Provides the pre-implementation planning procedure with feature summary, concrete assigned agents, scope, validation, closeout, plan review, and optional persisted review-loop state.
+  Provides the pre-implementation planning procedure with feature summary, concrete assigned agents, scope, validation, closeout, plan review, optional persisted review-loop state, and the delegation/review heuristic for cost-efficient scoped-worker implementation plus specialist review of contract-bearing work.
   Discovery route: `harness_architect` boot discovery reads `.agents/skills/*/SKILL.md`.
   Expected user/agent: parent Codex and harness agents planning non-trivial work.
   Validation: `mise run validate-skills`; review-loop behavior is validated through `mise run task-plan-loop -- ...` smoke tests.

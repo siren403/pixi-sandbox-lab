@@ -137,6 +137,22 @@ Common commands:
 - Do not add generic validators unless they prove the feature behavior.
 - Do not implement while using this skill unless the user separately approves implementation.
 
+## Delegation and Review Heuristic
+
+Use this role split for cost-efficient but reviewed execution:
+
+- The parent agent owns task sequencing, user-facing decisions, integration, final validation, commit, and closeout.
+- Use a specialist or architect for unsettled design, API surface, domain policy, or review of contract-bearing work.
+- After design and expected behavior are clear, prefer a low-cost scoped worker for bounded implementation when target files, ownership, and validation commands are explicit.
+- Do not let the parent agent be the only reviewer for UI primitives, framework contracts, harness specs, public APIs, release/debug boundaries, or cross-scene behavior. Assign the relevant specialist reviewer in the plan.
+- The parent integrates worker output only after specialist review feedback is resolved or explicitly deferred with a reason.
+
+Common patterns:
+
+- Pixi UI primitive or app-surface work: `pixi_surface_architect` reviews, `scoped_worker` implements, parent integrates and validates.
+- Harness spec work: `harness_architect` owns protocol fit, `plan_reviewer` reviews non-trivial plans, parent integrates and validates.
+- Mechanical single-scope patches with no contract change may use `scoped_worker` implementation plus parent validation only.
+
 ## Task-Start Handoff
 
 Before implementation, the approved plan should provide enough information for `task-start` to create an active task manifest.
