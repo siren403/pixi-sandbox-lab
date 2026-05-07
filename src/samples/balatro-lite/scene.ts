@@ -3,7 +3,14 @@ import type { SurfaceLayout } from "../../runtime/scene";
 import { navigateToSceneIndex } from "../../runtime/navigation";
 import { scene } from "../../runtime/scene";
 import { tokenValue } from "../../runtime/surface";
-import { containsBounds, createButton, readButtonBounds, readUiBounds, type UiBounds } from "../../ui/button";
+import {
+  containsBounds,
+  createButton,
+  readButtonBounds,
+  readUiBounds,
+  type ButtonPrimitive,
+  type UiBounds,
+} from "../../ui/button";
 import { createLabel } from "../../ui/label";
 import {
   createAppShell,
@@ -210,17 +217,22 @@ function renderScene({
   const statsHeight = token(layout, 108);
   const actionHeight = tokenValue(layout, surfaceTheme.components.buttonPrimary.height);
   const cardGap = token(layout, 14);
-  const cardWidth = Math.max(
-    token(layout, 72),
-    Math.min((contentWidth - cardGap * 3) / 4, (contentHeight - statsHeight - actionHeight - gap * 5) / 2.15, token(layout, 168)),
-  );
-  const cardHeight = Math.min(cardWidth * 1.42, (contentHeight - statsHeight - actionHeight - gap * 5) / 2);
-  const gridWidth = cardWidth * 4 + cardGap * 3;
-  const gridX = Math.max(0, (contentWidth - gridWidth) / 2);
+  const grid = resolveCardGrid({
+    contentWidth,
+    contentHeight,
+    padding,
+    gap,
+    cardGap,
+    statsHeight,
+    actionHeight,
+    cardCount: game.hand.length,
+  });
+  const availableWidth = Math.max(0, contentWidth - padding * 2);
+  const gridX = padding + Math.max(0, (availableWidth - grid.gridWidth) / 2);
   const statsRow = new Container({ label: "balatro-lite-stats" });
   statsRow.position.set(padding, padding);
   statsRow.layout = {
-    width: contentWidth - padding * 2,
+    width: availableWidth,
     height: statsHeight,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -269,15 +281,15 @@ function renderScene({
   const handContainer = new Container({ label: "balatro-lite-hand" });
   handContainer.position.set(0, statsRow.y + statsHeight + gap);
   handContainer.layout = {
-    width: contentWidth,
-    height: cardHeight * 2 + cardGap,
+    width: availableWidth,
+    height: grid.gridHeight,
   };
 
-  const cards = game.hand.slice(0, 8).map((card, index) => createCardButton(card, layout, game, cardWidth, cardHeight));
+  const cards = game.hand.slice(0, 8).map((card, index) => createCardButton(card, layout, game, grid.cardWidth, grid.cardHeight));
   for (const [index, cardButton] of cards.entries()) {
-    const column = index % 4;
-    const row = Math.floor(index / 4);
-    cardButton.position.set(gridX + column * (cardWidth + cardGap), row * (cardHeight + cardGap));
+    const column = index % grid.columns;
+    const row = Math.floor(index / grid.columns);
+    cardButton.position.set(gridX + column * (grid.cardWidth + cardGap), row * (grid.cardHeight + cardGap));
     handContainer.addChild(cardButton);
   }
 
@@ -298,17 +310,20 @@ function renderScene({
   }
 
   const actionRow = new Container({ label: "balatro-lite-actions" });
-  actionRow.position.set(padding, handContainer.y + cardHeight * 2 + cardGap + gap);
+  actionRow.position.set(padding, handContainer.y + grid.gridHeight + gap);
   actionRow.layout = {
-    width: contentWidth - padding * 2,
+    width: availableWidth,
     height: actionHeight,
     flexDirection: "row",
     gap,
+    justifyContent: "center",
+    alignItems: "center",
   };
 
+  const actionButtonWidth = Math.max(0, Math.min((availableWidth - gap) / 2, token(layout, 280)));
   const playHandButton = createButton({
     text: canPlayHand(game) ? "Play Hand" : "Select Cards",
-    width: Math.min((contentWidth - padding * 2 - gap) / 2, token(layout, 280)),
+    width: actionButtonWidth,
     height: actionHeight,
     layout,
     fontSize: surfaceTheme.components.buttonPrimary.typography,
@@ -318,12 +333,12 @@ function renderScene({
   });
   playHandButton.label = "balatro-play-hand";
   playHandButton.layout = {
-    width: Math.min((contentWidth - padding * 2 - gap) / 2, token(layout, 280)),
+    width: actionButtonWidth,
     height: actionHeight,
   };
   const nextRoundButton = createButton({
     text: canAdvanceRound(game) ? "Next Round" : "Waiting",
-    width: Math.min((contentWidth - padding * 2 - gap) / 2, token(layout, 280)),
+    width: actionButtonWidth,
     height: actionHeight,
     layout,
     fontSize: surfaceTheme.components.buttonPrimary.typography,
@@ -333,7 +348,7 @@ function renderScene({
   });
   nextRoundButton.label = "balatro-next-round";
   nextRoundButton.layout = {
-    width: Math.min((contentWidth - padding * 2 - gap) / 2, token(layout, 280)),
+    width: actionButtonWidth,
     height: actionHeight,
   };
   actionRow.addChild(playHandButton, nextRoundButton);
@@ -375,9 +390,9 @@ function createCardButton(
 function syncDebugState(
   layout: SurfaceLayout,
   shell: AppShell,
-  cardButtons: Array<ReturnType<typeof createButton>>,
-  playHandButton: ReturnType<typeof createButton>,
-  nextRoundButton: ReturnType<typeof createButton>,
+  cardButtons: Array<ButtonPrimitive>,
+  playHandButton: ButtonPrimitive,
+  nextRoundButton: ButtonPrimitive,
   statsRow: Container,
   handContainer: Container,
   actionRow: Container,
@@ -418,6 +433,8 @@ function syncDebugState(
     cardBounds,
     playHandButtonBounds,
     nextRoundButtonBounds,
+    playHandButtonMetrics: playHandButton.metrics,
+    nextRoundButtonMetrics: nextRoundButton.metrics,
     appShell: {
       activeSheet: appShellButtons.activeSheet,
       sheetBounds: appShellButtons.sheet,
@@ -443,6 +460,61 @@ function syncDebugState(
   };
 
   setBalatroLiteDebugState(debugState);
+}
+
+function resolveCardGrid({
+  contentWidth,
+  contentHeight,
+  padding,
+  gap,
+  cardGap,
+  statsHeight,
+  actionHeight,
+  cardCount,
+}: {
+  contentWidth: number;
+  contentHeight: number;
+  padding: number;
+  gap: number;
+  cardGap: number;
+  statsHeight: number;
+  actionHeight: number;
+  cardCount: number;
+}): { columns: number; rows: number; cardWidth: number; cardHeight: number; gridWidth: number; gridHeight: number } {
+  const availableWidth = Math.max(0, contentWidth - padding * 2);
+  const availableHeight = Math.max(0, contentHeight - padding * 2);
+  const aspect = 1.42;
+  const candidates = cardCount >= 8 ? [4, 2] : [Math.min(4, Math.max(1, cardCount))];
+
+  for (const columns of candidates) {
+    const rows = Math.ceil(cardCount / columns);
+    const widthLimit = (availableWidth - cardGap * (columns - 1)) / columns;
+    const heightLimit = (availableHeight - statsHeight - actionHeight - gap * 2 - cardGap * (rows - 1)) / rows;
+    const cardWidth = Math.min(widthLimit, heightLimit / aspect);
+    if (!(cardWidth > 0)) continue;
+
+    const cardHeight = cardWidth * aspect;
+    const gridWidth = cardWidth * columns + cardGap * (columns - 1);
+    const gridHeight = cardHeight * rows + cardGap * (rows - 1);
+    const totalHeight = statsHeight + gap + gridHeight + gap + actionHeight;
+    if (gridWidth > availableWidth || totalHeight > availableHeight) continue;
+    return { columns, rows, cardWidth, cardHeight, gridWidth, gridHeight };
+  }
+
+  const columns = candidates[0] ?? 4;
+  const rows = Math.ceil(cardCount / columns);
+  const widthLimit = (availableWidth - cardGap * (columns - 1)) / columns;
+  const heightLimit = (availableHeight - statsHeight - actionHeight - gap * 2 - cardGap * (rows - 1)) / rows;
+  const cardWidth = Math.max(0, Math.min(widthLimit, heightLimit / aspect));
+  const cardHeight = cardWidth * aspect;
+  return {
+    columns,
+    rows,
+    cardWidth,
+    cardHeight,
+    gridWidth: cardWidth * columns + cardGap * (columns - 1),
+    gridHeight: cardHeight * rows + cardGap * (rows - 1),
+  };
 }
 
 function token(layout: SurfaceLayout, design: number): number {

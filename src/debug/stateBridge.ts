@@ -1,6 +1,7 @@
 import { dispatchDebugCommand, type DebugCommand, type DebugCommandResult } from "./commands";
 import { createDebugStore } from "./store";
 import type { RuntimeReadyCriteria, RuntimeReadySnapshot } from "../runtime/readiness";
+import type { ButtonMetrics } from "../ui/button";
 
 type RectState = { x: number; y: number; width: number; height: number };
 
@@ -110,6 +111,8 @@ export type PixiBalatroLiteDebugState = {
   cardBounds: Record<string, RectState>;
   playHandButtonBounds: RectState;
   nextRoundButtonBounds: RectState;
+  playHandButtonMetrics: ButtonMetrics;
+  nextRoundButtonMetrics: ButtonMetrics;
   appShell: PixiSampleAppShellDebugState;
   layout: {
     canvasWidth: number;

@@ -3,23 +3,30 @@ import { Container, Graphics, Text } from "pixi.js";
 import { tokenValue } from "../runtime/surface";
 import { surfaceTheme } from "./tokens";
 import type { SurfaceLayout } from "../runtime/scene";
+import { createLabel } from "./label";
 
 type TokenSize = { design: number; minScreenPx?: number; maxScreenPx?: number };
 
 export type ButtonPrimitive = ButtonContainer & {
   background: Graphics;
   labelText: Text;
-  metrics: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    labelCenterX: number;
-    labelCenterY: number;
-  };
+  metrics: ButtonMetrics;
 };
 
 export type UiBounds = { x: number; y: number; width: number; height: number };
+
+export type ButtonMetrics = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  labelCenterX: number;
+  labelCenterY: number;
+  labelArea: UiBounds;
+  labelBounds: UiBounds;
+  resolvedFontSize: number;
+  labelOverflowed: boolean;
+};
 
 export type UiButtonHitTarget<TId extends string = string> = {
   id: TId;
@@ -49,22 +56,33 @@ export function createButton({
 }: ButtonOptions): ButtonPrimitive {
   const radius = tokenValue(layout, surfaceTheme.components.buttonPrimary.rounded);
   const strokeWidth = tokenValue(layout, surfaceTheme.components.actionHighlight.size);
+  const paddingX = tokenValue(layout, surfaceTheme.components.buttonPrimary.padding);
+  const paddingY = paddingX / 2;
+  const labelArea = {
+    x: paddingX,
+    y: paddingY,
+    width: Math.max(0, width - paddingX * 2),
+    height: Math.max(0, height - paddingY * 2),
+  };
   const background = new Graphics()
     .roundRect(0, 0, width, height, radius)
     .fill({ color: fill, alpha: 0.94 })
     .stroke({ color: stroke, width: strokeWidth });
   background.label = "button-background";
 
-  const labelText = new Text({
+  const labelText = createLabel({
     text,
-    style: {
-      fill: textColor,
-      fontFamily: "Inter, system-ui, sans-serif",
-      fontSize: tokenValue(layout, fontSize),
-      fontWeight: "600",
+    layout,
+    fontSize,
+    color: textColor,
+    weight: "600",
+    label: "button-label",
+    autoFit: {
+      maxWidth: labelArea.width,
+      maxHeight: labelArea.height,
+      minFontSize: Math.min(tokenValue(layout, surfaceTheme.typography.caption), 10 / layout.scale),
     },
   });
-  labelText.label = "button-label";
   labelText.anchor.set(0.5);
   labelText.position.set(width / 2, height / 2);
 
@@ -72,6 +90,7 @@ export function createButton({
   button.label = "button";
   button.background = background;
   button.labelText = labelText;
+  button.addChild(background, labelText);
   button.metrics = {
     x: 0,
     y: 0,
@@ -79,8 +98,11 @@ export function createButton({
     height,
     labelCenterX: width / 2,
     labelCenterY: height / 2,
+    labelArea,
+    labelBounds: toLocalBounds(labelText.getBounds()),
+    resolvedFontSize: labelText.metrics.resolvedFontSize,
+    labelOverflowed: labelText.metrics.overflowed,
   };
-  button.addChild(background, labelText);
   button.onHover.connect(() => {
     redrawButtonBackground(background, { width, height, radius, fill, stroke, strokeWidth: strokeWidth * 1.35, alpha: 1 });
   });
@@ -133,6 +155,16 @@ function toDesignBounds(
     y: bounds.y / layout.scale,
     width: bounds.width / layout.scale,
     height: bounds.height / layout.scale,
+  };
+}
+
+function toLocalBounds(bounds: { x: number; y: number; width: number; height: number } | undefined): UiBounds {
+  if (!bounds) return { x: 0, y: 0, width: 0, height: 0 };
+  return {
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
   };
 }
 

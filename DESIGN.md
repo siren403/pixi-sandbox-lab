@@ -110,7 +110,7 @@ Avoid one-note purple/blue gradient palettes, beige/brown editorial palettes, or
 
 Use `Inter, system-ui, sans-serif` for all current Pixi text. Letter spacing is `0`.
 
-Display text is reserved for the boot scene title. HUD text uses the `title` token. Body and caption tokens are for design-system samples, buttons, and smaller status text. Text must fit its control or layout region on desktop portrait and mobile portrait viewports. If text cannot fit, change the component layout or token rather than clipping.
+Display text is reserved for the boot scene title. HUD text uses the `title` token. Body and caption tokens are for design-system samples, buttons, and smaller status text. Text must fit its control or layout region on desktop portrait and mobile portrait viewports. If a single-line control text needs to adapt, use auto-fit to shrink the font size inside the region. Do not use ellipsis, multiline wrapping, or mask/clipping to force a fit.
 
 ## Layout
 
@@ -129,6 +129,7 @@ Default placement policy:
 - Repeated or semantic UI must live in `src/ui` primitives instead of scene-local `Graphics + Text`.
 - Raw scene-local `Graphics + Text` UI is acceptable only for throwaway probes.
 - If UI must use explicit coordinates, document why and add viewport E2E coverage for crop, overlap, safe area, and alignment.
+- Game-specific UI that behaves like HUD or panel chrome, including card hands, action rows, and scene controls, should stay in UI layout space inside the safe-area frame or AppShell contentHost. Adapt the row/grid geometry to the available content bounds rather than pushing through the world/camera model.
 
 Current Pixi layers:
 
@@ -155,6 +156,8 @@ Button:
 
 - Use `button-primary` for the boot start action and design-system control samples.
 - The text label is horizontally and vertically centered.
+- Button labels may auto-fit within `button-primary` padding by shrinking the font size between the resolved base token and a minimum token. Keep the text on one line and surface overflow in metrics rather than clipping or truncating.
+- Button metrics should expose the label area, measured label bounds, resolved font size, and overflow state so layout tests can verify the contract.
 - Minimum visible touch target is `48px` screen-space height; current boot button target is larger.
 - Use `createButton()` rather than hand-building a `Graphics + Text` pair. `createButton()` keeps project-owned drawing and uses `@pixi/ui` `ButtonContainer` for button events.
 
