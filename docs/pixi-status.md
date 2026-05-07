@@ -17,6 +17,7 @@ This document tracks the current implementation and validation state for the Pix
 - Scene transitions are configured through `Scene.transition` and rendered by a runtime-owned overlay with animated panels and slash patterns.
 - Scene switch commands go through `src/runtime/commandRuntime.ts`; duplicate scene switch requests are dropped while a switch is active and counts are exposed through runtime debug state.
 - The design-system scene renders tokens, type, components, and motion samples inside AppShell ContentHost. Major sample regions use `@pixi/layout` nodes so layout debug bounds can inspect them.
+- The Balatro-lite sample lives under `src/samples/balatro-lite/` as an isolated playable card-scoring prototype. Its `rules/` module is pure TypeScript with deterministic seeded deck/hand flow, while its scene adapter owns Pixi rendering, AppShell integration, pointer hit tests, and E2E debug state.
 - Semantic UI uses `src/ui` primitives for repeated components such as button, label, and panel. Button text is horizontally and vertically centered and covered by E2E checks.
 - Runtime UI code imports the shared token object from `src/ui/tokens.ts`; `src/runtime/surface.ts` owns only token scaling helpers.
 - `bun run check:design-tokens` compares the `DESIGN.md` frontmatter contract with `src/ui/tokens.ts`; release builds run this drift check before bundling.
@@ -50,6 +51,7 @@ Current checks include:
 - surface layers appear in the expected world/UI/debug order
 - layout debug panel appears and its bounds/filter toggles work
 - design-system scene renders color, type, and component samples
+- Balatro-lite renders a seeded hand, toggles card selection, scores a played hand with a chips/mult breakdown, advances to the next deterministic round, and preserves the fixed initial hand across reloads
 - button label center delta stays within contract
 - button, input-target, and marker component sizes meet their screen-space token contracts
 - release build output does not contain debug overlay identifiers

@@ -1,5 +1,6 @@
 import { Container, Graphics } from "pixi.js";
 import { designSystemScene, verticalSliceScene } from "./boot";
+import { balatroLiteScene } from "../samples/balatro-lite/scene";
 import type { SurfaceLayout } from "../runtime/scene";
 import { scene } from "../runtime/scene";
 import { setSceneIndexScene } from "../runtime/navigation";
@@ -61,6 +62,9 @@ export const bootScene = scene({
       onDesignSystem: () => {
         switchScene(designSystemScene, "debug");
       },
+      onBalatroLite: () => {
+        switchScene(balatroLiteScene, "debug");
+      },
     });
   },
 
@@ -99,6 +103,9 @@ export const sceneIndexScene = scene({
       },
       onDesignSystem: () => {
         switchScene(designSystemScene, "debug");
+      },
+      onBalatroLite: () => {
+        switchScene(balatroLiteScene, "debug");
       },
     });
   },
@@ -141,6 +148,10 @@ export const sceneIndexScene = scene({
         switchScene(designSystemScene, "debug");
         return;
       }
+      if (action === "scene-balatro-lite") {
+        switchScene(balatroLiteScene, "debug");
+        return;
+      }
       if (action === "layout-toggle") {
         layoutBoundsEnabled = !layoutBoundsEnabled;
         window.dispatchEvent(
@@ -164,6 +175,10 @@ export const sceneIndexScene = scene({
       }
       if (itemId === "design-system") {
         switchScene(designSystemScene, { source: "scene", args: { from: "scene-index", selectedSample: "design-system" } });
+        return;
+      }
+      if (itemId === "balatro-lite") {
+        switchScene(balatroLiteScene, { source: "scene", args: { from: "scene-index", selectedSample: "balatro-lite" } });
         return;
       }
     }
@@ -337,6 +352,7 @@ function syncSceneIndexState(layout: SurfaceLayout, root: Container, shell: AppS
 
 const sceneSamples = [
   { id: "vertical-slice", label: "Vertical Slice", enabled: true },
+  { id: "balatro-lite", label: "Balatro-lite", enabled: true },
   { id: "design-system", label: "Design System", enabled: true },
   { id: "camera-sample", label: "Camera Sample - planned", enabled: false },
   { id: "layout-sample", label: "Layout Sample - planned", enabled: false },
@@ -361,20 +377,25 @@ function countLayoutNodes(container: Container): number {
   return count;
 }
 
-function installDebugSceneListeners(handlers: { onScene: () => void; onDesignSystem: () => void }): () => void {
+function installDebugSceneListeners(handlers: { onScene: () => void; onDesignSystem: () => void; onBalatroLite: () => void }): () => void {
   const sceneListener = () => handlers.onScene();
   const designSystemListener = () => handlers.onDesignSystem();
+  const balatroLiteListener = () => handlers.onBalatroLite();
   const restoreDebugCommandHandler = setDebugCommandHandler((command) => {
     if (command.type === "app.reload") {
       window.location.reload();
       return acceptedCommand(command.type);
     }
     if (command.type === "scene.open") {
-      if (!["vertical-slice", "design-system"].includes(command.sceneId)) {
+      if (!["vertical-slice", "balatro-lite", "design-system"].includes(command.sceneId)) {
         return ignoredCommand(command.type, `Unsupported scene id: ${command.sceneId}`);
       }
       if (command.sceneId === "vertical-slice") {
         handlers.onScene();
+        return acceptedCommand(command.type);
+      }
+      if (command.sceneId === "balatro-lite") {
+        handlers.onBalatroLite();
         return acceptedCommand(command.type);
       }
       if (command.sceneId === "design-system") {
@@ -391,10 +412,12 @@ function installDebugSceneListeners(handlers: { onScene: () => void; onDesignSys
   });
   window.addEventListener("pixi:scene-switch", sceneListener);
   window.addEventListener("pixi:design-system", designSystemListener);
+  window.addEventListener("pixi:balatro-lite", balatroLiteListener);
   return () => {
     restoreDebugCommandHandler();
     window.removeEventListener("pixi:scene-switch", sceneListener);
     window.removeEventListener("pixi:design-system", designSystemListener);
+    window.removeEventListener("pixi:balatro-lite", balatroLiteListener);
   };
 }
 

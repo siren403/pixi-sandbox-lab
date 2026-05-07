@@ -79,6 +79,53 @@ export type PixiDesignSystemDebugState = {
   rendered: boolean;
 };
 
+export type PixiBalatroLiteDebugState = {
+  scene: "balatro-lite";
+  rendered: boolean;
+  seed: number;
+  round: number;
+  phase: "select" | "result";
+  deckRemaining: number;
+  hand: Array<{
+    id: string;
+    rank: string;
+    suit: string;
+    label: string;
+    selected: boolean;
+  }>;
+  selectedCardIds: string[];
+  canPlayHand: boolean;
+  canNextRound: boolean;
+  lastScore?: {
+    category: string;
+    playedCardIds: string[];
+    scoringCardIds: string[];
+    baseChips: number;
+    rankChips: number;
+    mult: number;
+    total: number;
+    straightIsAceLow: boolean;
+  };
+  cumulativeScore: number;
+  cardBounds: Record<string, RectState>;
+  playHandButtonBounds: RectState;
+  nextRoundButtonBounds: RectState;
+  appShell: PixiSampleAppShellDebugState;
+  layout: {
+    canvasWidth: number;
+    canvasHeight: number;
+    viewportWidth: number;
+    viewportHeight: number;
+    visibleWidth: number;
+    visibleHeight: number;
+    contentBounds: RectState;
+    statsBounds: RectState;
+    handBounds: RectState;
+    actionRowBounds: RectState;
+    boardBounds: RectState;
+  };
+};
+
 export type PixiSceneIndexDebugState = {
   scene: "scene-index";
   rendered: boolean;
@@ -152,11 +199,12 @@ export type PixiDebugState = {
   revision: number;
   lastCommand?: DebugCommandResult;
   activeScene?: string;
-  scene?: PixiBootDebugState | PixiDemoDebugState | PixiDesignSystemDebugState;
+  scene?: PixiBootDebugState | PixiDemoDebugState | PixiDesignSystemDebugState | PixiBalatroLiteDebugState;
   boot?: PixiBootDebugState;
   sceneIndex?: PixiSceneIndexDebugState;
   demo?: PixiDemoDebugState;
   designSystem?: PixiDesignSystemDebugState;
+  balatroLite?: PixiBalatroLiteDebugState;
   runtime?: PixiRuntimeDebugState;
   layout?: PixiLayoutDebugState;
 };
@@ -254,6 +302,24 @@ export function clearDesignSystemDebugState(): void {
   patchDebugState({
     designSystem: undefined,
     scene: snapshot.scene?.scene === "design-system" ? undefined : snapshot.scene,
+  });
+}
+
+export function setBalatroLiteDebugState(state: PixiBalatroLiteDebugState): void {
+  if (!debugEnabled) return;
+  patchDebugState({
+    balatroLite: state,
+    scene: state,
+    activeScene: state.scene,
+  });
+}
+
+export function clearBalatroLiteDebugState(): void {
+  if (!debugEnabled) return;
+  const snapshot = debugStore.getSnapshot();
+  patchDebugState({
+    balatroLite: undefined,
+    scene: snapshot.scene?.scene === "balatro-lite" ? undefined : snapshot.scene,
   });
 }
 
