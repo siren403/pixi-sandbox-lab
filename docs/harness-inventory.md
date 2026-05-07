@@ -132,6 +132,12 @@ Some paths may not exist yet. Absence is acceptable, but newly added paths must 
   Expected user/agent: parent Codex and Pixi implementation agents needing specialist review before surface/UI changes.
   Validation: TOML syntax smoke check and `mise run validate-skills` for its supporting skill.
 
+- `.codex/agents/game-rules-architect.toml`
+  Project-local custom agent responsible for reviewing card, board, and lightweight game sample rules, including scoring, turn flow, state ownership, seeded RNG, deterministic testing, and rule/runtime boundaries.
+  Discovery route: `harness_architect` boot discovery reads `.codex/agents/*.toml`; parent Codex may spawn this specialist before implementing rule-bearing game samples such as Balatro-lite, Yacht-lite, or board-game prototypes.
+  Expected user/agent: parent Codex, Pixi implementation agents, and scoped workers that need rule architecture or validation strategy before game sample implementation.
+  Validation: TOML syntax smoke check, required-field check for `name`, `description`, and `developer_instructions`, plus inventory reference search.
+
 - `.codex/agents/context-engineer.toml`
   Project-local custom agent responsible for context architecture, source-of-truth boundaries, prompt/doc refactors, task-specific context bundles, and stale or conflicting instruction detection.
   Discovery route: `harness_architect` boot discovery reads `.codex/agents/*.toml`; parent Codex may spawn this specialist before documentation, prompt, skill, custom-agent, checkpoint, or source-of-truth refactors.
