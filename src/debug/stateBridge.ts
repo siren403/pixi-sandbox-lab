@@ -2,11 +2,20 @@ import { dispatchDebugCommand, type DebugCommand, type DebugCommandResult } from
 import { createDebugStore } from "./store";
 import type { RuntimeReadyCriteria, RuntimeReadySnapshot } from "../runtime/readiness";
 import type { ButtonMetrics } from "../ui/button";
+import type { LayoutViolation } from "../ui/layoutFrames";
 
 type RectState = { x: number; y: number; width: number; height: number };
 
 export type PixiSampleAppShellDebugState = {
   activeSheet: "none" | "controls" | "debug";
+  topBarFrameBounds: RectState;
+  topBarRenderBounds: RectState;
+  contentFrameBounds: RectState;
+  contentRenderBounds: RectState;
+  bottomBarFrameBounds: RectState;
+  bottomBarRenderBounds: RectState;
+  sheetFrameBounds: RectState;
+  sheetRenderBounds: RectState;
   sheetBounds: RectState;
   backButtonBounds?: RectState;
   controlsButtonBounds?: RectState;
@@ -108,8 +117,12 @@ export type PixiBalatroLiteDebugState = {
     straightIsAceLow: boolean;
   };
   cumulativeScore: number;
+  cardFrameBounds: Record<string, RectState>;
+  cardRenderBounds: Record<string, RectState>;
   cardBounds: Record<string, RectState>;
+  playHandButtonFrameBounds: RectState;
   playHandButtonBounds: RectState;
+  nextRoundButtonFrameBounds: RectState;
   nextRoundButtonBounds: RectState;
   playHandButtonMetrics: ButtonMetrics;
   nextRoundButtonMetrics: ButtonMetrics;
@@ -121,11 +134,20 @@ export type PixiBalatroLiteDebugState = {
     viewportHeight: number;
     visibleWidth: number;
     visibleHeight: number;
-    contentBounds: RectState;
-    statsBounds: RectState;
-    handBounds: RectState;
-    actionRowBounds: RectState;
-    boardBounds: RectState;
+    contentFrameBounds: RectState;
+    contentRenderBounds: RectState;
+    statsFrameBounds: RectState;
+    statsRenderBounds: RectState;
+    handFrameBounds: RectState;
+    handRenderBounds: RectState;
+    actionRowFrameBounds: RectState;
+    actionRowRenderBounds: RectState;
+    boardFrameBounds: RectState;
+    boardRenderBounds: RectState;
+    layoutViolations: {
+      errors: Array<LayoutViolation>;
+      inspected: number;
+    };
   };
 };
 

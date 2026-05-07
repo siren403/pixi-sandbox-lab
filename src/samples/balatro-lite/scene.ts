@@ -6,20 +6,25 @@ import { tokenValue } from "../../runtime/surface";
 import {
   containsBounds,
   createButton,
-  readButtonBounds,
-  readUiBounds,
   type ButtonPrimitive,
   type UiBounds,
 } from "../../ui/button";
 import { createLabel } from "../../ui/label";
 import {
   createAppShell,
+  readAppShellFrameBounds,
   readAppShellButtonBounds,
   resolveAppShellHit,
   type AppShell,
   type AppShellButtonBounds,
   type AppShellSheet,
 } from "../../ui/layouts/appShell";
+import {
+  attachFrame,
+  collectLayoutViolations,
+  readFrameBounds,
+  readRenderBounds,
+} from "../../ui/layoutFrames";
 import { surfaceTheme } from "../../ui/tokens";
 import {
   clearBalatroLiteDebugState,
@@ -52,7 +57,10 @@ let removeScene: (() => void) | null = null;
 let activeSheet: AppShellSheet = "none";
 let layoutBoundsEnabled = false;
 let cardHitTargets: Record<string, RectState> = {};
+let cardRenderBounds: Record<string, RectState> = {};
+let playHandButtonFrameBounds: RectState = { x: 0, y: 0, width: 0, height: 0 };
 let playHandButtonBounds: RectState = { x: 0, y: 0, width: 0, height: 0 };
+let nextRoundButtonFrameBounds: RectState = { x: 0, y: 0, width: 0, height: 0 };
 let nextRoundButtonBounds: RectState = { x: 0, y: 0, width: 0, height: 0 };
 let appShellButtons: AppShellButtonBounds = {
   activeSheet: "none",
@@ -124,12 +132,12 @@ export const balatroLiteScene = scene({
 
     if (pointerPressed) {
       const position = pointer.position();
-      if (canPlayHand(game) && containsBounds(playHandButtonBounds, position)) {
+      if (canPlayHand(game) && containsBounds(playHandButtonFrameBounds, position)) {
         game = playSelectedHand(game);
         renderScene({ app, layers, layout });
         return;
       }
-      if (canAdvanceRound(game) && containsBounds(nextRoundButtonBounds, position)) {
+      if (canAdvanceRound(game) && containsBounds(nextRoundButtonFrameBounds, position)) {
         game = dealNextRound(game);
         renderScene({ app, layers, layout });
         return;
@@ -197,24 +205,31 @@ function renderScene({
         : [],
   });
 
+  const contentFrame = shell.frames.content;
   const board = new Container({ label: "balatro-lite-board" });
-  board.layout = {
-    width: shell.frames.content.width,
-    height: shell.frames.content.height,
-    flexDirection: "column",
-  };
+  attachFrame(board, {
+    id: "balatro-lite-board",
+    role: "board",
+    frameBounds: rectAt(contentFrame, 0, 0, contentFrame.width, contentFrame.height),
+  });
 
   const panel = new Graphics()
-    .rect(0, 0, shell.frames.content.width, shell.frames.content.height)
-    .fill({ color: 0x10261f, alpha: 0.96 })
-    .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.18 });
+    .rect(0, 0, contentFrame.width, contentFrame.height)
+    .fill({ color: 0x10261f, alpha: 0.96 });
   panel.label = "balatro-lite-panel";
 
   const padding = token(layout, 22);
   const gap = token(layout, 16);
-  const contentWidth = shell.frames.content.width;
-  const contentHeight = shell.frames.content.height;
-  const statsHeight = token(layout, 108);
+  const contentWidth = contentFrame.width;
+  const contentHeight = contentFrame.height;
+  const compactStats = contentWidth < token(layout, 720);
+  const statsColumns = compactStats ? 2 : 4;
+  const statCellHeight = compactStats ? token(layout, 40) : token(layout, 34);
+  const selectedLabelHeight = token(layout, 34);
+  const statCellGap = gap;
+  const statsRowCount = Math.ceil(4 / statsColumns);
+  const statsGridHeight = statsRowCount * statCellHeight + Math.max(0, statsRowCount - 1) * statCellGap;
+  const statsHeight = statsGridHeight + gap + selectedLabelHeight;
   const actionHeight = tokenValue(layout, surfaceTheme.components.buttonPrimary.height);
   const cardGap = token(layout, 14);
   const grid = resolveCardGrid({
@@ -229,45 +244,50 @@ function renderScene({
   });
   const availableWidth = Math.max(0, contentWidth - padding * 2);
   const gridX = padding + Math.max(0, (availableWidth - grid.gridWidth) / 2);
-  const statsRow = new Container({ label: "balatro-lite-stats" });
-  statsRow.position.set(padding, padding);
-  statsRow.layout = {
-    width: availableWidth,
-    height: statsHeight,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap,
-  };
+  const statsBlock = new Container({ label: "balatro-lite-stats" });
+  statsBlock.position.set(padding, padding);
+  attachFrame(statsBlock, {
+    id: "balatro-lite-stats",
+    role: "stats-block",
+    frameBounds: rectAt(contentFrame, padding, padding, availableWidth, statsHeight),
+  });
 
-  const roundLabel = createLabel({
-    text: `Round ${game.round}`,
-    layout,
-    fontSize: surfaceTheme.typography.body,
-    color: surfaceTheme.color.text,
-    label: "balatro-lite-round-label",
-  });
-  const scoreLabel = createLabel({
-    text: `Score ${game.cumulativeScore} / Last ${game.lastScore?.total ?? "-"}`,
-    layout,
-    fontSize: surfaceTheme.typography.body,
-    color: surfaceTheme.color.text,
-    label: "balatro-lite-score-label",
-  });
-  const phaseLabel = createLabel({
-    text: `Phase ${game.phase}`,
-    layout,
-    fontSize: surfaceTheme.typography.caption,
-    color: surfaceTheme.color.text,
-    label: "balatro-lite-phase-label",
-  });
-  const deckLabel = createLabel({
-    text: `Deck ${game.deck.length}`,
-    layout,
-    fontSize: surfaceTheme.typography.caption,
-    color: surfaceTheme.color.text,
-    label: "balatro-lite-deck-label",
-  });
-  statsRow.addChild(roundLabel, scoreLabel, phaseLabel, deckLabel);
+  const statItems = [
+    { id: "round", text: `Round ${game.round}`, label: "balatro-lite-round-label", fontSize: surfaceTheme.typography.body },
+    { id: "score", text: `Score ${game.cumulativeScore} / Last ${game.lastScore?.total ?? "-"}`, label: "balatro-lite-score-label", fontSize: surfaceTheme.typography.body },
+    { id: "phase", text: `Phase ${game.phase}`, label: "balatro-lite-phase-label", fontSize: surfaceTheme.typography.caption },
+    { id: "deck", text: `Deck ${game.deck.length}`, label: "balatro-lite-deck-label", fontSize: surfaceTheme.typography.caption },
+  ] as const;
+  const statCellWidth = compactStats ? Math.max(0, (availableWidth - statCellGap) / 2) : Math.max(0, (availableWidth - statCellGap * 3) / 4);
+
+  for (const [index, item] of statItems.entries()) {
+    const column = index % statsColumns;
+    const row = Math.floor(index / statsColumns);
+    const cellX = column * (statCellWidth + statCellGap);
+    const cellY = row * (statCellHeight + statCellGap);
+    const cell = new Container({ label: `balatro-lite-stat-${item.id}` });
+    cell.position.set(cellX, cellY);
+    attachFrame(cell, {
+      id: `balatro-lite-stat-${item.id}`,
+      role: "stat-cell",
+      frameBounds: rectAt(contentFrame, padding + cellX, padding + cellY, statCellWidth, statCellHeight),
+    });
+    const label = createLabel({
+      text: item.text,
+      layout,
+      fontSize: item.fontSize,
+      color: surfaceTheme.color.text,
+      label: item.label,
+      autoFit: {
+        maxWidth: statCellWidth,
+        maxHeight: statCellHeight,
+        minFontSize: Math.min(tokenValue(layout, surfaceTheme.typography.caption), 10 / layout.scale),
+      },
+    });
+    label.position.set(0, 0);
+    cell.addChild(label);
+    statsBlock.addChild(cell);
+  }
 
   const selectedLabel = createLabel({
     text: game.selectedCardIds.length > 0 ? `Selected ${game.selectedCardIds.length}/5` : "Select up to 5 cards",
@@ -275,25 +295,44 @@ function renderScene({
     fontSize: surfaceTheme.typography.caption,
     color: surfaceTheme.color.actionAccent,
     label: "balatro-lite-selected-label",
+    autoFit: {
+      maxWidth: availableWidth,
+      maxHeight: selectedLabelHeight,
+      minFontSize: Math.min(tokenValue(layout, surfaceTheme.typography.caption), 10 / layout.scale),
+    },
   });
-  selectedLabel.position.set(padding, statsRow.y + statsHeight - token(layout, 24));
+  selectedLabel.position.set(0, statsGridHeight + gap);
+  attachFrame(selectedLabel, {
+    id: "balatro-lite-selected-label",
+    role: "selected-label",
+    frameBounds: rectAt(contentFrame, padding, padding + statsGridHeight + gap, availableWidth, selectedLabelHeight),
+  });
+  statsBlock.addChild(selectedLabel);
 
   const handContainer = new Container({ label: "balatro-lite-hand" });
-  handContainer.position.set(0, statsRow.y + statsHeight + gap);
-  handContainer.layout = {
-    width: availableWidth,
-    height: grid.gridHeight,
-  };
+  const handY = padding + statsHeight + gap;
+  handContainer.position.set(0, handY);
+  attachFrame(handContainer, {
+    id: "balatro-lite-hand",
+    role: "hand",
+    frameBounds: rectAt(contentFrame, 0, handY, contentWidth, grid.gridHeight),
+  });
 
   const cards = game.hand.slice(0, 8).map((card, index) => createCardButton(card, layout, game, grid.cardWidth, grid.cardHeight));
   for (const [index, cardButton] of cards.entries()) {
     const column = index % grid.columns;
     const row = Math.floor(index / grid.columns);
-    cardButton.position.set(gridX + column * (grid.cardWidth + cardGap), row * (grid.cardHeight + cardGap));
+    const x = gridX + column * (grid.cardWidth + cardGap);
+    const y = row * (grid.cardHeight + cardGap);
+    cardButton.position.set(x, y);
+    attachFrame(cardButton, {
+      id: cardButton.label ?? `balatro-card:${index}`,
+      role: "card",
+      frameBounds: rectAt(contentFrame, x, handY + y, grid.cardWidth, grid.cardHeight),
+    });
     handContainer.addChild(cardButton);
   }
 
-  const handBounds = cards.length > 0 ? readUiBounds(layout, handContainer) : { x: 0, y: 0, width: 0, height: 0 };
   const emptyStateLabel =
     cards.length === 0
       ? createLabel({
@@ -310,15 +349,13 @@ function renderScene({
   }
 
   const actionRow = new Container({ label: "balatro-lite-actions" });
-  actionRow.position.set(padding, handContainer.y + grid.gridHeight + gap);
-  actionRow.layout = {
-    width: availableWidth,
-    height: actionHeight,
-    flexDirection: "row",
-    gap,
-    justifyContent: "center",
-    alignItems: "center",
-  };
+  const actionY = handY + grid.gridHeight + gap;
+  actionRow.position.set(padding, actionY);
+  attachFrame(actionRow, {
+    id: "balatro-lite-actions",
+    role: "actions",
+    frameBounds: rectAt(contentFrame, padding, actionY, availableWidth, actionHeight),
+  });
 
   const actionButtonWidth = Math.max(0, Math.min((availableWidth - gap) / 2, token(layout, 280)));
   const playHandButton = createButton({
@@ -336,6 +373,7 @@ function renderScene({
     width: actionButtonWidth,
     height: actionHeight,
   };
+  playHandButton.position.set(0, 0);
   const nextRoundButton = createButton({
     text: canAdvanceRound(game) ? "Next Round" : "Waiting",
     width: actionButtonWidth,
@@ -351,14 +389,31 @@ function renderScene({
     width: actionButtonWidth,
     height: actionHeight,
   };
+  nextRoundButton.position.set(actionButtonWidth + gap, 0);
+  attachFrame(playHandButton, {
+    id: "balatro-play-hand",
+    role: "action-button",
+    frameBounds: rectAt(contentFrame, actionRow.x + playHandButton.x, actionRow.y + playHandButton.y, actionButtonWidth, actionHeight),
+  });
+  attachFrame(nextRoundButton, {
+    id: "balatro-next-round",
+    role: "action-button",
+    frameBounds: rectAt(
+      contentFrame,
+      actionRow.x + nextRoundButton.x,
+      actionRow.y + nextRoundButton.y,
+      actionButtonWidth,
+      actionHeight,
+    ),
+  });
   actionRow.addChild(playHandButton, nextRoundButton);
 
-  board.addChild(panel, statsRow, selectedLabel, handContainer, actionRow);
+  board.addChild(panel, statsBlock, handContainer, actionRow);
   shell.contentHost.addChild(board);
   root.addChild(backdrop, shell);
   layers.ui.addChild(root);
   app.renderer.layout.update(root);
-  syncDebugState(layout, shell, cards, playHandButton, nextRoundButton, statsRow, handContainer, actionRow, board, app.screen.width, app.screen.height);
+  syncDebugState(layout, shell, cards, playHandButton, nextRoundButton, statsBlock, handContainer, actionRow, board, app.screen.width, app.screen.height);
 }
 
 function createCardButton(
@@ -393,7 +448,7 @@ function syncDebugState(
   cardButtons: Array<ButtonPrimitive>,
   playHandButton: ButtonPrimitive,
   nextRoundButton: ButtonPrimitive,
-  statsRow: Container,
+  statsBlock: Container,
   handContainer: Container,
   actionRow: Container,
   board: Container,
@@ -401,6 +456,7 @@ function syncDebugState(
   canvasHeight: number,
 ): void {
   appShellButtons = readAppShellButtonBounds(layout, shell);
+  const appShellFrames = readAppShellFrameBounds(layout, shell);
   const selectedCardIds = game.selectedCardIds.slice();
   const hand = game.hand.map((card) => ({
     id: card.id,
@@ -410,12 +466,43 @@ function syncDebugState(
     selected: selectedCardIds.includes(card.id),
   }));
 
-  const cardBounds = Object.fromEntries(
-    cardButtons.map((button) => [button.label?.slice("balatro-card:".length) ?? "", readButtonBounds(layout, button)]),
+  cardHitTargets = Object.fromEntries(
+    cardButtons.map((button) => [button.label?.slice("balatro-card:".length) ?? "", readFrameBounds(button)]),
   ) as Record<string, RectState>;
-  cardHitTargets = cardBounds;
-  playHandButtonBounds = readButtonBounds(layout, playHandButton);
-  nextRoundButtonBounds = readButtonBounds(layout, nextRoundButton);
+  cardRenderBounds = Object.fromEntries(
+    cardButtons.map((button) => [button.label?.slice("balatro-card:".length) ?? "", readRenderBounds(layout, button)]),
+  ) as Record<string, RectState>;
+  playHandButtonFrameBounds = readFrameBounds(playHandButton);
+  playHandButtonBounds = readRenderBounds(layout, playHandButton);
+  nextRoundButtonFrameBounds = readFrameBounds(nextRoundButton);
+  nextRoundButtonBounds = readRenderBounds(layout, nextRoundButton);
+
+  const statGroupIds = [
+    "balatro-lite-stat-round",
+    "balatro-lite-stat-score",
+    "balatro-lite-stat-phase",
+    "balatro-lite-stat-deck",
+    "balatro-lite-selected-label",
+  ];
+  const cardGroupIds = Object.keys(cardHitTargets).map((cardId) => `balatro-card:${cardId}`);
+  const layoutViolations = collectLayoutViolations(layout, [
+    shell.contentHost,
+    board,
+    statsBlock,
+    ...(statsBlock.children as Array<Container>),
+    handContainer,
+    actionRow,
+    ...cardButtons,
+    playHandButton,
+    nextRoundButton,
+  ], {
+    parentFrameBounds: shell.frames.content,
+    overlapGroups: [
+      { id: "stats", nodeIds: statGroupIds },
+      { id: "actions", nodeIds: ["balatro-play-hand", "balatro-next-round"] },
+      { id: "cards", nodeIds: cardGroupIds },
+    ],
+  });
 
   const debugState: PixiBalatroLiteDebugState = {
     scene: "balatro-lite",
@@ -430,14 +517,26 @@ function syncDebugState(
     canNextRound: canAdvanceRound(game),
     lastScore: game.lastScore,
     cumulativeScore: game.cumulativeScore,
-    cardBounds,
+    cardFrameBounds: cardHitTargets,
+    cardRenderBounds,
+    cardBounds: cardRenderBounds,
+    playHandButtonFrameBounds,
     playHandButtonBounds,
+    nextRoundButtonFrameBounds,
     nextRoundButtonBounds,
     playHandButtonMetrics: playHandButton.metrics,
     nextRoundButtonMetrics: nextRoundButton.metrics,
     appShell: {
       activeSheet: appShellButtons.activeSheet,
-      sheetBounds: appShellButtons.sheet,
+      topBarFrameBounds: appShellFrames.topBarFrameBounds,
+      topBarRenderBounds: appShellFrames.topBarRenderBounds,
+      contentFrameBounds: appShellFrames.contentFrameBounds,
+      contentRenderBounds: appShellFrames.contentRenderBounds,
+      bottomBarFrameBounds: appShellFrames.bottomBarFrameBounds,
+      bottomBarRenderBounds: appShellFrames.bottomBarRenderBounds,
+      sheetFrameBounds: appShellFrames.sheetFrameBounds,
+      sheetRenderBounds: appShellFrames.sheetRenderBounds,
+      sheetBounds: appShellFrames.sheetFrameBounds,
       backButtonBounds: appShellButtons.back,
       controlsButtonBounds: appShellButtons.controls,
       debugButtonBounds: appShellButtons.debug,
@@ -451,11 +550,17 @@ function syncDebugState(
       viewportHeight: layout.viewportHeight,
       visibleWidth: layout.visibleWidth,
       visibleHeight: layout.visibleHeight,
-      contentBounds: readUiBounds(layout, shell.contentHost),
-      statsBounds: readUiBounds(layout, statsRow),
-      handBounds: readUiBounds(layout, handContainer),
-      actionRowBounds: readUiBounds(layout, actionRow),
-      boardBounds: readUiBounds(layout, board),
+      contentFrameBounds: readFrameBounds(shell.contentHost),
+      contentRenderBounds: readRenderBounds(layout, shell.contentHost),
+      statsFrameBounds: readFrameBounds(statsBlock),
+      statsRenderBounds: readRenderBounds(layout, statsBlock),
+      handFrameBounds: readFrameBounds(handContainer),
+      handRenderBounds: readRenderBounds(layout, handContainer),
+      actionRowFrameBounds: readFrameBounds(actionRow),
+      actionRowRenderBounds: readRenderBounds(layout, actionRow),
+      boardFrameBounds: readFrameBounds(board),
+      boardRenderBounds: readRenderBounds(layout, board),
+      layoutViolations,
     },
   };
 
@@ -514,6 +619,15 @@ function resolveCardGrid({
     cardHeight,
     gridWidth: cardWidth * columns + cardGap * (columns - 1),
     gridHeight: cardHeight * rows + cardGap * (rows - 1),
+  };
+}
+
+function rectAt(base: RectState, x: number, y: number, width: number, height: number): RectState {
+  return {
+    x: base.x + x,
+    y: base.y + y,
+    width,
+    height,
   };
 }
 

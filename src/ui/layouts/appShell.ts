@@ -5,6 +5,7 @@ import { tokenValue } from "../../runtime/surface";
 import { containsBounds, createButton, readButtonBounds, type ButtonPrimitive, type UiBounds } from "../button";
 import { createBlockingPanel } from "../blockingPanel";
 import { createBottomSheetHandle } from "../bottomSheetHandle";
+import { attachFrame, readRenderBounds } from "../layoutFrames";
 import { createLabel } from "../label";
 import { surfaceTheme } from "../tokens";
 
@@ -35,6 +36,17 @@ export type AppShell = Container & {
 };
 
 export type RectFrame = UiBounds;
+
+export type AppShellFrameBounds = {
+  topBarFrameBounds: RectFrame;
+  topBarRenderBounds: RectFrame;
+  contentFrameBounds: RectFrame;
+  contentRenderBounds: RectFrame;
+  bottomBarFrameBounds: RectFrame;
+  bottomBarRenderBounds: RectFrame;
+  sheetFrameBounds: RectFrame;
+  sheetRenderBounds: RectFrame;
+};
 
 export type AppShellButtonBounds = {
   activeSheet: AppShellSheet;
@@ -145,6 +157,10 @@ export function createAppShell(
   shell.bottomBar = bottomBar;
   shell.bottomSheetHost = bottomSheetHost.host;
   shell.buttons = buttons;
+  attachFrame(topBar, { id: "app-shell-top-bar", role: "top-bar", frameBounds: topBarFrame });
+  attachFrame(contentHost, { id: "app-shell-content", role: "content", frameBounds: contentFrame });
+  attachFrame(bottomBar, { id: "app-shell-bottom-bar", role: "bottom-bar", frameBounds: bottomBarFrame });
+  attachFrame(bottomSheetHost.host, { id: "app-shell-sheet", role: "sheet", frameBounds: sheetFrame });
   shell.addChild(topBar, contentHost, bottomBar, bottomSheetHost.host);
   return shell;
 }
@@ -160,6 +176,19 @@ export function readAppShellButtonBounds(layout: SurfaceLayout, shell: AppShell)
     actions: Object.fromEntries(
       Object.entries(shell.buttons.sheetActions).map(([id, button]) => [id, readButtonBounds(layout, button)]),
     ),
+  };
+}
+
+export function readAppShellFrameBounds(layout: SurfaceLayout, shell: AppShell): AppShellFrameBounds {
+  return {
+    topBarFrameBounds: shell.frames.topBar,
+    topBarRenderBounds: readRenderBounds(layout, shell.topBar),
+    contentFrameBounds: shell.frames.content,
+    contentRenderBounds: readRenderBounds(layout, shell.contentHost),
+    bottomBarFrameBounds: shell.frames.bottomBar,
+    bottomBarRenderBounds: readRenderBounds(layout, shell.bottomBar),
+    sheetFrameBounds: shell.frames.sheet,
+    sheetRenderBounds: readRenderBounds(layout, shell.bottomSheetHost),
   };
 }
 
@@ -202,10 +231,17 @@ function createTopBar(
     gap,
   };
 
+  const backgroundStrokeWidth = Math.max(1, 2 / layout.scale);
+  const backgroundStrokeInset = backgroundStrokeWidth / 2;
   const background = new Graphics()
-    .rect(0, 0, frame.width, frame.height)
+    .rect(
+      backgroundStrokeInset,
+      backgroundStrokeInset,
+      Math.max(0, frame.width - backgroundStrokeWidth),
+      Math.max(0, frame.height - backgroundStrokeWidth),
+    )
     .fill({ color: 0x0b1220, alpha: 1 })
-    .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.24 });
+    .stroke({ color: surfaceTheme.color.actionAccent, width: backgroundStrokeWidth, alpha: 0.24 });
   background.label = "top-bar-background";
 
   const left = new Container({ label: "top-bar-left" });
@@ -267,10 +303,17 @@ function createBottomBar(layout: SurfaceLayout, frame: RectFrame, buttons: AppSh
     justifyContent: "space-between",
     gap,
   };
+  const backgroundStrokeWidth = Math.max(1, 2 / layout.scale);
+  const backgroundStrokeInset = backgroundStrokeWidth / 2;
   const background = new Graphics()
-    .rect(0, 0, frame.width, frame.height)
+    .rect(
+      backgroundStrokeInset,
+      backgroundStrokeInset,
+      Math.max(0, frame.width - backgroundStrokeWidth),
+      Math.max(0, frame.height - backgroundStrokeWidth),
+    )
     .fill({ color: 0x0b1220, alpha: 1 })
-    .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.24 });
+    .stroke({ color: surfaceTheme.color.actionAccent, width: backgroundStrokeWidth, alpha: 0.24 });
   background.label = "bottom-bar-background";
 
   const left = new Container({ label: "bottom-bar-left" });

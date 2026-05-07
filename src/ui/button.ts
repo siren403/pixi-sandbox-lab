@@ -65,7 +65,7 @@ export function createButton({
     height: Math.max(0, height - paddingY * 2),
   };
   const background = new Graphics()
-    .roundRect(0, 0, width, height, radius)
+    .roundRect(strokeWidth / 2, strokeWidth / 2, Math.max(0, width - strokeWidth), Math.max(0, height - strokeWidth), radius)
     .fill({ color: fill, alpha: 0.94 })
     .stroke({ color: stroke, width: strokeWidth });
   background.label = "button-background";
@@ -182,7 +182,13 @@ function redrawButtonBackground(
 ): void {
   background
     .clear()
-    .roundRect(0, 0, options.width, options.height, options.radius)
+    .roundRect(
+      options.strokeWidth / 2,
+      options.strokeWidth / 2,
+      Math.max(0, options.width - options.strokeWidth),
+      Math.max(0, options.height - options.strokeWidth),
+      options.radius,
+    )
     .fill({ color: options.fill, alpha: options.alpha })
     .stroke({ color: options.stroke, width: options.strokeWidth });
 }

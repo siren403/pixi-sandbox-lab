@@ -130,6 +130,8 @@ Default placement policy:
 - Raw scene-local `Graphics + Text` UI is acceptable only for throwaway probes.
 - If UI must use explicit coordinates, document why and add viewport E2E coverage for crop, overlap, safe area, and alignment.
 - Game-specific UI that behaves like HUD or panel chrome, including card hands, action rows, and scene controls, should stay in UI layout space inside the safe-area frame or AppShell contentHost. Adapt the row/grid geometry to the available content bounds rather than pushing through the world/camera model.
+- Frame contracts are separate from render observation. Use explicit `frameBounds` as the layout and validation source of truth, and reserve `getBounds()`-derived values for render inspection, overflow detection, and debug overlays.
+- For narrow portrait layouts, switch dense stat or control rows into compact blocks or grids before labels overlap or escape the frame. Do not let a single-line row force the content frame to grow from child overflow.
 
 Current Pixi layers:
 
@@ -207,6 +209,7 @@ Proposed layout component contracts:
 Do:
 
 - Keep UI layout-first and safe-area-aware.
+- Keep frame bounds and render bounds separate in debug state and validation.
 - Keep world/gameplay coordinates explicit when that makes game logic clearer.
 - Add E2E checks for component contracts such as button label centering, touch target size, no overlap, and no critical crop.
 - Use debug inspection bounds to inspect semantic boxes before considering a layout task complete.
@@ -215,6 +218,7 @@ Do:
 Don't:
 
 - Do not fix UI by hardcoding viewport pixels.
+- Do not use child-inflated `getBounds()` output as the layout source of truth for a parent frame.
 - Do not put gameplay-critical UI outside the safe-area frame.
 - Do not let title, marker, player, or boot controls overlap on supported portrait viewports.
 - Do not introduce DOM-style design system assumptions that ignore Pixi `Container`, `Graphics`, `Text`, `@pixi/layout`, and canvas scaling.

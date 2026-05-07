@@ -37,6 +37,18 @@ function expectLabelInsideArea(metrics: {
   expect(metrics?.labelBounds.width ?? 0).toBeGreaterThan(0);
 }
 
+function expectRectInside(
+  bounds: { x: number; y: number; width: number; height: number } | undefined,
+  frame: { x: number; y: number; width: number; height: number } | undefined,
+): void {
+  expect(bounds?.width ?? 0).toBeGreaterThan(0);
+  expect(bounds?.height ?? 0).toBeGreaterThan(0);
+  expect(bounds?.x ?? 0).toBeGreaterThanOrEqual((frame?.x ?? 0) - 0.5);
+  expect(bounds?.y ?? 0).toBeGreaterThanOrEqual((frame?.y ?? 0) - 0.5);
+  expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual((frame?.x ?? 0) + (frame?.width ?? 0) + 0.5);
+  expect((bounds?.y ?? 0) + (bounds?.height ?? 0)).toBeLessThanOrEqual((frame?.y ?? 0) + (frame?.height ?? 0) + 0.5);
+}
+
 test("renders the seeded Balatro-lite round and advances through play/next round", async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
   const canvas = await gotoBoot(page);
@@ -58,32 +70,46 @@ test("renders the seeded Balatro-lite round and advances through play/next round
   expect(initialSnapshot?.canNextRound).toBe(false);
   expect(initialSnapshot?.lastScore).toBeUndefined();
   expect(initialSnapshot?.cumulativeScore).toBe(0);
-  expect(Object.keys(initialSnapshot?.cardBounds ?? {})).toHaveLength(8);
-  expect(initialSnapshot?.playHandButtonBounds.width ?? 0).toBeGreaterThan(0);
-  expect(initialSnapshot?.nextRoundButtonBounds.width ?? 0).toBeGreaterThan(0);
-  expect(initialSnapshot?.appShell.sheetBounds.width ?? 0).toBeGreaterThan(0);
-  expect(initialSnapshot?.layout.contentBounds.width ?? 0).toBeGreaterThan(0);
-  expect(initialSnapshot?.layout.actionRowBounds.width ?? 0).toBeGreaterThan(0);
+  expect(Object.keys(initialSnapshot?.cardFrameBounds ?? {})).toHaveLength(8);
+  expect(initialSnapshot?.playHandButtonFrameBounds.width ?? 0).toBeGreaterThan(0);
+  expect(initialSnapshot?.nextRoundButtonFrameBounds.width ?? 0).toBeGreaterThan(0);
+  expect(initialSnapshot?.appShell.sheetFrameBounds.width ?? 0).toBeGreaterThan(0);
+  expect(initialSnapshot?.layout.contentFrameBounds.width ?? 0).toBeGreaterThan(0);
+  expect(initialSnapshot?.layout.actionRowFrameBounds.width ?? 0).toBeGreaterThan(0);
+  expect(initialSnapshot?.layout.layoutViolations.errors ?? []).toEqual([]);
   const scale = (initialSnapshot?.layout.viewportWidth ?? 0) / (initialSnapshot?.layout.visibleWidth ?? 1);
-  const content = initialSnapshot?.layout.contentBounds;
-  const actionRow = initialSnapshot?.layout.actionRowBounds;
-  const hand = initialSnapshot?.layout.handBounds;
+  const contentFrame = initialSnapshot?.layout.contentFrameBounds;
+  const contentRender = initialSnapshot?.layout.contentRenderBounds;
+  const actionRowFrame = initialSnapshot?.layout.actionRowFrameBounds;
+  const handFrame = initialSnapshot?.layout.handFrameBounds;
+  const statsFrame = initialSnapshot?.layout.statsFrameBounds;
+  expectRectInside(contentRender, contentFrame);
+  expectRectInside(actionRowFrame, contentFrame);
+  expectRectInside(handFrame, contentFrame);
+  expectRectInside(statsFrame, contentFrame);
+  expectRectInside(initialSnapshot?.appShell.contentFrameBounds, contentFrame);
+  expectRectInside(initialSnapshot?.appShell.topBarRenderBounds, initialSnapshot?.appShell.topBarFrameBounds);
+  expectRectInside(initialSnapshot?.appShell.contentRenderBounds, initialSnapshot?.appShell.contentFrameBounds);
+  expectRectInside(initialSnapshot?.appShell.bottomBarRenderBounds, initialSnapshot?.appShell.bottomBarFrameBounds);
+  if ((initialSnapshot?.appShell.sheetFrameBounds.height ?? 0) > 0) {
+    expectRectInside(initialSnapshot?.appShell.sheetRenderBounds, initialSnapshot?.appShell.sheetFrameBounds);
+  } else {
+    expect(initialSnapshot?.appShell.sheetRenderBounds.height ?? 0).toBe(0);
+  }
+  expectRectInside(initialSnapshot?.playHandButtonFrameBounds, actionRowFrame);
+  expectRectInside(initialSnapshot?.nextRoundButtonFrameBounds, actionRowFrame);
   expect((initialSnapshot?.playHandButtonBounds.height ?? 0) * scale).toBeGreaterThanOrEqual(48);
   expect((initialSnapshot?.nextRoundButtonBounds.height ?? 0) * scale).toBeGreaterThanOrEqual(48);
-  expect(actionRow?.y ?? 0).toBeGreaterThanOrEqual(content?.y ?? 0);
-  expect((actionRow?.y ?? 0) + (actionRow?.height ?? 0)).toBeLessThanOrEqual((content?.y ?? 0) + (content?.height ?? 0));
-  expect(hand?.y ?? 0).toBeGreaterThanOrEqual(content?.y ?? 0);
-  expect((hand?.y ?? 0) + (hand?.height ?? 0)).toBeLessThanOrEqual((content?.y ?? 0) + (content?.height ?? 0));
-  expect(actionRow?.y ?? 0).toBeGreaterThanOrEqual((hand?.y ?? 0) + (hand?.height ?? 0));
-  for (const bounds of Object.values(initialSnapshot?.cardBounds ?? {})) {
-    expect(bounds.height * scale).toBeGreaterThanOrEqual(48);
-    expect(bounds.x).toBeGreaterThanOrEqual(content?.x ?? 0);
-    expect(bounds.y).toBeGreaterThanOrEqual(content?.y ?? 0);
-    expect(bounds.x + bounds.width).toBeLessThanOrEqual((content?.x ?? 0) + (content?.width ?? 0));
-    expect(bounds.y + bounds.height).toBeLessThanOrEqual((content?.y ?? 0) + (content?.height ?? 0));
+  expectRectInside(initialSnapshot?.playHandButtonBounds, actionRowFrame);
+  expectRectInside(initialSnapshot?.nextRoundButtonBounds, actionRowFrame);
+  for (const bounds of Object.values(initialSnapshot?.cardFrameBounds ?? {})) {
+    expectRectInside(bounds, contentFrame);
+  }
+  for (const bounds of Object.values(initialSnapshot?.cardRenderBounds ?? {})) {
+    expectRectInside(bounds, contentFrame);
   }
 
-  const cardBounds = Object.values(initialSnapshot?.cardBounds ?? {});
+  const cardBounds = Object.values(initialSnapshot?.cardFrameBounds ?? {});
   for (let i = 0; i < cardBounds.length; i += 1) {
     for (let j = i + 1; j < cardBounds.length; j += 1) {
       expect(rectsOverlap(cardBounds[i], cardBounds[j])).toBe(false);
@@ -92,19 +118,16 @@ test("renders the seeded Balatro-lite round and advances through play/next round
 
   expectLabelInsideArea(initialSnapshot?.playHandButtonMetrics);
   expectLabelInsideArea(initialSnapshot?.nextRoundButtonMetrics);
-  expect(rectsOverlap(initialSnapshot?.playHandButtonBounds, initialSnapshot?.nextRoundButtonBounds)).toBe(false);
-  expect(actionRow?.x ?? 0).toBeGreaterThanOrEqual(content?.x ?? 0);
-  expect((actionRow?.x ?? 0) + (actionRow?.width ?? 0)).toBeLessThanOrEqual((content?.x ?? 0) + (content?.width ?? 0));
-  expect((hand?.x ?? 0)).toBeGreaterThanOrEqual(content?.x ?? 0);
-  expect((hand?.x ?? 0) + (hand?.width ?? 0)).toBeLessThanOrEqual((content?.x ?? 0) + (content?.width ?? 0));
-  expect((hand?.y ?? 0) + (hand?.height ?? 0)).toBeLessThanOrEqual((actionRow?.y ?? 0));
+  expect(rectsOverlap(initialSnapshot?.playHandButtonFrameBounds, initialSnapshot?.nextRoundButtonFrameBounds)).toBe(false);
+  expectRectInside(initialSnapshot?.layout.boardFrameBounds, contentFrame);
+  expectRectInside(initialSnapshot?.layout.boardRenderBounds, contentFrame);
 
-  const firstCardBounds = initialSnapshot?.cardBounds[initialSnapshot?.hand[0]?.id ?? ""];
+  const firstCardBounds = initialSnapshot?.cardFrameBounds[initialSnapshot?.hand[0]?.id ?? ""];
   await clickCanvasAt(page, canvas, centerOf(firstCardBounds).x, centerOf(firstCardBounds).y, { designSpace: true });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.balatroLite?.selectedCardIds)).toHaveLength(1);
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.balatroLite?.canPlayHand)).toBe(true);
 
-  const playButtonBounds = (await readDebugSnapshot(page))?.balatroLite?.playHandButtonBounds;
+  const playButtonBounds = (await readDebugSnapshot(page))?.balatroLite?.playHandButtonFrameBounds;
   await clickCanvasAt(page, canvas, centerOf(playButtonBounds).x, centerOf(playButtonBounds).y, { designSpace: true });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.balatroLite?.phase)).toBe("result");
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.balatroLite?.selectedCardIds)).toEqual([]);
@@ -117,9 +140,9 @@ test("renders the seeded Balatro-lite round and advances through play/next round
   const resultSnapshot = (await readDebugSnapshot(page))?.balatroLite;
   expectLabelInsideArea(resultSnapshot?.playHandButtonMetrics);
   expectLabelInsideArea(resultSnapshot?.nextRoundButtonMetrics);
-  expect(rectsOverlap(resultSnapshot?.playHandButtonBounds, resultSnapshot?.nextRoundButtonBounds)).toBe(false);
+  expect(rectsOverlap(resultSnapshot?.playHandButtonFrameBounds, resultSnapshot?.nextRoundButtonFrameBounds)).toBe(false);
 
-  const nextRoundButtonBounds = (await readDebugSnapshot(page))?.balatroLite?.nextRoundButtonBounds;
+  const nextRoundButtonBounds = (await readDebugSnapshot(page))?.balatroLite?.nextRoundButtonFrameBounds;
   await clickCanvasAt(page, canvas, centerOf(nextRoundButtonBounds).x, centerOf(nextRoundButtonBounds).y, { designSpace: true });
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.balatroLite?.round)).toBe(2);
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.balatroLite?.phase)).toBe("select");

@@ -1170,8 +1170,17 @@ function syncDesignSystemState(layout: SurfaceLayout, stage: Container): void {
 function readSampleAppShellDebugState(sceneName: string) {
   if (sceneName !== "vertical-slice" && sceneName !== "alternate" && sceneName !== "design-system") return undefined;
   const state = sampleShellState[sceneName];
+  const empty = { x: 0, y: 0, width: 0, height: 0 };
   return {
     activeSheet: state.sheet,
+    topBarFrameBounds: empty,
+    topBarRenderBounds: empty,
+    contentFrameBounds: empty,
+    contentRenderBounds: empty,
+    bottomBarFrameBounds: empty,
+    bottomBarRenderBounds: empty,
+    sheetFrameBounds: state.buttons.sheet,
+    sheetRenderBounds: state.buttons.sheet,
     sheetBounds: state.buttons.sheet,
     backButtonBounds: state.buttons.back,
     controlsButtonBounds: state.buttons.controls,
