@@ -23,6 +23,7 @@ import {
   type AppShellButtonBounds,
   type AppShellSheet,
 } from "../ui/layouts/appShell";
+import { demoDebugEnabled, getSceneIndexSheetContent } from "../debug/sheetContent";
 
 type BootState = {
   scene: "boot";
@@ -245,23 +246,14 @@ function renderSceneIndex(app: { renderer: { layout: { update: (container: Conta
     .fill(surfaceTheme.color.primary);
   backdrop.label = "scene-index-backdrop";
 
+  const sheetContent = getSceneIndexSheetContent(sceneIndexSheet, layoutBoundsEnabled);
   const shell = createAppShell(layout, {
     title: "Samples",
     activeSheet: sceneIndexSheet,
-    sheetTitle: sceneIndexSheet === "debug" ? "Debug" : "Controls",
-    sheetLines:
-      sceneIndexSheet === "debug"
-        ? ["Debug tools run inside the app shell.", layoutBoundsEnabled ? "Layout bounds are visible." : "Layout bounds are hidden."]
-        : ["Select a sample from the list.", "Scene-specific controls will appear here."],
-    sheetActions:
-      sceneIndexSheet === "debug"
-        ? [
-            { id: "scene-vertical", label: "Open Vertical Slice" },
-            { id: "scene-design", label: "Open Design System" },
-            { id: "layout-toggle", label: layoutBoundsEnabled ? "Hide Layout Bounds" : "Show Layout Bounds" },
-            { id: "reload", label: "Reload" },
-          ]
-        : [],
+    showDebug: demoDebugEnabled,
+    sheetTitle: sheetContent.sheetTitle,
+    sheetLines: sheetContent.sheetLines,
+    sheetActions: sheetContent.sheetActions,
   });
 
   const list = new Container({ label: "scene-index-list" });

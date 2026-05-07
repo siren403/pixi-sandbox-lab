@@ -51,6 +51,7 @@ test("opens scene index with app shell and bottom sheet controls", async ({ page
   let sceneIndex = (await readDebugSnapshot(page))?.sceneIndex;
   expect(sceneIndex?.items.map((item) => item.label)).toContain("Vertical Slice");
   expect(sceneIndex?.items.map((item) => item.label)).toContain("Design System");
+  expect(sceneIndex?.items.map((item) => item.label)).toContain("Camera Sample - planned");
   expect(sceneIndex?.layoutNodes).toBeGreaterThanOrEqual(8);
   expect(sceneIndex?.appShell.topBarBounds.height).toBeGreaterThan(0);
   expect(sceneIndex?.appShell.contentBounds.height).toBeGreaterThan(0);
@@ -76,6 +77,18 @@ test("opens scene index with app shell and bottom sheet controls", async ({ page
   await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.sceneIndex?.appShell.activeSheet)).toBe("debug");
   sceneIndex = (await readDebugSnapshot(page))?.sceneIndex;
   expect(sceneIndex?.appShell.sheetBounds.height).toBeGreaterThan(0);
+
+  const cameraSample = sceneIndex?.items.find((item) => item.label === "Camera Sample - planned");
+  expect(cameraSample).toBeDefined();
+  await clickCanvasAt(
+    page,
+    canvas,
+    (cameraSample?.bounds.x ?? 0) + (cameraSample?.bounds.width ?? 0) / 2,
+    (cameraSample?.bounds.y ?? 0) + (cameraSample?.bounds.height ?? 0) / 2,
+    { designSpace: true },
+  );
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.sceneIndex?.scene)).toBe("scene-index");
+  await expect.poll(() => readDebugSnapshot(page).then((snapshot) => snapshot?.sceneIndex?.appShell.activeSheet)).toBe("debug");
 
   expect(consoleErrors).toEqual([]);
 });

@@ -1,4 +1,4 @@
-import { Container, Graphics } from "pixi.js";
+import { Container, Graphics, Rectangle } from "pixi.js";
 import type { SurfaceLayout } from "../../runtime/scene";
 import { pixiTo } from "../../runtime/motion";
 import { tokenValue } from "../../runtime/surface";
@@ -19,7 +19,7 @@ export type AppShell = Container & {
   buttons: {
     back?: ButtonPrimitive;
     controls: ButtonPrimitive;
-    debug: ButtonPrimitive;
+    debug?: ButtonPrimitive;
     closeSheet?: ButtonPrimitive;
     sheetActions: Record<string, ButtonPrimitive>;
   };
@@ -39,7 +39,7 @@ export type AppShellButtonBounds = {
   sheet: RectFrame;
   back?: RectFrame;
   controls: RectFrame;
-  debug: RectFrame;
+  debug?: RectFrame;
   close?: RectFrame;
   actions: Record<string, RectFrame>;
 };
@@ -56,6 +56,7 @@ type AppShellOptions = {
   title: string;
   titleLabel?: string;
   showBack?: boolean;
+  showDebug?: boolean;
   activeSheet?: AppShellSheet;
   sheetTitle?: string;
   sheetLines?: string[];
@@ -68,10 +69,13 @@ export function createAppShell(
 ): AppShell {
   const safeFrame = getScaffoldFrame(layout);
   const gap = tokenValue(layout, surfaceTheme.spacing.sm);
+  const showDebug = options.showDebug ?? true;
+  const activeSheet = options.activeSheet ?? "none";
+  const visibleSheet = showDebug || activeSheet !== "debug" ? activeSheet : "none";
   const topBarHeight = tokenValue(layout, { design: 96, minScreenPx: 52 });
   const bottomBarHeight = tokenValue(layout, { design: 104, minScreenPx: 56 });
   const sheetHeight =
-    options.activeSheet === "none" ? 0 : Math.min(safeFrame.height * 0.68, tokenValue(layout, { design: 1080, minScreenPx: 420 }));
+    visibleSheet === "none" ? 0 : Math.min(safeFrame.height * 0.68, tokenValue(layout, { design: 1080, minScreenPx: 420 }));
   const topBarFrame = {
     x: safeFrame.x,
     y: safeFrame.y,
@@ -97,7 +101,7 @@ export function createAppShell(
     height: Math.max(0, bottomBarFrame.y - (topBarFrame.y + topBarFrame.height) - gap * 2),
   };
   const shell = new Container({ label: "app-shell" }) as AppShell;
-  shell.activeSheet = options.activeSheet ?? "none";
+  shell.activeSheet = visibleSheet;
   shell.frames = {
     topBar: topBarFrame,
     content: contentFrame,
@@ -107,7 +111,7 @@ export function createAppShell(
 
   const buttons: AppShell["buttons"] = {
     controls: createShellButton("Controls", layout),
-    debug: createShellButton("Debug", layout),
+    debug: showDebug ? createShellButton("Debug", layout) : undefined,
     sheetActions: {},
   };
 
@@ -124,7 +128,10 @@ export function createAppShell(
 
   const bottomBar = createBottomBar(layout, bottomBarFrame, buttons);
 
-  const bottomSheetHost = createBottomSheetHost(layout, sheetFrame, options);
+  const bottomSheetHost = createBottomSheetHost(layout, sheetFrame, {
+    ...options,
+    activeSheet: visibleSheet,
+  });
   if (bottomSheetHost.closeButton) buttons.closeSheet = bottomSheetHost.closeButton;
   buttons.sheetActions = bottomSheetHost.actions;
 
@@ -146,7 +153,7 @@ export function readAppShellButtonBounds(layout: SurfaceLayout, shell: AppShell)
     sheet: shell.frames.sheet,
     back: shell.buttons.back ? readButtonBounds(layout, shell.buttons.back) : undefined,
     controls: readButtonBounds(layout, shell.buttons.controls),
-    debug: readButtonBounds(layout, shell.buttons.debug),
+    debug: shell.buttons.debug ? readButtonBounds(layout, shell.buttons.debug) : undefined,
     close: shell.buttons.closeSheet ? readButtonBounds(layout, shell.buttons.closeSheet) : undefined,
     actions: Object.fromEntries(
       Object.entries(shell.buttons.sheetActions).map(([id, button]) => [id, readButtonBounds(layout, button)]),
@@ -161,7 +168,7 @@ export function resolveAppShellHit(bounds: AppShellButtonBounds, position: { x: 
   if (bounds.activeSheet !== "none" && containsBounds(bounds.sheet, position)) return { kind: "sheet" };
   if (bounds.back && containsBounds(bounds.back, position)) return { kind: "back" };
   if (containsBounds(bounds.controls, position)) return { kind: "controls" };
-  if (containsBounds(bounds.debug, position)) return { kind: "debug" };
+  if (bounds.debug && containsBounds(bounds.debug, position)) return { kind: "debug" };
   return undefined;
 }
 
@@ -282,7 +289,7 @@ function createBottomBar(layout: SurfaceLayout, frame: RectFrame, buttons: AppSh
   };
 
   left.addChild(buttons.controls);
-  right.addChild(buttons.debug);
+  if (buttons.debug) right.addChild(buttons.debug);
   bar.addChild(background, left, right);
   return bar;
 }
@@ -307,7 +314,18 @@ function createBottomSheetHost(
     .roundRect(0, 0, frame.width, frame.height, tokenValue(layout, { design: 32, minScreenPx: 18 }))
     .fill({ color: 0x0b1220, alpha: 1 })
     .stroke({ color: surfaceTheme.color.actionAccent, width: Math.max(1, 2 / layout.scale), alpha: 0.5 });
-  background.label = "bottom-sheet-background";
+  background.label = "bottom-sheet-blocker";
+  background.eventMode = "static";
+  background.hitArea = new Rectangle(0, 0, frame.width, frame.height);
+  const stopPropagation = (event: { stopPropagation: () => void }) => {
+    event.stopPropagation();
+  };
+  background.on("pointerdown", stopPropagation);
+  background.on("pointerup", stopPropagation);
+  background.on("pointertap", stopPropagation);
+  background.on("pointermove", stopPropagation);
+  background.on("pointerover", stopPropagation);
+  background.on("pointerout", stopPropagation);
 
   const handleRowHeight = tokenValue(layout, { design: 44, minScreenPx: 22 });
   const handleRow = new Container({ label: "bottom-sheet-handle-row" });
@@ -380,7 +398,10 @@ function createBottomSheetHost(
     cursorY += lineHeight + tokenValue(layout, surfaceTheme.spacing.xs);
   }
 
-  host.addChild(background, handleRow, header, body);
+  const content = new Container({ label: "bottom-sheet-content" });
+  content.addChild(handleRow, header, body);
+
+  host.addChild(background, content);
   host.alpha = 0.88;
   pixiTo(host, {
     pixi: { alpha: 1 },

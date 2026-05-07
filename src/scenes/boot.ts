@@ -26,6 +26,7 @@ import {
   setDesignSystemDebugState,
 } from "../debug/stateBridge";
 import { setDebugCommandHandler, type DebugCommandResult } from "../debug/commands";
+import { demoDebugEnabled, getSampleSheetContent } from "../debug/sheetContent";
 
 const speed = 520;
 const pointerFollowRate = 10;
@@ -519,14 +520,16 @@ function renderSampleShell(
   },
 ): AppShell {
   const state = sampleShellState[options.sceneId];
+  const sheetContent = getSampleSheetContent(options.sceneId, state.sheet, layoutBoundsEnabled);
   const shell = createAppShell(layout, {
     title: options.title,
     titleLabel: options.titleLabel,
     showBack: true,
+    showDebug: demoDebugEnabled,
     activeSheet: state.sheet,
-    sheetTitle: state.sheet === "debug" ? "Debug" : "Controls",
-    sheetLines: sampleSheetLines(options.sceneId, state.sheet),
-    sheetActions: state.sheet === "debug" ? sampleDebugActions(options.sceneId) : [],
+    sheetTitle: sheetContent.sheetTitle,
+    sheetLines: sheetContent.sheetLines,
+    sheetActions: sheetContent.sheetActions,
   });
   shell.label = "app-shell";
 
@@ -637,7 +640,8 @@ function handleSampleShellPointer(
 function readSampleSceneArgs(args: SampleSceneArgs | undefined): SampleSceneArgs {
   if (!args || typeof args !== "object") return {};
   return {
-    openSheet: args.openSheet === "controls" || args.openSheet === "debug" ? args.openSheet : undefined,
+    openSheet:
+      args.openSheet === "controls" || (demoDebugEnabled && args.openSheet === "debug") ? args.openSheet : undefined,
   };
 }
 
@@ -667,27 +671,6 @@ function rerenderShellForScene(sceneId: SampleSceneId, layer: Container, layout:
     title: "Design System",
   });
   renderDesignSystem(shell.contentHost, layout, shell.frames.content);
-}
-
-function sampleSheetLines(sceneId: SampleSceneId, sheet: AppShellSheet): string[] {
-  if (sheet === "none") return [];
-  if (sheet === "controls") {
-    if (sceneId === "vertical-slice") return ["Drag or pinch the world.", "Tap empty space to move the player."];
-    if (sceneId === "alternate") return ["Press X to return to the vertical slice."];
-    return ["Inspect tokens, primitives, layout rows, and motion samples."];
-  }
-  return ["Debug actions are part of the Pixi app shell.", "The DOM debug panel is kept hidden for E2E state only."];
-}
-
-function sampleDebugActions(sceneId: SampleSceneId): Array<{ id: string; label: string }> {
-  const actions = [
-    { id: "scene-index", label: "Back to Samples" },
-    { id: "layout-toggle", label: layoutBoundsEnabled ? "Hide Layout Bounds" : "Show Layout Bounds" },
-    { id: "reload", label: "Reload" },
-  ];
-  if (sceneId !== "vertical-slice") actions.splice(1, 0, { id: "scene-vertical", label: "Open Vertical Slice" });
-  if (sceneId !== "design-system") actions.splice(1, 0, { id: "scene-design", label: "Open Design System" });
-  return actions;
 }
 
 function createAssetOrb(texture: Texture, layout: SurfaceLayout, xRatio: number, yRatio: number): Sprite {
